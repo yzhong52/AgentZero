@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Property Parser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --surface: #18181c;
+      --border: #2a2a30;
+      --text: #e8e8ec;
+      --muted: #8888a0;
+      --accent: #7c6cf9;
+      --accent-hover: #9588ff;
+      --success: #4ade80;
+      --error: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+    }
+    .form-wrap {
+      width: 100%;
+      max-width: 560px;
+    }
+    .input-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    input[type="url"] {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font: 1rem "JetBrains Mono", monospace;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="url"]::placeholder { color: var(--muted); }
+    input[type="url"]:focus { border-color: var(--accent); }
+    button {
+      padding: 0.75rem 1.5rem;
+      font: 600 0.95rem "DM Sans", sans-serif;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .message {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .message.error { background: rgba(248,113,113,0.15); color: var(--error); }
+    .message.success { background: rgba(74,222,128,0.12); color: var(--success); }
+    .result {
+      width: 100%;
+      max-width: 640px;
+      margin-top: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .result h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .result-body { padding: 1.25rem; }
+    .result-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .field {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .field-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .field-value {
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+    .field-value.empty { color: var(--muted); font-style: italic; }
+    .images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .images img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .source-url {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+    .source-url a { color: inherit; }
+  </style>
+</head>
+<body>
+  <h1>Property Parser</h1>
+  <p class="subtitle">Paste a listing URL to extract address, price, beds, baths, and more.</p>
+
+  <div class="form-wrap">
+    <form id="form" class="input-row">
+      <input type="url" name="url" id="url" placeholder="https://example.com/listing/123" required />
+      <button type="submit" id="submit">Parse</button>
+    </form>
+    <div id="message" class="message" role="alert" hidden></div>
+    <div id="result" class="result" hidden>
+      <h2>Parsed property</h2>
+      <div id="result-body" class="result-body"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form");
+    const urlInput = document.getElementById("url");
+    const submitBtn = document.getElementById("submit");
+    const messageEl = document.getElementById("message");
+    const resultEl = document.getElementById("result");
+    const resultBody = document.getElementById("result-body");
+
+    function showMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = "message " + type;
+      messageEl.hidden = false;
+    }
+    function hideMessage() {
+      messageEl.hidden = true;
+    }
+    function renderValue(val) {
+      if (val === undefined || val === null || String(val).trim() === "") return null;
+      return String(val).trim();
+    }
+    function renderResult(data) {
+      const fields = [
+        { key: "title", label: "Title" },
+        { key: "address", label: "Address" },
+        { key: "price", label: "Price" },
+        { key: "beds", label: "Beds" },
+        { key: "baths", label: "Baths" },
+        { key: "sqft", label: "Sq ft" },
+        { key: "description", label: "Description" },
+      ];
+      let html = "";
+      if (data.url) {
+        html += '<div class="field"><span class="field-label">Source</span><span class="field-value source-url"><a href="' + escapeHtml(data.url) + '" target="_blank" rel="noopener">' + escapeHtml(data.url) + "</a></span></div>";
+      }
+      for (const f of fields) {
+        const v = renderValue(data[f.key]);
+        html += '<div class="field"><span class="field-label">' + escapeHtml(f.label) + "</span><span class=\"field-value" + (v ? "" : " empty") + "\">" + (v ? escapeHtml(v) : "—") + "</span></div>";
+      }
+      if (data.images && data.images.length) {
+        html += '<div class="field"><span class="field-label">Images</span><div class="field-value"><div class="images">';
+        data.images.slice(0, 10).forEach(function (src) {
+          html += '<img src="' + escapeHtml(src) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'" />';
+        });
+        html += "</div></div></div>";
+      }
+      resultBody.innerHTML = html;
+      resultEl.hidden = false;
+    }
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (!url) return;
+      hideMessage();
+      resultEl.hidden = true;
+      submitBtn.disabled = true;
+      try {
+        const resp = await fetch("/api/parse?url=" + encodeURIComponent(url));
+        const data = await resp.json().catch(function () { return null; });
+        if (!resp.ok) {
+          showMessage(data?.detail || "Request failed", "error");
+          return;
+        }
+        renderResult(data);
+        showMessage("Done. Parsed data shown below.", "success");
+      } catch (err) {
+        showMessage("Network error: " + (err.message || "unknown"), "error");
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

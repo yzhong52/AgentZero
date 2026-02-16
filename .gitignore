@@ -2,3 +2,12 @@
 __pycache__/
 *.pyc
 .env
+
+# Rust
+target/
+Cargo.lock
+
+# Node/TypeScript
+node_modules/
+dist/
+*.log

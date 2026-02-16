@@ -1,4 +1,16 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+backend/target/
+.env
 .venv/
+venv/
+__pycache__/
+.DS_Store
+.vscode/
+*.log
+*.sqlite3
+/.idea/.venv/
 __pycache__/
 *.pyc
 .env

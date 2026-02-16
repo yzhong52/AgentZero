@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, middleware::Logger};
-use regex::Regex;
 use reqwest::Client;
+use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT, ACCEPT, ACCEPT_LANGUAGE, REFERER, ACCEPT_ENCODING};
 use scraper::{Html, Selector};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
@@ -31,11 +31,30 @@ fn safe_url(input: &str) -> Option<Url> {
 }
 
 async fn fetch_html(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
-    let resp = client
-        .get(url.as_str())
-        .header("User-Agent", "property-parser/1.0")
-        .send()
-        .await?;
+    // Build browser-like headers to reduce chance of 403 from sites with basic bot checks
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        USER_AGENT,
+        HeaderValue::from_static("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+    );
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"),
+    );
+    headers.insert(
+        ACCEPT_LANGUAGE,
+        HeaderValue::from_static("en-US,en;q=0.9"),
+    );
+    headers.insert(
+        ACCEPT_ENCODING,
+        HeaderValue::from_static("gzip, deflate, br"),
+    );
+    // Use the target URL as a referer (many sites accept this as a browser-supplied header)
+    if let Ok(rv) = HeaderValue::from_str(url.as_str()) {
+        headers.insert(REFERER, rv);
+    }
+
+    let resp = client.get(url.as_str()).headers(headers).send().await?;
     resp.error_for_status_ref()?;
     resp.text().await
 }
@@ -149,7 +168,6 @@ async fn parse(web::Query(params): web::Query<HashMap<String, String>>) -> impl 
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     let bind = "127.0.0.1:8000";
@@ -171,6 +189,4 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-fn main() {
-    println!("Hello, world!");
-}
+// (Removed stray main function)

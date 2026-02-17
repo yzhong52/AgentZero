@@ -167,6 +167,31 @@ async fn parse(
     }))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use scraper::Html;
+
+    #[test]
+    fn snapshot_redfin_3662_oak_st() {
+        let html = std::fs::read_to_string("fixtures/redfin_3662_oak_st.html")
+            .expect("fixture not found — run from backend/");
+        let document = Html::parse_document(&html);
+
+        let result = ParseResult {
+            url: "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332"
+                .to_string(),
+            title: extract_title(&document),
+            description: extract_description(&document),
+            images: extract_images(&document),
+            raw_json_ld: extract_json_ld(&document),
+            meta: meta_map(&document),
+        };
+
+        insta::assert_json_snapshot!(result);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();

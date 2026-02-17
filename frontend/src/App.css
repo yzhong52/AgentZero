@@ -1,42 +1,124 @@
-#root {
-  max-width: 1280px;
+.app-root {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1rem;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* ── form ── */
+.form-wrap {
+  margin: 1.5rem auto;
+  max-width: 640px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.input-row {
+  display: flex;
+  gap: 0.5rem;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.input-row input {
+  flex: 1;
+  padding: 0.55em 0.9em;
+  font-size: 1em;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: transparent;
+  color: inherit;
+  min-width: 0;
 }
 
-.card {
-  padding: 2em;
+/* ── messages ── */
+.message {
+  margin: 0.75rem auto;
+  max-width: 640px;
+  padding: 0.6em 1em;
+  border-radius: 6px;
+  font-size: 0.95em;
+  text-align: left;
+}
+.message.error   { background: #5c1a1a; color: #fca5a5; }
+.message.success { background: #14532d; color: #86efac; }
+
+/* ── listings ── */
+.listings-section {
+  margin-top: 2.5rem;
+  text-align: left;
 }
 
-.read-the-docs {
-  color: #888;
+.listings-section h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  color: #aaa;
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* ── card ── */
+.listing-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #333;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #1a1a1a;
+}
+
+.listing-card:hover {
+  border-color: #646cff;
+  box-shadow: 0 0 0 2px #646cff33;
+}
+
+.listing-img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+
+.listing-body {
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.listing-price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.listing-address {
+  font-size: 0.88rem;
+  color: #bbb;
+}
+
+.listing-stats {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #999;
+  flex-wrap: wrap;
+}
+
+.listing-title {
+  font-size: 0.82rem;
+  color: #777;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── empty state ── */
+.empty {
+  color: #666;
+  margin-top: 3rem;
 }

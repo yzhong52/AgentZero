@@ -1,43 +1,108 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-type ParseResult = {
+type Property = {
+  id: number
   url: string
   title: string
   description: string
+  price: number | null
+  price_currency: string | null
+  street_address: string | null
+  city: string | null
+  region: string | null
+  postal_code: string | null
+  country: string | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sqft: number | null
+  year_built: number | null
+  lat: number | null
+  lon: number | null
   images: string[]
-  raw_json_ld: any[]
-  meta: Record<string, string>
+  created_at: string
+}
+
+function formatPrice(price: number | null, currency: string | null) {
+  if (price == null) return null
+  return new Intl.NumberFormat('en-CA', {
+    style: 'currency',
+    currency: currency ?? 'CAD',
+    maximumFractionDigits: 0,
+  }).format(price)
+}
+
+function ListingCard({ p }: { p: Property }) {
+  const img = p.images[0]
+  const address = [p.street_address, p.city, p.region, p.postal_code]
+    .filter(Boolean)
+    .join(', ')
+
+  return (
+    <a className="listing-card" href={p.url} target="_blank" rel="noreferrer">
+      {img && <img src={img} alt={p.title} className="listing-img" />}
+      <div className="listing-body">
+        <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
+        <div className="listing-address">{address || p.url}</div>
+        <div className="listing-stats">
+          {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
+          {p.bathrooms != null && <span>{p.bathrooms} ba</span>}
+          {p.sqft != null && <span>{p.sqft.toLocaleString()} sqft</span>}
+          {p.year_built != null && <span>Built {p.year_built}</span>}
+        </div>
+        <div className="listing-title">{p.title}</div>
+      </div>
+    </a>
+  )
 }
 
 function App() {
   const [url, setUrl] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<ParseResult | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const [listings, setListings] = useState<Property[]>([])
 
-  async function handleParse(e?: React.FormEvent) {
-    e?.preventDefault()
-    setError(null)
-    setResult(null)
-    if (!url) return setError('Please enter a URL')
-    setLoading(true)
+  async function fetchListings() {
     try {
-      const resp = await fetch(`/api/parse?url=${encodeURIComponent(url)}`)
+      const resp = await fetch('/api/listings')
+      if (resp.ok) setListings(await resp.json())
+    } catch {
+      // non-fatal
+    }
+  }
+
+  useEffect(() => { fetchListings() }, [])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSavedMsg(null)
+    if (!url.trim()) return setError('Please enter a URL')
+    setSaving(true)
+    try {
+      const resp = await fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim() }),
+      })
       if (!resp.ok) throw new Error(await resp.text())
-      const data: ParseResult = await resp.json()
-      setResult(data)
+      const saved: Property = await resp.json()
+      setSavedMsg(`Saved: ${saved.title || saved.url}`)
+      setUrl('')
+      fetchListings()
     } catch (err: any) {
       setError(err?.message || String(err))
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   return (
     <div className="app-root">
       <h1>Property Parser</h1>
-      <form onSubmit={handleParse} className="form-wrap">
+
+      <form className="form-wrap">
         <div className="input-row">
           <input
             type="url"
@@ -45,29 +110,26 @@ function App() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Parsing…' : 'Parse'}
+          <button type="submit" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </form>
+
       {error && <div className="message error">{error}</div>}
-      {result && (
-        <div className="result">
-          <div style={{ padding: 12 }}>
-            <h2>Result</h2>
-            <p><strong>URL:</strong> {result.url}</p>
-            <p><strong>Title:</strong> {result.title}</p>
-            <p><strong>Description:</strong> {result.description}</p>
-            <p><strong>Images:</strong></p>
-            <ul>
-              {result.images.map((src) => (
-                <li key={src}><a href={src} target="_blank" rel="noreferrer">{src}</a></li>
-              ))}
-            </ul>
-            <p><strong>Raw JSON-LD:</strong></p>
-            <pre style={{ maxHeight: 300, overflow: 'auto' }}>{JSON.stringify(result.raw_json_ld, null, 2)}</pre>
+      {savedMsg && <div className="message success">{savedMsg}</div>}
+
+      {listings.length > 0 && (
+        <section className="listings-section">
+          <h2>Saved Listings ({listings.length})</h2>
+          <div className="listings-grid">
+            {listings.map((p) => <ListingCard key={p.id} p={p} />)}
           </div>
-        </div>
+        </section>
+      )}
+
+      {listings.length === 0 && (
+        <p className="empty">No listings saved yet. Paste a property URL above and click Save.</p>
       )}
     </div>
   )

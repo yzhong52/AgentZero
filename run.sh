@@ -3,11 +3,11 @@
 
 set -e
 
-echo "📦 Installing frontend dependencies..."
-npm install
+echo "Installing frontend dependencies..."
+npm --prefix frontend install
 
-echo "🔨 Building TypeScript frontend..."
-npm run build
+echo "Building React frontend..."
+npm --prefix frontend run build
 
-echo "🚀 Starting Rust server..."
-cargo run --release
+echo "Starting Rust server..."
+cargo run --release --manifest-path backend/Cargo.toml

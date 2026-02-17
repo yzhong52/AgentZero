@@ -1,5 +1,6 @@
 use serde::Serialize;
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
+use std::str::FromStr;
 
 #[derive(Serialize, Clone)]
 pub struct Property {
@@ -25,7 +26,11 @@ pub struct Property {
 }
 
 pub async fn init(database_url: &str) -> SqlitePool {
-    let pool = SqlitePool::connect(database_url)
+    let opts = SqliteConnectOptions::from_str(database_url)
+        .expect("Invalid DATABASE_URL")
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(opts)
         .await
         .expect("Failed to connect to SQLite database");
 

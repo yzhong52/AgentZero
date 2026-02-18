@@ -48,36 +48,40 @@ async fn main() {
     let total = listings.len();
     println!("Found {} listing(s)", total);
 
-    let mut total_cached = 0usize;
-    let mut total_images = 0usize;
+    let mut total_newly_cached = 0usize;
+    let mut total_pending = 0usize;
 
     for (i, listing) in listings.iter().enumerate() {
-        println!("[{}/{}] {}", i + 1, total, listing.url);
+        let pending = match db::list_pending_image_urls(&pool, listing.id).await {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("  Failed to list pending for listing {}: {}", listing.id, e);
+                continue;
+            }
+        };
 
-        if listing.images.is_empty() {
-            println!("  no images");
+        println!("[{}/{}] {} — {} pending", i + 1, total, listing.url, pending.len());
+
+        if pending.is_empty() {
             continue;
         }
 
-        let resolved = images::cache_images(
+        let newly_cached = images::cache_images(
             &pool,
             &client,
             store.as_ref(),
             listing.id,
-            &listing.images,
             &images_url_prefix,
         )
         .await;
 
-        let cached = resolved
-            .iter()
-            .filter(|u| u.starts_with(&images_url_prefix))
-            .count();
-
-        println!("  {}/{} images cached locally", cached, resolved.len());
-        total_cached += cached;
-        total_images += resolved.len();
+        println!("  {}/{} newly cached", newly_cached, pending.len());
+        total_newly_cached += newly_cached;
+        total_pending += pending.len();
     }
 
-    println!("\nDone. {}/{} images cached across {} listing(s).", total_cached, total_images, total);
+    println!(
+        "\nDone. {}/{} images cached across {} listing(s).",
+        total_newly_cached, total_pending, total
+    );
 }

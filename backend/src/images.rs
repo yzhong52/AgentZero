@@ -41,62 +41,55 @@ fn image_ext(bytes: &[u8]) -> &'static str {
     }
 }
 
-/// Download and cache all images for a listing.
+/// Download and cache all pending images for a listing.
 ///
-/// Uses `store` (any `ObjectStore` impl) for writes — swap `LocalFileSystem`
-/// for `AmazonS3`, `GoogleCloudStorage`, etc. with no other code changes.
+/// "Pending" means rows in images_cache where local_path IS NULL.
+/// On success, sha256 / phash / local_path are written back to the row.
+/// On failure (404, network error, decode error), the row is left with
+/// NULL fields so the API falls back to source_url.
 ///
-/// `url_prefix` is prepended to object keys to build the public serve URL:
-///   - Local:  "/images"               → "/images/<id>/<sha256>.jpg"
-///   - S3:     "https://bucket.s3…"    → "https://bucket.s3…/<id>/<sha256>.jpg"
-///
-/// Dedup per listing:
-///   1. Fast path: source URL already in images_cache → skip download.
-///   2. SHA-256: exact byte-duplicate → reuse existing path.
-///   3. dHash: perceptual duplicate (Hamming ≤ 8) → reuse existing path.
+/// Returns the number of images newly written to the store.
 pub async fn cache_images(
     pool: &SqlitePool,
     client: &Client,
     store: &dyn ObjectStore,
     listing_id: i64,
-    image_urls: &[String],
     url_prefix: &str,
-) -> Vec<String> {
-    // Load existing cached images for this listing (for SHA-256 / pHash comparison).
+) -> usize {
+    // Already-cached images for this listing (for SHA-256 / dHash dedup).
     let mut cached = db::list_cached_images(pool, listing_id)
         .await
         .unwrap_or_default();
 
-    let mut resolved: Vec<String> = Vec::with_capacity(image_urls.len());
-
-    for url in image_urls {
-        // Fast path: URL already cached.
-        match db::find_cached_by_url(pool, url).await {
-            Ok(Some(serve_url)) => {
-                resolved.push(serve_url);
-                continue;
-            }
-            Ok(None) => {}
-            Err(e) => {
-                tracing::warn!("DB lookup failed for {}: {}", url, e);
-                resolved.push(url.clone());
-                continue;
-            }
+    // URLs registered but not yet downloaded.
+    let pending = match db::list_pending_image_urls(pool, listing_id).await {
+        Ok(urls) => urls,
+        Err(e) => {
+            tracing::error!("Failed to list pending images for listing {}: {}", listing_id, e);
+            return 0;
         }
+    };
 
+    let mut newly_cached = 0usize;
+
+    for url in &pending {
         // Download image bytes.
         let bytes = match client.get(url).send().await {
-            Ok(resp) => match resp.bytes().await {
-                Ok(b) => b,
+            Ok(resp) => match resp.error_for_status() {
+                Ok(resp) => match resp.bytes().await {
+                    Ok(b) => b,
+                    Err(e) => {
+                        tracing::warn!("Failed to read image bytes {}: {}", url, e);
+                        continue;
+                    }
+                },
                 Err(e) => {
-                    tracing::warn!("Failed to read image bytes {}: {}", url, e);
-                    resolved.push(url.clone());
+                    tracing::warn!("Image URL returned error status {}: {}", url, e);
                     continue;
                 }
             },
             Err(e) => {
                 tracing::warn!("Failed to download image {}: {}", url, e);
-                resolved.push(url.clone());
                 continue;
             }
         };
@@ -104,31 +97,31 @@ pub async fn cache_images(
         // SHA-256 — exact duplicate within this listing.
         let sha256 = hex::encode(Sha256::digest(&bytes));
         if let Some(c) = cached.iter().find(|c| c.sha256 == sha256) {
-            resolved.push(c.local_path.clone());
+            let _ = db::update_cached_image(pool, listing_id, url, &sha256, c.phash, &c.local_path).await;
             continue;
         }
 
         // Decode image for dHash.
-        let img = match image::load_from_memory(&bytes) {
-            Ok(i) => i,
+        let ph = match image::load_from_memory(&bytes) {
+            Ok(img) => dhash(&img),
             Err(e) => {
                 tracing::warn!("Could not decode image {}: {}", url, e);
-                resolved.push(url.clone());
-                continue;
+                // Store the file anyway; skip dHash dedup.
+                0i64
             }
         };
 
-        let ph = dhash(&img);
-
-        // dHash dedup — perceptual duplicate within this listing.
-        if let Some(existing) = cached.iter().find(|c| hamming(c.phash, ph) <= PHASH_THRESHOLD) {
-            tracing::debug!(
-                "dHash duplicate for {} (distance={})",
-                url,
-                hamming(existing.phash, ph)
-            );
-            resolved.push(existing.local_path.clone());
-            continue;
+        // dHash dedup — perceptual duplicate within this listing (only when ph != 0).
+        if ph != 0 {
+            if let Some(existing) = cached.iter().find(|c| hamming(c.phash, ph) <= PHASH_THRESHOLD) {
+                tracing::debug!(
+                    "dHash duplicate for {} (distance={})",
+                    url,
+                    hamming(existing.phash, ph)
+                );
+                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.local_path).await;
+                continue;
+            }
         }
 
         // Write to object store.
@@ -138,41 +131,22 @@ pub async fn cache_images(
 
         if let Err(e) = store.put(&object_key, bytes.clone().into()).await {
             tracing::warn!("Failed to write image to store {}: {}", object_key, e);
-            resolved.push(url.clone());
             continue;
         }
 
-        // Persist to DB.
-        if let Err(e) =
-            db::insert_cached_image(pool, listing_id, url, &sha256, ph, &serve_url).await
-        {
-            tracing::warn!("Failed to insert image cache row: {}", e);
-        }
+        let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &serve_url).await;
 
         // Update in-memory list for subsequent dedup checks.
         cached.push(db::CachedImage {
             sha256,
             phash: ph,
-            local_path: serve_url.clone(),
+            local_path: serve_url,
         });
 
-        resolved.push(serve_url);
+        newly_cached += 1;
     }
 
-    resolved
-}
-
-/// Resolve a listing's stored image URLs: return cached serve URL if available,
-/// else fall back to the original remote URL.
-pub async fn resolve_images(pool: &SqlitePool, image_urls: &[String]) -> Vec<String> {
-    let mut out = Vec::with_capacity(image_urls.len());
-    for url in image_urls {
-        match db::find_cached_by_url(pool, url).await {
-            Ok(Some(serve_url)) => out.push(serve_url),
-            _ => out.push(url.clone()),
-        }
-    }
-    out
+    newly_cached
 }
 
 /// Ensure the local images directory exists at startup.

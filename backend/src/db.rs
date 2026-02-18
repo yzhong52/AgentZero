@@ -21,6 +21,7 @@ pub struct Property {
     pub year_built: Option<i64>,
     pub lat: Option<f64>,
     pub lon: Option<f64>,
+    /// Populated from images_cache, not stored directly in listings.
     pub images: Vec<String>,
     pub created_at: String,
 }
@@ -43,14 +44,12 @@ pub async fn init(database_url: &str) -> SqlitePool {
 }
 
 pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
-    let images = serde_json::to_string(&p.images).unwrap_or_else(|_| "[]".to_string());
-
     sqlx::query(
         r#"INSERT INTO listings
                (url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, images)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                bedrooms, bathrooms, sqft, year_built, lat, lon)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(url) DO UPDATE SET
                title          = excluded.title,
                description    = excluded.description,
@@ -66,8 +65,7 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                sqft           = excluded.sqft,
                year_built     = excluded.year_built,
                lat            = excluded.lat,
-               lon            = excluded.lon,
-               images         = excluded.images"#,
+               lon            = excluded.lon"#,
     )
     .bind(&p.url)
     .bind(&p.title)
@@ -85,14 +83,13 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
-    .bind(&images)
     .execute(pool)
     .await?;
 
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, images, created_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -106,19 +103,22 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, images, created_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.iter().map(row_to_property).collect())
+    let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
+
+    for prop in &mut properties {
+        prop.images = list_resolved_images(pool, prop.id).await.unwrap_or_default();
+    }
+
+    Ok(properties)
 }
 
 fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
-    let images_str: &str = row.get("images");
-    let images: Vec<String> = serde_json::from_str(images_str).unwrap_or_default();
-
     Property {
         id: row.get("id"),
         url: row.get("url"),
@@ -137,7 +137,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         year_built: row.get("year_built"),
         lat: row.get("lat"),
         lon: row.get("lon"),
-        images,
+        images: vec![], // populated separately from images_cache
         created_at: row.get("created_at"),
     }
 }
@@ -146,19 +146,22 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
 // images_cache
 // ---------------------------------------------------------------------------
 
+/// An image that has been successfully downloaded and cached locally.
+/// Only rows with non-null local_path are returned here (used for dedup).
 pub struct CachedImage {
     pub sha256: String,
     pub phash: i64,
     pub local_path: String,
 }
 
-/// All cached images for a listing (used for dedup during download).
+/// All successfully cached images for a listing (used for SHA-256 / dHash dedup).
 pub async fn list_cached_images(
     pool: &SqlitePool,
     listing_id: i64,
 ) -> Result<Vec<CachedImage>, sqlx::Error> {
     let rows = sqlx::query(
-        "SELECT sha256, phash, local_path FROM images_cache WHERE listing_id = ?",
+        "SELECT sha256, phash, local_path FROM images_cache
+         WHERE listing_id = ? AND local_path IS NOT NULL",
     )
     .bind(listing_id)
     .fetch_all(pool)
@@ -174,8 +177,40 @@ pub async fn list_cached_images(
         .collect())
 }
 
-/// Insert a cached image. Ignores conflicts on (listing_id, sha256).
-pub async fn insert_cached_image(
+/// Register an image URL for a listing. sha256/phash/local_path start as NULL.
+/// No-op if the URL is already registered.
+pub async fn insert_image_url(
+    pool: &SqlitePool,
+    listing_id: i64,
+    source_url: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT OR IGNORE INTO images_cache (listing_id, source_url) VALUES (?, ?)",
+    )
+    .bind(listing_id)
+    .bind(source_url)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// URLs that have been registered but not yet downloaded (local_path IS NULL).
+pub async fn list_pending_image_urls(
+    pool: &SqlitePool,
+    listing_id: i64,
+) -> Result<Vec<String>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT source_url FROM images_cache
+         WHERE listing_id = ? AND local_path IS NULL ORDER BY id",
+    )
+    .bind(listing_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.iter().map(|r| r.get("source_url")).collect())
+}
+
+/// Mark an image as cached by filling in sha256, phash, and local_path.
+pub async fn update_cached_image(
     pool: &SqlitePool,
     listing_id: i64,
     source_url: &str,
@@ -184,27 +219,30 @@ pub async fn insert_cached_image(
     local_path: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT OR IGNORE INTO images_cache (listing_id, source_url, sha256, phash, local_path)
-         VALUES (?, ?, ?, ?, ?)",
+        "UPDATE images_cache SET sha256 = ?, phash = ?, local_path = ?
+         WHERE listing_id = ? AND source_url = ?",
     )
-    .bind(listing_id)
-    .bind(source_url)
     .bind(sha256)
     .bind(phash)
     .bind(local_path)
+    .bind(listing_id)
+    .bind(source_url)
     .execute(pool)
     .await?;
     Ok(())
 }
 
-/// Given a source URL, return its cached local_path if already downloaded.
-pub async fn find_cached_by_url(
+/// Resolved image URLs for a listing: local_path if cached, source_url as fallback.
+pub async fn list_resolved_images(
     pool: &SqlitePool,
-    source_url: &str,
-) -> Result<Option<String>, sqlx::Error> {
-    let row = sqlx::query("SELECT local_path FROM images_cache WHERE source_url = ? LIMIT 1")
-        .bind(source_url)
-        .fetch_optional(pool)
-        .await?;
-    Ok(row.map(|r| r.get("local_path")))
+    listing_id: i64,
+) -> Result<Vec<String>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT COALESCE(local_path, source_url) AS url
+         FROM images_cache WHERE listing_id = ? ORDER BY id",
+    )
+    .bind(listing_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.iter().map(|r| r.get("url")).collect())
 }

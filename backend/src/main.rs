@@ -287,21 +287,26 @@ async fn save_listing(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    // Cache images in the background; resolve URLs for the response.
-    let resolved_images = images::cache_images(
+    // Register image URLs in images_cache (no-op if already present).
+    for url in &property.images {
+        let _ = db::insert_image_url(&state.db, saved.id, url).await;
+    }
+
+    // Download any pending images.
+    images::cache_images(
         &state.db,
         &state.client,
         state.store.as_ref(),
         saved.id,
-        &saved.images,
         &state.images_url_prefix,
     )
     .await;
 
-    Ok(Json(db::Property {
-        images: resolved_images,
-        ..saved
-    }))
+    let images = db::list_resolved_images(&state.db, saved.id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok(Json(db::Property { images, ..saved }))
 }
 
 async fn list_listings(
@@ -311,16 +316,7 @@ async fn list_listings(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    let mut resolved = Vec::with_capacity(listings.len());
-    for listing in listings {
-        let imgs = images::resolve_images(&state.db, &listing.images).await;
-        resolved.push(db::Property {
-            images: imgs,
-            ..listing
-        });
-    }
-
-    Ok(Json(resolved))
+    Ok(Json(listings))
 }
 
 #[cfg(test)]

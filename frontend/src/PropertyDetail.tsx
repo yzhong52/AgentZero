@@ -17,6 +17,8 @@ export function PropertyDetail() {
     const [property, setProperty] = useState<Property | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [refreshing, setRefreshing] = useState(false)
+    const [refreshMsg, setRefreshMsg] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchProperty() {
@@ -38,6 +40,27 @@ export function PropertyDetail() {
         fetchProperty()
     }, [id])
 
+    async function handleRefresh() {
+        if (!property) return
+        setError(null)
+        setRefreshMsg(null)
+        setRefreshing(true)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}`, {
+                method: 'PUT',
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+            const updated: Property = await resp.json()
+            setProperty(updated)
+            setRefreshMsg('Property updated successfully')
+            setTimeout(() => setRefreshMsg(null), 3000)
+        } catch (err: any) {
+            setError(err?.message || String(err))
+        } finally {
+            setRefreshing(false)
+        }
+    }
+
     if (loading) return <div className="loading">Loading...</div>
     if (error) return <div className="error-msg">{error}</div>
     if (!property) return <div className="error-msg">Property not found</div>
@@ -53,9 +76,22 @@ export function PropertyDetail() {
 
     return (
         <div className="property-detail">
-            <button className="back-btn" onClick={() => navigate('/')}>
-                ← Back
-            </button>
+            <div className="detail-nav">
+                <button className="back-btn" onClick={() => navigate('/')}>
+                    ← Back
+                </button>
+                <button 
+                    className="refresh-btn" 
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    title="Refresh property data from source"
+                >
+                    {refreshing ? '⟳ Refreshing…' : '⟳ Refresh'}
+                </button>
+            </div>
+
+            {error && <div className="message error">{error}</div>}
+            {refreshMsg && <div className="message success">{refreshMsg}</div>}
 
             <div className="detail-images">
                 {property.images.length > 0 ? (

@@ -130,19 +130,41 @@
   padding: 2rem 1rem;
 }
 
-.back-btn {
+/* ── property detail ── */
+.property-detail {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.detail-nav {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.back-btn,
+.refresh-btn {
   background: none;
   border: none;
   color: #646cff;
   font-size: 1rem;
   cursor: pointer;
-  padding: 0.5rem;
-  margin-bottom: 1.5rem;
+  padding: 0.5rem 0.75rem;
   transition: color 0.2s;
+  border-radius: 4px;
 }
 
-.back-btn:hover {
+.back-btn:hover,
+.refresh-btn:hover {
   color: #8b9eff;
+}
+
+.back-btn:disabled,
+.refresh-btn:disabled {
+  color: #555;
+  cursor: not-allowed;
 }
 
 .detail-images {

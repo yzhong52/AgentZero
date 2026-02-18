@@ -3,9 +3,9 @@ mod images;
 
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{Query, State, Path},
     http::StatusCode,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use object_store::local::LocalFileSystem;
 use std::sync::Arc;
@@ -309,6 +309,63 @@ async fn save_listing(
     Ok(Json(db::Property { images, ..saved }))
 }
 
+async fn refresh_listing(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<db::Property>, (StatusCode, String)> {
+    // Fetch existing listing to get the URL
+    let listings = db::list(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    
+    let property = listings
+        .iter()
+        .find(|p| p.id == id)
+        .ok_or((StatusCode::NOT_FOUND, "Listing not found".to_string()))?;
+
+    let url = &property.url;
+    let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+
+    let html = fetch_html(&state.client, &parsed)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+
+    // Extract everything in a block
+    let (json_ld, title) = {
+        let document = Html::parse_document(&html);
+        (extract_json_ld(&document), extract_title(&document))
+    };
+
+    let mut updated = extract_property(parsed.as_str(), &title, &json_ld);
+    updated.id = id;
+    updated.url = url.to_string();
+
+    let saved = db::update_by_id(&state.db, id, &updated)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    // Update image URLs in images_cache
+    for (position, url) in updated.images.iter().enumerate() {
+        let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
+    }
+
+    // Download any pending images
+    images::cache_images(
+        &state.db,
+        &state.client,
+        state.store.as_ref(),
+        id,
+        &state.images_url_prefix,
+    )
+    .await;
+
+    let images = db::list_resolved_images(&state.db, saved.id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok(Json(db::Property { images, ..saved }))
+}
+
 async fn list_listings(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
@@ -403,6 +460,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
+        .route("/api/listings/:id", put(refresh_listing))
         .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)
         .layer(cors);

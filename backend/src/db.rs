@@ -99,6 +99,58 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     Ok(row_to_property(&row))
 }
 
+pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
+    sqlx::query(
+        r#"UPDATE listings SET
+               title          = ?,
+               description    = ?,
+               price          = ?,
+               price_currency = ?,
+               street_address = ?,
+               city           = ?,
+               region         = ?,
+               postal_code    = ?,
+               country        = ?,
+               bedrooms       = ?,
+               bathrooms      = ?,
+               sqft           = ?,
+               year_built     = ?,
+               lat            = ?,
+               lon            = ?
+           WHERE id = ?"#,
+    )
+    .bind(&p.title)
+    .bind(&p.description)
+    .bind(p.price)
+    .bind(&p.price_currency)
+    .bind(&p.street_address)
+    .bind(&p.city)
+    .bind(&p.region)
+    .bind(&p.postal_code)
+    .bind(&p.country)
+    .bind(p.bedrooms)
+    .bind(p.bathrooms)
+    .bind(p.sqft)
+    .bind(p.year_built)
+    .bind(p.lat)
+    .bind(p.lon)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    let row = sqlx::query(
+        "SELECT id, url, title, description, price, price_currency,
+                street_address, city, region, postal_code, country,
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
+         FROM listings WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row_to_property(&row))
+}
+
 pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,

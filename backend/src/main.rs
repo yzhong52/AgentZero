@@ -1,4 +1,5 @@
 mod db;
+mod images;
 
 use axum::{
     Json, Router,
@@ -6,6 +7,7 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
+use tower_http::services::ServeDir;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, REFERER, USER_AGENT};
 use scraper::{Html, Selector};
@@ -20,6 +22,7 @@ use url::Url;
 struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
+    images_dir: String,
 }
 
 #[derive(Serialize)]
@@ -280,7 +283,20 @@ async fn save_listing(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    Ok(Json(saved))
+    // Cache images in the background; resolve URLs for the response.
+    let resolved_images = images::cache_images(
+        &state.db,
+        &state.client,
+        saved.id,
+        &saved.images,
+        &state.images_dir,
+    )
+    .await;
+
+    Ok(Json(db::Property {
+        images: resolved_images,
+        ..saved
+    }))
 }
 
 async fn list_listings(
@@ -290,7 +306,16 @@ async fn list_listings(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    Ok(Json(listings))
+    let mut resolved = Vec::with_capacity(listings.len());
+    for listing in listings {
+        let imgs = images::resolve_images(&state.db, &listing.images).await;
+        resolved.push(db::Property {
+            images: imgs,
+            ..listing
+        });
+    }
+
+    Ok(Json(resolved))
 }
 
 #[cfg(test)]
@@ -338,15 +363,22 @@ async fn main() {
 
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
+    let images_dir =
+        std::env::var("IMAGES_DIR").unwrap_or_else(|_| "listings_images".to_string());
 
     let db = db::init(&database_url).await;
+    images::ensure_images_dir(&images_dir).await;
 
     let client = Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
         .unwrap();
 
-    let state = AppState { db, client };
+    let state = AppState {
+        db,
+        client,
+        images_dir: images_dir.clone(),
+    };
 
     let cors = CorsLayer::new()
         .allow_origin(
@@ -360,6 +392,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
+        .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)
         .layer(cors);
 

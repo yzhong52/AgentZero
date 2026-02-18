@@ -141,3 +141,70 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         created_at: row.get("created_at"),
     }
 }
+
+// ---------------------------------------------------------------------------
+// images_cache
+// ---------------------------------------------------------------------------
+
+pub struct CachedImage {
+    pub sha256: String,
+    pub phash: i64,
+    pub local_path: String,
+}
+
+/// All cached images for a listing (used for dedup during download).
+pub async fn list_cached_images(
+    pool: &SqlitePool,
+    listing_id: i64,
+) -> Result<Vec<CachedImage>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT sha256, phash, local_path FROM images_cache WHERE listing_id = ?",
+    )
+    .bind(listing_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .iter()
+        .map(|r| CachedImage {
+            sha256: r.get("sha256"),
+            phash: r.get("phash"),
+            local_path: r.get("local_path"),
+        })
+        .collect())
+}
+
+/// Insert a cached image. Ignores conflicts on (listing_id, sha256).
+pub async fn insert_cached_image(
+    pool: &SqlitePool,
+    listing_id: i64,
+    source_url: &str,
+    sha256: &str,
+    phash: i64,
+    local_path: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT OR IGNORE INTO images_cache (listing_id, source_url, sha256, phash, local_path)
+         VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(listing_id)
+    .bind(source_url)
+    .bind(sha256)
+    .bind(phash)
+    .bind(local_path)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Given a source URL, return its cached local_path if already downloaded.
+pub async fn find_cached_by_url(
+    pool: &SqlitePool,
+    source_url: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    let row = sqlx::query("SELECT local_path FROM images_cache WHERE source_url = ? LIMIT 1")
+        .bind(source_url)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(|r| r.get("local_path")))
+}

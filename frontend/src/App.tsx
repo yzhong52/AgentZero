@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './App.css'
 
-type Property = {
+export type Property = {
   id: number
   url: string
   title: string
@@ -33,13 +34,18 @@ function formatPrice(price: number | null, currency: string | null) {
 }
 
 function ListingCard({ p }: { p: Property }) {
+  const navigate = useNavigate()
   const img = p.images[0]
   const address = [p.street_address, p.city, p.region, p.postal_code]
     .filter(Boolean)
     .join(', ')
 
   return (
-    <a className="listing-card" href={p.url} target="_blank" rel="noreferrer">
+    <button
+      className="listing-card"
+      onClick={() => navigate(`/property/${p.id}`)}
+      type="button"
+    >
       {img && <img src={img} alt={p.title} className="listing-img" />}
       <div className="listing-body">
         <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
@@ -52,7 +58,7 @@ function ListingCard({ p }: { p: Property }) {
         </div>
         <div className="listing-title">{p.title}</div>
       </div>
-    </a>
+    </button>
   )
 }
 

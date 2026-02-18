@@ -1,5 +1,6 @@
 use crate::db;
 use image::imageops::FilterType;
+use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
 use reqwest::Client;
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
@@ -41,25 +42,27 @@ fn image_ext(bytes: &[u8]) -> &'static str {
 }
 
 /// Download and cache all images for a listing.
-/// - Skips URLs already in images_cache (fast path: source_url lookup).
-/// - Skips exact byte-duplicates via SHA-256.
-/// - Skips perceptual duplicates via dHash with Hamming distance ≤ PHASH_THRESHOLD.
-/// Returns resolved image URLs: local `/images/<id>/<sha256>.<ext>` when cached,
-/// or the original remote URL as fallback.
+///
+/// Uses `store` (any `ObjectStore` impl) for writes — swap `LocalFileSystem`
+/// for `AmazonS3`, `GoogleCloudStorage`, etc. with no other code changes.
+///
+/// `url_prefix` is prepended to object keys to build the public serve URL:
+///   - Local:  "/images"               → "/images/<id>/<sha256>.jpg"
+///   - S3:     "https://bucket.s3…"    → "https://bucket.s3…/<id>/<sha256>.jpg"
+///
+/// Dedup per listing:
+///   1. Fast path: source URL already in images_cache → skip download.
+///   2. SHA-256: exact byte-duplicate → reuse existing path.
+///   3. dHash: perceptual duplicate (Hamming ≤ 8) → reuse existing path.
 pub async fn cache_images(
     pool: &SqlitePool,
     client: &Client,
+    store: &dyn ObjectStore,
     listing_id: i64,
     image_urls: &[String],
-    images_dir: &str,
+    url_prefix: &str,
 ) -> Vec<String> {
-    let dir = format!("{}/{}", images_dir, listing_id);
-    if let Err(e) = fs::create_dir_all(&dir).await {
-        tracing::warn!("Could not create image dir {}: {}", dir, e);
-        return image_urls.to_vec();
-    }
-
-    // Load existing cached images for this listing (for pHash comparison).
+    // Load existing cached images for this listing (for SHA-256 / pHash comparison).
     let mut cached = db::list_cached_images(pool, listing_id)
         .await
         .unwrap_or_default();
@@ -69,8 +72,8 @@ pub async fn cache_images(
     for url in image_urls {
         // Fast path: URL already cached.
         match db::find_cached_by_url(pool, url).await {
-            Ok(Some(local_path)) => {
-                resolved.push(local_path);
+            Ok(Some(serve_url)) => {
+                resolved.push(serve_url);
                 continue;
             }
             Ok(None) => {}
@@ -98,21 +101,14 @@ pub async fn cache_images(
             }
         };
 
-        // SHA-256.
+        // SHA-256 — exact duplicate within this listing.
         let sha256 = hex::encode(Sha256::digest(&bytes));
-
-        // Check SHA-256 dupe within this listing.
-        if cached.iter().any(|c| c.sha256 == sha256) {
-            // Exact duplicate — reuse existing local_path.
-            if let Some(c) = cached.iter().find(|c| c.sha256 == sha256) {
-                resolved.push(c.local_path.clone());
-            } else {
-                resolved.push(url.clone());
-            }
+        if let Some(c) = cached.iter().find(|c| c.sha256 == sha256) {
+            resolved.push(c.local_path.clone());
             continue;
         }
 
-        // Decode image for pHash.
+        // Decode image for dHash.
         let img = match image::load_from_memory(&bytes) {
             Ok(i) => i,
             Err(e) => {
@@ -124,10 +120,10 @@ pub async fn cache_images(
 
         let ph = dhash(&img);
 
-        // pHash dedup: compare against all cached hashes for this listing.
+        // dHash dedup — perceptual duplicate within this listing.
         if let Some(existing) = cached.iter().find(|c| hamming(c.phash, ph) <= PHASH_THRESHOLD) {
             tracing::debug!(
-                "pHash duplicate detected for {} (distance={})",
+                "dHash duplicate for {} (distance={})",
                 url,
                 hamming(existing.phash, ph)
             );
@@ -135,54 +131,54 @@ pub async fn cache_images(
             continue;
         }
 
-        // Write file.
+        // Write to object store.
         let ext = image_ext(&bytes);
-        let filename = format!("{}.{}", sha256, ext);
-        let local_path = format!("{}/{}", dir, filename);
-        let serve_path = format!("/images/{}/{}", listing_id, filename);
+        let object_key = ObjectPath::from(format!("{}/{}.{}", listing_id, sha256, ext));
+        let serve_url = format!("{}/{}", url_prefix, object_key);
 
-        if let Err(e) = fs::write(&local_path, &bytes).await {
-            tracing::warn!("Failed to write image {}: {}", local_path, e);
+        if let Err(e) = store.put(&object_key, bytes.clone().into()).await {
+            tracing::warn!("Failed to write image to store {}: {}", object_key, e);
             resolved.push(url.clone());
             continue;
         }
 
         // Persist to DB.
         if let Err(e) =
-            db::insert_cached_image(pool, listing_id, url, &sha256, ph, &serve_path).await
+            db::insert_cached_image(pool, listing_id, url, &sha256, ph, &serve_url).await
         {
             tracing::warn!("Failed to insert image cache row: {}", e);
         }
 
-        // Update in-memory list for subsequent pHash checks.
+        // Update in-memory list for subsequent dedup checks.
         cached.push(db::CachedImage {
             sha256,
             phash: ph,
-            local_path: serve_path.clone(),
+            local_path: serve_url.clone(),
         });
 
-        resolved.push(serve_path);
+        resolved.push(serve_url);
     }
 
     resolved
 }
 
-/// Resolve a listing's stored image URLs: return local path if cached, else remote URL.
+/// Resolve a listing's stored image URLs: return cached serve URL if available,
+/// else fall back to the original remote URL.
 pub async fn resolve_images(pool: &SqlitePool, image_urls: &[String]) -> Vec<String> {
     let mut out = Vec::with_capacity(image_urls.len());
     for url in image_urls {
         match db::find_cached_by_url(pool, url).await {
-            Ok(Some(local)) => out.push(local),
+            Ok(Some(serve_url)) => out.push(serve_url),
             _ => out.push(url.clone()),
         }
     }
     out
 }
 
-/// Ensure the images directory exists at startup.
+/// Ensure the local images directory exists at startup.
+/// Only needed for LocalFileSystem — cloud stores (S3, GCS) don't require this.
 pub async fn ensure_images_dir(path: &str) {
     if let Err(e) = fs::create_dir_all(path).await {
         tracing::warn!("Could not create images dir {}: {}", path, e);
     }
 }
-

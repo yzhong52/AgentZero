@@ -19,6 +19,7 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate"] }
 sha2 = "0.10"
 hex = "0.4"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+object_store = "0.13"
 
 [dev-dependencies]
 insta = { version = "1", features = ["json"] }

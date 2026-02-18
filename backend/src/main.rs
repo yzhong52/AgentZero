@@ -7,6 +7,8 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
+use object_store::local::LocalFileSystem;
+use std::sync::Arc;
 use tower_http::services::ServeDir;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, REFERER, USER_AGENT};
@@ -22,7 +24,9 @@ use url::Url;
 struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
-    images_dir: String,
+    store: Arc<dyn object_store::ObjectStore>,
+    /// Prefix for public image URLs. Local: "/images". S3: "https://bucket.s3…".
+    images_url_prefix: String,
 }
 
 #[derive(Serialize)]
@@ -287,9 +291,10 @@ async fn save_listing(
     let resolved_images = images::cache_images(
         &state.db,
         &state.client,
+        state.store.as_ref(),
         saved.id,
         &saved.images,
-        &state.images_dir,
+        &state.images_url_prefix,
     )
     .await;
 
@@ -365,9 +370,18 @@ async fn main() {
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
     let images_dir =
         std::env::var("IMAGES_DIR").unwrap_or_else(|_| "listings_images".to_string());
+    let images_url_prefix =
+        std::env::var("IMAGES_URL_PREFIX").unwrap_or_else(|_| "/images".to_string());
 
     let db = db::init(&database_url).await;
+
+    // Local filesystem store — swap for AmazonS3::new() / GoogleCloudStorage::new()
+    // when ready to move to cloud. Set IMAGES_URL_PREFIX to the bucket's public URL.
     images::ensure_images_dir(&images_dir).await;
+    let store: Arc<dyn object_store::ObjectStore> = Arc::new(
+        LocalFileSystem::new_with_prefix(std::path::Path::new(&images_dir))
+            .expect("Failed to initialize local image store"),
+    );
 
     let client = Client::builder()
         .timeout(Duration::from_secs(15))
@@ -377,7 +391,8 @@ async fn main() {
     let state = AppState {
         db,
         client,
-        images_dir: images_dir.clone(),
+        store,
+        images_url_prefix,
     };
 
     let cors = CorsLayer::new()

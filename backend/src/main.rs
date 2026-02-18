@@ -15,7 +15,7 @@ use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, HeaderMap, Heade
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 use url::Url;
@@ -36,7 +36,7 @@ struct ParseResult {
     description: String,
     images: Vec<String>,
     raw_json_ld: Vec<JsonValue>,
-    meta: HashMap<String, String>,
+    meta: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize)]
@@ -101,8 +101,8 @@ fn extract_json_ld(document: &Html) -> Vec<JsonValue> {
     out
 }
 
-fn meta_map(document: &Html) -> HashMap<String, String> {
-    let mut m = HashMap::new();
+fn meta_map(document: &Html) -> BTreeMap<String, String> {
+    let mut m = BTreeMap::new();
     let selector = Selector::parse("meta").unwrap();
     for el in document.select(&selector) {
         let name = el

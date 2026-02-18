@@ -100,7 +100,7 @@ function App() {
 
   return (
     <div className="app-root">
-      <h1>Property Parser</h1>
+      <h1>Agent Zero</h1>
 
       <form className="form-wrap">
         <div className="input-row">

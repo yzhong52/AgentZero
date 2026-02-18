@@ -287,9 +287,9 @@ async fn save_listing(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    // Register image URLs in images_cache (no-op if already present).
-    for url in &property.images {
-        let _ = db::insert_image_url(&state.db, saved.id, url).await;
+    // Register image URLs in images_cache, preserving parser ordering.
+    for (position, url) in property.images.iter().enumerate() {
+        let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
     }
 
     // Download any pending images.

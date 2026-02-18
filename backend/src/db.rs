@@ -177,18 +177,23 @@ pub async fn list_cached_images(
         .collect())
 }
 
-/// Register an image URL for a listing. sha256/phash/local_path start as NULL.
-/// No-op if the URL is already registered.
+/// Register an image URL for a listing at a given position.
+/// If the URL already exists, its position is updated to reflect the latest
+/// parser ordering. sha256/phash/local_path are left unchanged on conflict.
 pub async fn insert_image_url(
     pool: &SqlitePool,
     listing_id: i64,
     source_url: &str,
+    position: i64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT OR IGNORE INTO images_cache (listing_id, source_url) VALUES (?, ?)",
+        "INSERT INTO images_cache (listing_id, source_url, position)
+         VALUES (?, ?, ?)
+         ON CONFLICT(listing_id, source_url) DO UPDATE SET position = excluded.position",
     )
     .bind(listing_id)
     .bind(source_url)
+    .bind(position)
     .execute(pool)
     .await?;
     Ok(())
@@ -201,7 +206,7 @@ pub async fn list_pending_image_urls(
 ) -> Result<Vec<String>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT source_url FROM images_cache
-         WHERE listing_id = ? AND local_path IS NULL ORDER BY id",
+         WHERE listing_id = ? AND local_path IS NULL ORDER BY position",
     )
     .bind(listing_id)
     .fetch_all(pool)
@@ -239,7 +244,7 @@ pub async fn list_resolved_images(
 ) -> Result<Vec<String>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT COALESCE(local_path, source_url) AS url
-         FROM images_cache WHERE listing_id = ? ORDER BY id",
+         FROM images_cache WHERE listing_id = ? ORDER BY position",
     )
     .bind(listing_id)
     .fetch_all(pool)

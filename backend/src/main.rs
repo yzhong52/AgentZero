@@ -24,7 +24,7 @@ use url::Url;
 
 use parser::{
     ParseResult, extract_description, extract_image_urls, extract_images, extract_json_ld,
-    extract_property, extract_title, meta_map,
+    extract_lot_size, extract_property, extract_title, meta_map,
 };
 
 #[derive(Clone)]
@@ -126,8 +126,9 @@ async fn save_listing(
         (extract_json_ld(&document), extract_title(&document))
     };
 
-    let property = extract_property(parsed.as_str(), &title, &json_ld)
+    let mut property = extract_property(parsed.as_str(), &title, &json_ld)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
+    property.land_sqft = extract_lot_size(&html);
     let image_urls = extract_image_urls(&json_ld);
 
     let saved = db::save(&state.db, &property)
@@ -186,6 +187,7 @@ async fn refresh_listing(
 
     let mut updated = extract_property(parsed.as_str(), &title, &json_ld)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
+    updated.land_sqft = extract_lot_size(&html);
     updated.id = id;
     updated.url = url.to_string();
     let image_urls = extract_image_urls(&json_ld);

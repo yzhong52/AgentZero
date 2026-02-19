@@ -8,9 +8,20 @@ use std::sync::OnceLock;
 use crate::db;
 
 static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
+static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
+}
+
+/// Extracts lot size (sqft) from the raw HTML source.
+/// Redfin embeds `"lotSize":3480` as escaped JSON in a script block — not in JSON-LD.
+pub fn extract_lot_size(html: &str) -> Option<i64> {
+    LOT_SIZE_RE
+        .get_or_init(|| Regex::new(r#"lotSize\\?\":(\d+)"#).unwrap())
+        .captures(html)
+        .and_then(|c| c.get(1))
+        .and_then(|m| m.as_str().parse::<i64>().ok())
 }
 
 /// Parses `amenityFeature` array entries for parking count, AC, and radiant floor heating.
@@ -167,7 +178,6 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     let amenities = entity["amenityFeature"].as_array().map(Vec::as_slice).unwrap_or(&[]);
     let (parking_garage, ac, radiant_floor_heating) = parse_amenity_features(amenities);
-    let land_sqft = entity["lotSize"]["value"].as_i64();
 
     Some(db::Property {
         id: 0,
@@ -194,7 +204,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         parking_garage,
         parking_covered: None,
         parking_open: None,
-        land_sqft,
+        land_sqft: None, // set from raw HTML by caller via extract_lot_size()
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,

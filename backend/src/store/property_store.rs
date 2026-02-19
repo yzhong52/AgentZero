@@ -27,25 +27,31 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
         r#"INSERT INTO listings
                (url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                bedrooms, bathrooms, sqft, year_built, lat, lon,
+                parking_garage, land_sqft, ac, radiant_floor_heating,
+                updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(url) DO UPDATE SET
-               title          = excluded.title,
-               description    = excluded.description,
-               price          = excluded.price,
-               price_currency = excluded.price_currency,
-               street_address = excluded.street_address,
-               city           = excluded.city,
-               region         = excluded.region,
-               postal_code    = excluded.postal_code,
-               country        = excluded.country,
-               bedrooms       = excluded.bedrooms,
-               bathrooms      = excluded.bathrooms,
-               sqft           = excluded.sqft,
-               year_built     = excluded.year_built,
-               lat            = excluded.lat,
-               lon            = excluded.lon,
-               updated_at     = datetime('now')"#,
+               title                = excluded.title,
+               description          = excluded.description,
+               price                = excluded.price,
+               price_currency       = excluded.price_currency,
+               street_address       = excluded.street_address,
+               city                 = excluded.city,
+               region               = excluded.region,
+               postal_code          = excluded.postal_code,
+               country              = excluded.country,
+               bedrooms             = excluded.bedrooms,
+               bathrooms            = excluded.bathrooms,
+               sqft                 = excluded.sqft,
+               year_built           = excluded.year_built,
+               lat                  = excluded.lat,
+               lon                  = excluded.lon,
+               parking_garage       = excluded.parking_garage,
+               land_sqft            = excluded.land_sqft,
+               ac                   = excluded.ac,
+               radiant_floor_heating = excluded.radiant_floor_heating,
+               updated_at           = datetime('now')"#,
     )
     .bind(&p.url)
     .bind(&p.title)
@@ -63,6 +69,10 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
+    .bind(p.parking_garage)
+    .bind(p.land_sqft)
+    .bind(p.ac)
+    .bind(p.radiant_floor_heating)
     .execute(pool)
     .await?;
 
@@ -86,22 +96,26 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
 pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
-               title          = ?,
-               description    = ?,
-               price          = ?,
-               price_currency = ?,
-               street_address = ?,
-               city           = ?,
-               region         = ?,
-               postal_code    = ?,
-               country        = ?,
-               bedrooms       = ?,
-               bathrooms      = ?,
-               sqft           = ?,
-               year_built     = ?,
-               lat            = ?,
-               lon            = ?,
-               updated_at     = datetime('now')
+               title                 = ?,
+               description           = ?,
+               price                 = ?,
+               price_currency        = ?,
+               street_address        = ?,
+               city                  = ?,
+               region                = ?,
+               postal_code           = ?,
+               country               = ?,
+               bedrooms              = ?,
+               bathrooms             = ?,
+               sqft                  = ?,
+               year_built            = ?,
+               lat                   = ?,
+               lon                   = ?,
+               parking_garage        = ?,
+               land_sqft             = ?,
+               ac                    = ?,
+               radiant_floor_heating = ?,
+               updated_at            = datetime('now')
            WHERE id = ?"#,
     )
     .bind(&p.title)
@@ -119,6 +133,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
+    .bind(p.parking_garage)
+    .bind(p.land_sqft)
+    .bind(p.ac)
+    .bind(p.radiant_floor_heating)
     .bind(id)
     .execute(pool)
     .await?;

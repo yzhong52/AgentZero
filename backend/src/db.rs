@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
 
@@ -33,6 +33,39 @@ pub struct Property {
     pub created_at: String,
     pub updated_at: Option<String>,
     pub notes: Option<String>,
+    // User-tracked fields (not populated by the parser)
+    pub parking_garage: Option<i64>,
+    pub parking_covered: Option<i64>,
+    pub parking_open: Option<i64>,
+    pub land_sqft: Option<i64>,
+    pub property_tax: Option<i64>,
+    pub skytrain_station: Option<String>,
+    pub skytrain_walk_min: Option<i64>,
+    pub radiant_floor_heating: Option<bool>,
+    pub ac: Option<bool>,
+    pub mortgage_monthly: Option<i64>,
+    pub hoa_monthly: Option<i64>,
+    pub monthly_total: Option<i64>,
+    pub has_rental_suite: Option<bool>,
+    pub rental_income: Option<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct UserDetails {
+    pub parking_garage: Option<i64>,
+    pub parking_covered: Option<i64>,
+    pub parking_open: Option<i64>,
+    pub land_sqft: Option<i64>,
+    pub property_tax: Option<i64>,
+    pub skytrain_station: Option<String>,
+    pub skytrain_walk_min: Option<i64>,
+    pub radiant_floor_heating: Option<bool>,
+    pub ac: Option<bool>,
+    pub mortgage_monthly: Option<i64>,
+    pub hoa_monthly: Option<i64>,
+    pub monthly_total: Option<i64>,
+    pub has_rental_suite: Option<bool>,
+    pub rental_income: Option<i64>,
 }
 
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -99,7 +132,10 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
+                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -152,7 +188,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
+                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -166,7 +205,10 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
+                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -204,7 +246,52 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
+        parking_garage: row.get("parking_garage"),
+        parking_covered: row.get("parking_covered"),
+        parking_open: row.get("parking_open"),
+        land_sqft: row.get("land_sqft"),
+        property_tax: row.get("property_tax"),
+        skytrain_station: row.get("skytrain_station"),
+        skytrain_walk_min: row.get("skytrain_walk_min"),
+        radiant_floor_heating: row.get("radiant_floor_heating"),
+        ac: row.get("ac"),
+        mortgage_monthly: row.get("mortgage_monthly"),
+        hoa_monthly: row.get("hoa_monthly"),
+        monthly_total: row.get("monthly_total"),
+        has_rental_suite: row.get("has_rental_suite"),
+        rental_income: row.get("rental_income"),
     }
+}
+
+pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"UPDATE listings SET
+               parking_garage = ?, parking_covered = ?, parking_open = ?,
+               land_sqft = ?, property_tax = ?,
+               skytrain_station = ?, skytrain_walk_min = ?,
+               radiant_floor_heating = ?, ac = ?,
+               mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
+               has_rental_suite = ?, rental_income = ?
+           WHERE id = ?"#,
+    )
+    .bind(d.parking_garage)
+    .bind(d.parking_covered)
+    .bind(d.parking_open)
+    .bind(d.land_sqft)
+    .bind(d.property_tax)
+    .bind(&d.skytrain_station)
+    .bind(d.skytrain_walk_min)
+    .bind(d.radiant_floor_heating)
+    .bind(d.ac)
+    .bind(d.mortgage_monthly)
+    .bind(d.hoa_monthly)
+    .bind(d.monthly_total)
+    .bind(d.has_rental_suite)
+    .bind(d.rental_income)
+    .bind(id)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {

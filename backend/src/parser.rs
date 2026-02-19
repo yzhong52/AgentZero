@@ -148,6 +148,20 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         created_at: String::new(),
         updated_at: None,
         notes: None,
+        parking_garage: None,
+        parking_covered: None,
+        parking_open: None,
+        land_sqft: None,
+        property_tax: None,
+        skytrain_station: None,
+        skytrain_walk_min: None,
+        radiant_floor_heating: None,
+        ac: None,
+        mortgage_monthly: None,
+        hoa_monthly: None,
+        monthly_total: None,
+        has_rental_suite: None,
+        rental_income: None,
     })
 }
 

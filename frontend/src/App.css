@@ -280,6 +280,74 @@
   color: #888;
 }
 
+/* ── tracked details ── */
+.tracked-details {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #333;
+}
+
+.tracked-details > h3 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.05rem;
+  color: #fff;
+}
+
+.tracked-group {
+  margin-bottom: 1.5rem;
+}
+
+.tracked-group h4 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #777;
+  margin: 0 0 0.6rem 0;
+}
+
+.tracked-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.6rem 1.25rem;
+}
+
+.tracked-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tracked-field label {
+  font-size: 0.78rem;
+  color: #999;
+}
+
+.tracked-input,
+.tracked-select {
+  background: #242424;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #ddd;
+  font-size: 0.9rem;
+  padding: 0.35em 0.6em;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tracked-input:focus,
+.tracked-select:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+.tracked-value {
+  font-size: 0.9rem;
+  color: #ddd;
+  padding: 0.35em 0;
+}
+
 .detail-header {
   margin-bottom: 1.5rem;
 }

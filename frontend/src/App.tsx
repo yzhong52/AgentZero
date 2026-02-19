@@ -30,6 +30,20 @@ export type Property = {
   created_at: string
   updated_at: string | null
   notes: string | null
+  parking_garage: number | null
+  parking_covered: number | null
+  parking_open: number | null
+  land_sqft: number | null
+  property_tax: number | null
+  skytrain_station: string | null
+  skytrain_walk_min: number | null
+  radiant_floor_heating: boolean | null
+  ac: boolean | null
+  mortgage_monthly: number | null
+  hoa_monthly: number | null
+  monthly_total: number | null
+  has_rental_suite: boolean | null
+  rental_income: number | null
 }
 
 function formatPrice(price: number | null, currency: string | null) {

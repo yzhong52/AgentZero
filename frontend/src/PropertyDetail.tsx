@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Property, ImageEntry } from './App'
 
+function boolLabel(v: boolean | null): string {
+    return v === null ? '—' : v ? 'Yes' : 'No'
+}
+
+function moneyLabel(v: number | null): string {
+    return v === null ? '—' : `$${v.toLocaleString()}`
+}
+
+function numLabel(v: number | null, suffix = ''): string {
+    return v === null ? '—' : `${v}${suffix}`
+}
+
 function formatPrice(price: number | null, currency: string | null) {
     if (price == null) return null
     return new Intl.NumberFormat('en-CA', {
@@ -216,6 +228,60 @@ export function PropertyDetail() {
                             <p>{property.description}</p>
                         </div>
                     )}
+
+                    <div className="tracked-details">
+                        <h3>My Tracked Info</h3>
+
+                        <div className="tracked-group">
+                            <h4>Parking</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Garage (indoor)</label><span className="tracked-value">{numLabel(property.parking_garage)}</span></div>
+                                <div className="tracked-field"><label>Covered outdoor</label><span className="tracked-value">{numLabel(property.parking_covered)}</span></div>
+                                <div className="tracked-field"><label>Open outdoor</label><span className="tracked-value">{numLabel(property.parking_open)}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Land</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Land size (sqft)</label><span className="tracked-value">{numLabel(property.land_sqft, ' sqft')}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Transit</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Closest Skytrain station</label><span className="tracked-value">{property.skytrain_station ?? '—'}</span></div>
+                                <div className="tracked-field"><label>Walk time (min)</label><span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Features</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Radiant floor heating</label><span className="tracked-value">{boolLabel(property.radiant_floor_heating)}</span></div>
+                                <div className="tracked-field"><label>Air conditioning</label><span className="tracked-value">{boolLabel(property.ac)}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Financials</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Property tax (annual)</label><span className="tracked-value">{moneyLabel(property.property_tax)}</span></div>
+                                <div className="tracked-field"><label>Mortgage (monthly)</label><span className="tracked-value">{moneyLabel(property.mortgage_monthly)}</span></div>
+                                <div className="tracked-field"><label>HOA / Strata (monthly)</label><span className="tracked-value">{moneyLabel(property.hoa_monthly)}</span></div>
+                                <div className="tracked-field"><label>Monthly total</label><span className="tracked-value">{moneyLabel(property.monthly_total)}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Rental</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field"><label>Has rental suite</label><span className="tracked-value">{boolLabel(property.has_rental_suite)}</span></div>
+                                <div className="tracked-field"><label>Rental income (monthly)</label><span className="tracked-value">{moneyLabel(property.rental_income)}</span></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="detail-metadata">
                         <div className="meta-item">

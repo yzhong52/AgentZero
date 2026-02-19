@@ -208,5 +208,20 @@ expression: property
     }
   ],
   "created_at": "",
-  "updated_at": null
+  "updated_at": null,
+  "notes": null,
+  "parking_garage": null,
+  "parking_covered": null,
+  "parking_open": null,
+  "land_sqft": null,
+  "property_tax": null,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "mortgage_monthly": null,
+  "hoa_monthly": null,
+  "monthly_total": null,
+  "has_rental_suite": null,
+  "rental_income": null
 }

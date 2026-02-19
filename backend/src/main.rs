@@ -255,6 +255,18 @@ async fn patch_notes(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Updates user-tracked details for a listing. `id` is the property/listing ID.
+async fn patch_details(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<db::UserDetails>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    db::update_details(&state.db, id, &body)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn list_listings(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
@@ -360,6 +372,7 @@ async fn main() {
         .route("/api/listings", post(save_listing).get(list_listings))
         .route("/api/listings/:id", put(refresh_listing))
         .route("/api/listings/:id/notes", patch(patch_notes))
+        .route("/api/listings/:id/details", patch(patch_details))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))
         .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)

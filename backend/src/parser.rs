@@ -147,6 +147,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         images: Vec::new(),
         created_at: String::new(),
         updated_at: None,
+        notes: None,
     })
 }
 

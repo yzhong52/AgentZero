@@ -6,7 +6,7 @@ use axum::{
     Json, Router,
     extract::{Query, State, Path},
     http::StatusCode,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post, put},
 };
 use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
@@ -37,6 +37,11 @@ struct AppState {
 #[derive(Deserialize)]
 struct SaveRequest {
     url: String,
+}
+
+#[derive(Deserialize)]
+struct NotesRequest {
+    notes: Option<String>,
 }
 
 fn safe_url(input: &str) -> Option<Url> {
@@ -238,6 +243,18 @@ async fn delete_image(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Updates the personal notes for a listing. `id` is the property/listing ID.
+async fn patch_notes(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<NotesRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    db::update_notes(&state.db, id, body.notes.as_deref())
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn list_listings(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
@@ -342,6 +359,7 @@ async fn main() {
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
         .route("/api/listings/:id", put(refresh_listing))
+        .route("/api/listings/:id/notes", patch(patch_notes))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))
         .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)

@@ -32,6 +32,7 @@ pub struct Property {
     pub images: Vec<ImageEntry>,
     pub created_at: String,
     pub updated_at: Option<String>,
+    pub notes: Option<String>,
 }
 
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -98,7 +99,7 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -151,7 +152,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -165,7 +166,7 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -202,7 +203,17 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         images: vec![], // populated separately from images_cache
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
+        notes: row.get("notes"),
     }
+}
+
+pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE listings SET notes = ? WHERE id = ?")
+        .bind(notes)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------

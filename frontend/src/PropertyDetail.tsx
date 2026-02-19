@@ -57,6 +57,8 @@ export function PropertyDetail() {
     const [error, setError] = useState<string | null>(null)
     const [refreshing, setRefreshing] = useState(false)
     const [refreshMsg, setRefreshMsg] = useState<string | null>(null)
+    const [notes, setNotes] = useState<string>('')
+    const [notesSaving, setNotesSaving] = useState(false)
 
     useEffect(() => {
         async function fetchProperty() {
@@ -68,6 +70,7 @@ export function PropertyDetail() {
                 const found = listings.find((p) => p.id === parseInt(id!))
                 if (!found) throw new Error('Property not found')
                 setProperty(found)
+                setNotes(found.notes ?? '')
             } catch (err: any) {
                 setError(err?.message || String(err))
             } finally {
@@ -96,6 +99,23 @@ export function PropertyDetail() {
             setError(err?.message || String(err))
         } finally {
             setRefreshing(false)
+        }
+    }
+
+    async function handleNotesSave() {
+        if (!property) return
+        setNotesSaving(true)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/notes`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes: notes || null }),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+        } catch (err: any) {
+            setError(err?.message || String(err))
+        } finally {
+            setNotesSaving(false)
         }
     }
 
@@ -174,45 +194,60 @@ export function PropertyDetail() {
                 )}
             </div>
 
-            <div className="detail-content">
-                <div className="detail-header">
-                    <h1>{property.title}</h1>
-                    <div className="detail-price">{formatPrice(property.price, property.price_currency)}</div>
+            <div className="detail-body">
+                <div className="detail-content">
+                    <div className="detail-header">
+                        <h1>{property.title}</h1>
+                        <div className="detail-price">{formatPrice(property.price, property.price_currency)}</div>
+                    </div>
+
+                    {address && <div className="detail-address">{address}</div>}
+
+                    <div className="detail-specs">
+                        {property.bedrooms != null && <div className="spec"><strong>{property.bedrooms}</strong> Bedrooms</div>}
+                        {property.bathrooms != null && <div className="spec"><strong>{property.bathrooms}</strong> Bathrooms</div>}
+                        {property.sqft != null && <div className="spec"><strong>{property.sqft.toLocaleString()}</strong> sqft</div>}
+                        {property.year_built != null && <div className="spec"><strong>Built {property.year_built}</strong></div>}
+                    </div>
+
+                    {property.description && (
+                        <div className="detail-description">
+                            <h3>Description</h3>
+                            <p>{property.description}</p>
+                        </div>
+                    )}
+
+                    <div className="detail-metadata">
+                        <div className="meta-item">
+                            <strong>URL:</strong>
+                            <a href={property.url} target="_blank" rel="noreferrer">{property.url}</a>
+                        </div>
+                        <div className="meta-item">
+                            <strong>Latitude:</strong> {property.lat ?? 'N/A'}
+                        </div>
+                        <div className="meta-item">
+                            <strong>Longitude:</strong> {property.lon ?? 'N/A'}
+                        </div>
+                        <div className="meta-item">
+                            <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                        <div className="meta-item">
+                            <strong>Last refreshed:</strong> {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </div>
+                    </div>
                 </div>
 
-                {address && <div className="detail-address">{address}</div>}
-
-                <div className="detail-specs">
-                    {property.bedrooms != null && <div className="spec"><strong>{property.bedrooms}</strong> Bedrooms</div>}
-                    {property.bathrooms != null && <div className="spec"><strong>{property.bathrooms}</strong> Bathrooms</div>}
-                    {property.sqft != null && <div className="spec"><strong>{property.sqft.toLocaleString()}</strong> sqft</div>}
-                    {property.year_built != null && <div className="spec"><strong>Built {property.year_built}</strong></div>}
-                </div>
-
-                {property.description && (
-                    <div className="detail-description">
-                        <h3>Description</h3>
-                        <p>{property.description}</p>
-                    </div>
-                )}
-
-                <div className="detail-metadata">
-                    <div className="meta-item">
-                        <strong>URL:</strong>
-                        <a href={property.url} target="_blank" rel="noreferrer">{property.url}</a>
-                    </div>
-                    <div className="meta-item">
-                        <strong>Latitude:</strong> {property.lat ?? 'N/A'}
-                    </div>
-                    <div className="meta-item">
-                        <strong>Longitude:</strong> {property.lon ?? 'N/A'}
-                    </div>
-                    <div className="meta-item">
-                        <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                    <div className="meta-item">
-                        <strong>Last refreshed:</strong> {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                    </div>
+                <div className="notes-panel">
+                    <h3 className="notes-heading">My Notes</h3>
+                    <textarea
+                        className="notes-textarea"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        onBlur={handleNotesSave}
+                        placeholder="Add personal notes about this property…"
+                        disabled={notesSaving}
+                    />
+                    {notesSaving && <div className="notes-saving">Saving…</div>}
                 </div>
             </div>
         </div>

@@ -4,5 +4,6 @@
 //! - `image_store`: Image database operations (read/write)
 //! - `property_store`: Property database operations (read/write)
 
+pub mod history_store;
 pub mod image_store;
 pub mod property_store;

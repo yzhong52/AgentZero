@@ -4,8 +4,10 @@
 //! - `image`: Image and ImageEntry struct definitions
 //! - `property`: Property and UserDetails struct definitions
 
+pub mod history;
 pub mod image;
 pub mod property;
 
+pub use history::HistoryEntry;
 pub use image::{ImageEntry, CachedImage};
 pub use property::{Property, UserDetails};

@@ -192,6 +192,13 @@ async fn refresh_listing(
     updated.url = url.to_string();
     let image_urls = extract_image_urls(&json_ld);
 
+    // Record price change history before overwriting.
+    if property.price != updated.price {
+        let old = property.price.map(|v| v.to_string());
+        let new = updated.price.map(|v| v.to_string());
+        let _ = db::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+    }
+
     let saved = db::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
@@ -280,6 +287,17 @@ async fn patch_details(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Returns price/field change history for a listing. `id` is the property/listing ID.
+async fn get_history(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<Vec<db::HistoryEntry>>, (StatusCode, String)> {
+    let entries = db::list_history(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(Json(entries))
 }
 
 async fn list_listings(
@@ -388,6 +406,7 @@ async fn main() {
         .route("/api/listings/:id", put(refresh_listing).delete(delete_listing))
         .route("/api/listings/:id/notes", patch(patch_notes))
         .route("/api/listings/:id/details", patch(patch_details))
+        .route("/api/listings/:id/history", get(get_history))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))
         .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)

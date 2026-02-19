@@ -8,7 +8,8 @@
 
 // Re-export types and operations for backward compatibility
 #[allow(unused_imports)]
-pub use crate::models::{ImageEntry, CachedImage, Property, UserDetails};
+pub use crate::models::{HistoryEntry, ImageEntry, CachedImage, Property, UserDetails};
+pub use crate::store::history_store::{insert_change, list_history};
 pub use crate::store::property_store::{init, save, update_by_id, list, update_details, update_notes, delete};
 pub use crate::store::image_store::{
     list_cached_images, insert_image_url, list_pending_image_urls,

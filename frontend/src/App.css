@@ -387,6 +387,46 @@
   color: #aaa;
 }
 
+/* ── change history ── */
+.history-panel {
+  margin-top: 1.25rem;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.history-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: #fafaf8;
+  border: 1px solid #e0dfd8;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.history-field {
+  font-weight: 600;
+  color: #1c1c1e;
+  text-transform: capitalize;
+}
+
+.history-change {
+  color: #555;
+}
+
+.history-date {
+  color: #aaa;
+  font-size: 0.75rem;
+}
+
 /* ── tracked details ── */
 .tracked-details {
   margin-top: 2rem;

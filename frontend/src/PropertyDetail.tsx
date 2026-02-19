@@ -3,6 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import type { Property, ImageEntry } from './App'
 import { STATUS_OPTIONS, STATUS_COLORS } from './App'
 
+type HistoryEntry = {
+    id: number
+    listing_id: number
+    field_name: string
+    old_value: string | null
+    new_value: string | null
+    changed_at: string
+}
+
 function boolLabel(v: boolean | null): string {
     return v === null ? '—' : v ? 'Yes' : 'No'
 }
@@ -73,6 +82,7 @@ export function PropertyDetail() {
     const [notes, setNotes] = useState<string>('')
     const [notesSaving, setNotesSaving] = useState(false)
     const [deleting, setDeleting] = useState(false)
+    const [history, setHistory] = useState<HistoryEntry[]>([])
 
     useEffect(() => {
         async function fetchProperty() {
@@ -85,6 +95,9 @@ export function PropertyDetail() {
                 if (!found) throw new Error('Property not found')
                 setProperty(found)
                 setNotes(found.notes ?? '')
+
+                const histResp = await fetch(`/api/listings/${found.id}/history`)
+                if (histResp.ok) setHistory(await histResp.json())
             } catch (err: any) {
                 setError(err?.message || String(err))
             } finally {
@@ -393,6 +406,27 @@ export function PropertyDetail() {
                         disabled={notesSaving}
                     />
                     {notesSaving && <div className="notes-saving">Saving…</div>}
+
+                    {history.length > 0 && (
+                        <div className="history-panel">
+                            <h3 className="notes-heading">Change History</h3>
+                            <ul className="history-list">
+                                {history.map((entry) => (
+                                    <li key={entry.id} className="history-entry">
+                                        <span className="history-field">{entry.field_name}</span>
+                                        <span className="history-change">
+                                            {entry.old_value ?? '—'} → {entry.new_value ?? '—'}
+                                        </span>
+                                        <span className="history-date">
+                                            {new Date(entry.changed_at).toLocaleDateString('en-CA', {
+                                                month: 'short', day: 'numeric', year: 'numeric',
+                                            })}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

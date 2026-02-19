@@ -83,6 +83,7 @@ export function PropertyDetail() {
     const [notesSaving, setNotesSaving] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [history, setHistory] = useState<HistoryEntry[]>([])
+    const [nickname, setNickname] = useState<string>('')
 
     useEffect(() => {
         async function fetchProperty() {
@@ -95,6 +96,7 @@ export function PropertyDetail() {
                 if (!found) throw new Error('Property not found')
                 setProperty(found)
                 setNotes(found.notes ?? '')
+                setNickname(found.nickname ?? '')
 
                 const histResp = await fetch(`/api/listings/${found.id}/history`)
                 if (histResp.ok) setHistory(await histResp.json())
@@ -143,6 +145,21 @@ export function PropertyDetail() {
             setError(err?.message || String(err))
         } finally {
             setNotesSaving(false)
+        }
+    }
+
+    async function handleNicknameSave() {
+        if (!property) return
+        setProperty({ ...property, nickname: nickname || null })
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/nickname`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname: nickname || null }),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+        } catch (err: any) {
+            setError(err?.message || String(err))
         }
     }
 
@@ -277,7 +294,15 @@ export function PropertyDetail() {
             <div className="detail-body">
                 <div className="detail-content">
                     <div className="detail-header">
-                        <h1>{property.title}</h1>
+                        <input
+                            className="nickname-input"
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
+                            onBlur={handleNicknameSave}
+                            placeholder={property.title}
+                            aria-label="Property nickname"
+                        />
+                        {nickname && <div className="detail-subtitle">{property.title}</div>}
                         <div className="detail-price">{formatPrice(property.price, property.price_currency)}</div>
                     </div>
 

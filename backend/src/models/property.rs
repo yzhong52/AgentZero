@@ -57,6 +57,8 @@ pub struct Property {
     pub rental_income: Option<i64>,
     /// User-set status: "Interested" | "Pass" | "Buyable"
     pub status: Option<String>,
+    /// User-assigned nickname / alias for this listing.
+    pub nickname: Option<String>,
 }
 
 /// User-provided details for a property (subset of Property fields).

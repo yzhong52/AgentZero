@@ -83,7 +83,7 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status
+                status, nickname
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -149,7 +149,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status
+                status, nickname
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -168,7 +168,7 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status
+                status, nickname
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -222,7 +222,18 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         has_rental_suite: row.get("has_rental_suite"),
         rental_income: row.get("rental_income"),
         status: row.get("status"),
+        nickname: row.get("nickname"),
     }
+}
+
+/// Update the nickname/alias for a property.
+pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE listings SET nickname = ? WHERE id = ?")
+        .bind(nickname)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }
 
 /// Update user-tracked fields for a property.

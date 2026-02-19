@@ -46,6 +46,11 @@ struct NotesRequest {
     notes: Option<String>,
 }
 
+#[derive(Deserialize)]
+struct NicknameRequest {
+    nickname: Option<String>,
+}
+
 fn safe_url(input: &str) -> Option<Url> {
     if let Ok(u) = Url::parse(input) {
         match u.scheme() {
@@ -277,6 +282,18 @@ async fn delete_listing(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Updates the nickname for a listing. `id` is the property/listing ID.
+async fn patch_nickname(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<NicknameRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    db::update_nickname(&state.db, id, body.nickname.as_deref())
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Updates user-tracked details for a listing. `id` is the property/listing ID.
 async fn patch_details(
     State(state): State<AppState>,
@@ -405,6 +422,7 @@ async fn main() {
         .route("/api/listings", post(save_listing).get(list_listings))
         .route("/api/listings/:id", put(refresh_listing).delete(delete_listing))
         .route("/api/listings/:id/notes", patch(patch_notes))
+        .route("/api/listings/:id/nickname", patch(patch_nickname))
         .route("/api/listings/:id/details", patch(patch_details))
         .route("/api/listings/:id/history", get(get_history))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))

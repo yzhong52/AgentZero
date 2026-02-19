@@ -505,6 +505,40 @@
   color: #1c1c1e;
 }
 
+/* editable nickname replaces the h1 */
+.nickname-input {
+  width: 100%;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1c1c1e;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0 0 0.1rem 0;
+  margin-bottom: 0.25rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.nickname-input:hover,
+.nickname-input:focus {
+  outline: none;
+  border-bottom-color: #4f46e5;
+}
+
+.nickname-input::placeholder {
+  color: #1c1c1e;
+  opacity: 1;
+}
+
+.detail-subtitle {
+  font-size: 0.85rem;
+  color: #999;
+  margin-bottom: 0.4rem;
+}
+
 .detail-price {
   font-size: 1.75rem;
   font-weight: 700;

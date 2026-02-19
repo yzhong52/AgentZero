@@ -107,13 +107,67 @@ function ListingCard({ p }: { p: Property }) {
   )
 }
 
+type ColKey =
+  | 'name' | 'price' | 'status' | 'address' | 'bedrooms' | 'bathrooms'
+  | 'sqft' | 'year_built' | 'land_sqft' | 'parking_garage' | 'ac'
+  | 'monthly_total' | 'hoa_monthly' | 'property_tax' | 'skytrain'
+
+type ColDef = { key: ColKey; label: string; render: (p: Property) => React.ReactNode }
+
+const ALL_COLUMNS: ColDef[] = [
+  { key: 'name',          label: 'Name',          render: p => p.nickname ?? p.title },
+  { key: 'price',         label: 'Price',         render: p => formatPrice(p.price, p.price_currency) ?? '—' },
+  { key: 'status',        label: 'Status',        render: p => p.status ?? '—' },
+  { key: 'address',       label: 'Address',       render: p => [p.street_address, p.city].filter(Boolean).join(', ') || '—' },
+  { key: 'bedrooms',      label: 'Beds',          render: p => p.bedrooms ?? '—' },
+  { key: 'bathrooms',     label: 'Baths',         render: p => p.bathrooms ?? '—' },
+  { key: 'sqft',          label: 'Sqft',          render: p => p.sqft?.toLocaleString() ?? '—' },
+  { key: 'year_built',    label: 'Year Built',    render: p => p.year_built ?? '—' },
+  { key: 'land_sqft',     label: 'Land Sqft',     render: p => p.land_sqft?.toLocaleString() ?? '—' },
+  { key: 'parking_garage',label: 'Garage',        render: p => p.parking_garage ?? '—' },
+  { key: 'ac',            label: 'AC',            render: p => p.ac === null ? '—' : p.ac ? 'Yes' : 'No' },
+  { key: 'monthly_total', label: 'Monthly',       render: p => p.monthly_total ? `$${p.monthly_total.toLocaleString()}` : '—' },
+  { key: 'hoa_monthly',   label: 'HOA',           render: p => p.hoa_monthly ? `$${p.hoa_monthly.toLocaleString()}` : '—' },
+  { key: 'property_tax',  label: 'Tax/yr',        render: p => p.property_tax ? `$${p.property_tax.toLocaleString()}` : '—' },
+  { key: 'skytrain',      label: 'Skytrain',      render: p => p.skytrain_station ? `${p.skytrain_station} (${p.skytrain_walk_min ?? '?'} min)` : '—' },
+]
+
+const DEFAULT_COLS: ColKey[] = ['name', 'price', 'status', 'address', 'bedrooms', 'bathrooms', 'sqft']
+
+function ListingTable({ rows, cols, navigate }: {
+  rows: Property[]
+  cols: ColDef[]
+  navigate: (path: string) => void
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="listings-table">
+        <thead>
+          <tr>{cols.map(c => <th key={c.key}>{c.label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map(p => (
+            <tr key={p.id} onClick={() => navigate(`/property/${p.id}`)} className="table-row">
+              {cols.map(c => <td key={c.key}>{c.render(p)}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function App() {
+  const navigate = useNavigate()
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
   const [statusFilter, setStatusFilter] = useState<string>('All')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
+  const [colPickerOpen, setColPickerOpen] = useState(false)
 
   async function fetchListings() {
     try {
@@ -175,6 +229,7 @@ function App() {
         <section className="listings-section">
           <div className="listings-header">
             <h2>Saved Listings ({listings.length})</h2>
+
             <div className="status-filter">
               {['All', ...STATUS_OPTIONS].map((s) => (
                 <button
@@ -187,12 +242,49 @@ function App() {
                 </button>
               ))}
             </div>
+
+            <div className="view-controls">
+              <button className={`view-btn${viewMode === 'grid' ? ' active' : ''}`} onClick={() => setViewMode('grid')}>Grid</button>
+              <button className={`view-btn${viewMode === 'table' ? ' active' : ''}`} onClick={() => setViewMode('table')}>Table</button>
+              {viewMode === 'table' && (
+                <div className="col-picker-wrap">
+                  <button className="view-btn" onClick={() => setColPickerOpen(o => !o)}>Columns ▾</button>
+                  {colPickerOpen && (
+                    <div className="col-picker-dropdown">
+                      {ALL_COLUMNS.map(c => (
+                        <label key={c.key} className="col-picker-item">
+                          <input
+                            type="checkbox"
+                            checked={visibleCols.has(c.key)}
+                            onChange={() => setVisibleCols(prev => {
+                              const next = new Set(prev)
+                              next.has(c.key) ? next.delete(c.key) : next.add(c.key)
+                              return next
+                            })}
+                          />
+                          {c.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="listings-grid">
-            {listings
-              .filter((p) => statusFilter === 'All' || p.status === statusFilter)
-              .map((p) => <ListingCard key={p.id} p={p} />)}
-          </div>
+
+          {viewMode === 'grid' ? (
+            <div className="listings-grid">
+              {listings
+                .filter((p) => statusFilter === 'All' || p.status === statusFilter)
+                .map((p) => <ListingCard key={p.id} p={p} />)}
+            </div>
+          ) : (
+            <ListingTable
+              rows={listings.filter((p) => statusFilter === 'All' || p.status === statusFilter)}
+              cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))}
+              navigate={navigate}
+            />
+          )}
         </section>
       )}
 

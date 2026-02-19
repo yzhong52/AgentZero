@@ -215,13 +215,6 @@ export function PropertyDetail() {
 
                     {address && <div className="detail-address">{address}</div>}
 
-                    <div className="detail-specs">
-                        {property.bedrooms != null && <div className="spec"><strong>{property.bedrooms}</strong> Bedrooms</div>}
-                        {property.bathrooms != null && <div className="spec"><strong>{property.bathrooms}</strong> Bathrooms</div>}
-                        {property.sqft != null && <div className="spec"><strong>{property.sqft.toLocaleString()}</strong> sqft</div>}
-                        {property.year_built != null && <div className="spec"><strong>Built {property.year_built}</strong></div>}
-                    </div>
-
                     {property.description && (
                         <div className="detail-description">
                             <h3>Description</h3>
@@ -230,7 +223,17 @@ export function PropertyDetail() {
                     )}
 
                     <div className="tracked-details">
-                        <h3>My Tracked Info</h3>
+                        <h3>Details</h3>
+
+                        <div className="tracked-group">
+                            <h4>Property</h4>
+                            <div className="tracked-fields">
+                                {property.bedrooms != null && <div className="tracked-field"><label>Bedrooms</label><span className="tracked-value">{property.bedrooms}</span></div>}
+                                {property.bathrooms != null && <div className="tracked-field"><label>Bathrooms</label><span className="tracked-value">{property.bathrooms}</span></div>}
+                                {property.sqft != null && <div className="tracked-field"><label>Square feet</label><span className="tracked-value">{property.sqft.toLocaleString()}</span></div>}
+                                {property.year_built != null && <div className="tracked-field"><label>Year built</label><span className="tracked-value">{property.year_built}</span></div>}
+                            </div>
+                        </div>
 
                         <div className="tracked-group">
                             <h4>Parking</h4>

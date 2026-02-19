@@ -149,6 +149,7 @@ async fn save_listing(
     Ok(Json(db::Property { images, ..saved }))
 }
 
+/// Refreshes a saved listing by re-fetching it from source. `id` is the property/listing ID.
 async fn refresh_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,

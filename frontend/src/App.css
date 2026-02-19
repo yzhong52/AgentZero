@@ -167,6 +167,27 @@
   cursor: not-allowed;
 }
 
+.delete-btn {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  transition: color 0.2s;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.delete-btn:hover {
+  color: #b91c1c;
+}
+
+.delete-btn:disabled {
+  color: #bbb;
+  cursor: not-allowed;
+}
+
 .detail-images {
   margin-bottom: 2rem;
 }

@@ -71,6 +71,7 @@ export function PropertyDetail() {
     const [refreshMsg, setRefreshMsg] = useState<string | null>(null)
     const [notes, setNotes] = useState<string>('')
     const [notesSaving, setNotesSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         async function fetchProperty() {
@@ -131,6 +132,20 @@ export function PropertyDetail() {
         }
     }
 
+    async function handleDelete() {
+        if (!property) return
+        if (!window.confirm(`Delete "${property.title}"? This cannot be undone.`)) return
+        setDeleting(true)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}`, { method: 'DELETE' })
+            if (!resp.ok) throw new Error(await resp.text())
+            navigate('/')
+        } catch (err: any) {
+            setError(err?.message || String(err))
+            setDeleting(false)
+        }
+    }
+
     async function handleDeleteImage(imageId: number) {
         if (!property) return
         try {
@@ -170,6 +185,14 @@ export function PropertyDetail() {
                     title="Refresh property data from source"
                 >
                     {refreshing ? '⟳ Refreshing…' : '⟳ Refresh'}
+                </button>
+                <button
+                    className="delete-btn"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    title="Delete this listing"
+                >
+                    {deleting ? 'Deleting…' : 'Delete'}
                 </button>
             </div>
 

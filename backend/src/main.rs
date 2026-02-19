@@ -259,6 +259,17 @@ async fn patch_notes(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Deletes a listing and all its images. `id` is the property/listing ID.
+async fn delete_listing(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    db::delete(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Updates user-tracked details for a listing. `id` is the property/listing ID.
 async fn patch_details(
     State(state): State<AppState>,
@@ -374,7 +385,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
-        .route("/api/listings/:id", put(refresh_listing))
+        .route("/api/listings/:id", put(refresh_listing).delete(delete_listing))
         .route("/api/listings/:id/notes", patch(patch_notes))
         .route("/api/listings/:id/details", patch(patch_details))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))

@@ -262,3 +262,12 @@ pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Re
         .await?;
     Ok(())
 }
+
+/// Delete a listing and all associated records (images cascade via FK).
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM listings WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}

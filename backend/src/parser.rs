@@ -1,9 +1,48 @@
+use regex::Regex;
 use scraper::{Html, Selector};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
 
 use crate::db;
+
+static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
+
+fn garage_re() -> &'static Regex {
+    GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
+}
+
+/// Parses `amenityFeature` array entries for parking count, AC, and radiant floor heating.
+/// Only sets a field to `Some(true)` for booleans when the feature has `value: true`.
+fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>) {
+    let mut parking_garage: Option<i64> = None;
+    let mut ac: Option<bool> = None;
+    let mut radiant: Option<bool> = None;
+
+    for f in features {
+        let name = match f["name"].as_str() {
+            Some(n) => n,
+            None => continue,
+        };
+        let active = f["value"].as_bool().unwrap_or(false);
+        let lower = name.to_lowercase();
+
+        if lower.contains("parking") {
+            if let Some(caps) = garage_re().captures(name) {
+                if let Some(n) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
+                    parking_garage = Some(n);
+                }
+            }
+        } else if active && (lower.contains("air conditioning") || lower.contains(" a/c")) {
+            ac = Some(true);
+        } else if active && lower.contains("radiant") {
+            radiant = Some(true);
+        }
+    }
+
+    (parking_garage, ac, radiant)
+}
 
 #[derive(Serialize)]
 pub struct ParseResult {
@@ -126,6 +165,10 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
     let lat = entity["geo"]["latitude"].as_f64();
     let lon = entity["geo"]["longitude"].as_f64();
 
+    let amenities = entity["amenityFeature"].as_array().map(Vec::as_slice).unwrap_or(&[]);
+    let (parking_garage, ac, radiant_floor_heating) = parse_amenity_features(amenities);
+    let land_sqft = entity["lotSize"]["value"].as_i64();
+
     Some(db::Property {
         id: 0,
         url: url.to_string(),
@@ -148,15 +191,15 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         created_at: String::new(),
         updated_at: None,
         notes: None,
-        parking_garage: None,
+        parking_garage,
         parking_covered: None,
         parking_open: None,
-        land_sqft: None,
+        land_sqft,
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,
-        radiant_floor_heating: None,
-        ac: None,
+        radiant_floor_heating,
+        ac,
         mortgage_monthly: None,
         hoa_monthly: None,
         monthly_total: None,

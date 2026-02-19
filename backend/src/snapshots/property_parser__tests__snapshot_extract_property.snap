@@ -1,5 +1,6 @@
 ---
 source: src/main.rs
+assertion_line: 326
 expression: property
 ---
 {
@@ -210,7 +211,7 @@ expression: property
   "created_at": "",
   "updated_at": null,
   "notes": null,
-  "parking_garage": null,
+  "parking_garage": 2,
   "parking_covered": null,
   "parking_open": null,
   "land_sqft": null,

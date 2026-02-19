@@ -292,18 +292,23 @@ export function PropertyDetail() {
                             <a href={property.url} target="_blank" rel="noreferrer">{property.url}</a>
                         </div>
                         <div className="meta-item">
-                            <strong>Latitude:</strong> {property.lat ?? 'N/A'}
-                        </div>
-                        <div className="meta-item">
-                            <strong>Longitude:</strong> {property.lon ?? 'N/A'}
-                        </div>
-                        <div className="meta-item">
                             <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                         <div className="meta-item">
                             <strong>Last refreshed:</strong> {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                         </div>
                     </div>
+
+                    {property.lat != null && property.lon != null && (
+                        <div className="map-preview">
+                            <iframe
+                                title="Property location"
+                                src={`https://maps.google.com/maps?q=${property.lat},${property.lon}&z=15&output=embed`}
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="notes-panel">

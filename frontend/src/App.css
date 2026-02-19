@@ -45,12 +45,6 @@
   text-align: left;
 }
 
-.listings-section h2 {
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-  color: #888;
-}
-
 .listings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -115,6 +109,98 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── status badge ── */
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  align-self: center;
+}
+
+.listing-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+/* ── listings header with filter ── */
+.listings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.listings-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #888;
+}
+
+.status-filter {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.filter-btn {
+  padding: 0.25em 0.75em;
+  font-size: 0.82rem;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.filter-btn:hover {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.filter-btn.active {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+/* ── status picker (detail panel) ── */
+.status-picker {
+  margin-bottom: 1.25rem;
+}
+
+.status-picker-label {
+  display: block;
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 0.4rem;
+}
+
+.status-picker-buttons {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.status-option-btn {
+  flex: 1;
+  padding: 0.3em 0.5em;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #fafaf8;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.status-option-btn:hover {
+  border-color: #4f46e5;
 }
 
 /* ── empty state ── */

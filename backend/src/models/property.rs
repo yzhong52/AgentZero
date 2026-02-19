@@ -55,6 +55,8 @@ pub struct Property {
     // rental
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,
+    /// User-set status: "Interested" | "Pass" | "Buyable"
+    pub status: Option<String>,
 }
 
 /// User-provided details for a property (subset of Property fields).
@@ -75,4 +77,5 @@ pub struct UserDetails {
     pub monthly_total: Option<i64>,
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,
+    pub status: Option<String>,
 }

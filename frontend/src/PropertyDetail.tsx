@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Property, ImageEntry } from './App'
+import { STATUS_OPTIONS, STATUS_COLORS } from './App'
 
 function boolLabel(v: boolean | null): string {
     return v === null ? '—' : v ? 'Yes' : 'No'
@@ -129,6 +130,37 @@ export function PropertyDetail() {
             setError(err?.message || String(err))
         } finally {
             setNotesSaving(false)
+        }
+    }
+
+    async function handleStatusChange(newStatus: string) {
+        if (!property) return
+        setProperty({ ...property, status: newStatus || null })
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/details`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    parking_garage: property.parking_garage,
+                    parking_covered: property.parking_covered,
+                    parking_open: property.parking_open,
+                    land_sqft: property.land_sqft,
+                    property_tax: property.property_tax,
+                    skytrain_station: property.skytrain_station,
+                    skytrain_walk_min: property.skytrain_walk_min,
+                    radiant_floor_heating: property.radiant_floor_heating,
+                    ac: property.ac,
+                    mortgage_monthly: property.mortgage_monthly,
+                    hoa_monthly: property.hoa_monthly,
+                    monthly_total: property.monthly_total,
+                    has_rental_suite: property.has_rental_suite,
+                    rental_income: property.rental_income,
+                    status: newStatus || null,
+                }),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+        } catch (err: any) {
+            setError(err?.message || String(err))
         }
     }
 
@@ -335,6 +367,22 @@ export function PropertyDetail() {
                 </div>
 
                 <div className="notes-panel">
+                    <div className="status-picker">
+                        <label className="status-picker-label">Status</label>
+                        <div className="status-picker-buttons">
+                            {STATUS_OPTIONS.map((s) => (
+                                <button
+                                    key={s}
+                                    className={`status-option-btn${property.status === s ? ' active' : ''}`}
+                                    style={property.status === s ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+                                    onClick={() => handleStatusChange(s)}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <h3 className="notes-heading">My Notes</h3>
                     <textarea
                         className="notes-textarea"

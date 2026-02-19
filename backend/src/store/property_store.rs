@@ -82,7 +82,8 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                 bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
+                status
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -147,7 +148,8 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                 bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
+                status
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -165,7 +167,8 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
                 bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income
+                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
+                status
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -218,6 +221,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         monthly_total: row.get("monthly_total"),
         has_rental_suite: row.get("has_rental_suite"),
         rental_income: row.get("rental_income"),
+        status: row.get("status"),
     }
 }
 
@@ -230,7 +234,8 @@ pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Resu
                skytrain_station = ?, skytrain_walk_min = ?,
                radiant_floor_heating = ?, ac = ?,
                mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
-               has_rental_suite = ?, rental_income = ?
+               has_rental_suite = ?, rental_income = ?,
+               status = ?
            WHERE id = ?"#,
     )
     .bind(d.parking_garage)
@@ -247,6 +252,7 @@ pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Resu
     .bind(d.monthly_total)
     .bind(d.has_rental_suite)
     .bind(d.rental_income)
+    .bind(&d.status)
     .bind(id)
     .execute(pool)
     .await?;

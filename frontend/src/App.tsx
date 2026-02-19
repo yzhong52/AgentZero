@@ -44,6 +44,25 @@ export type Property = {
   monthly_total: number | null
   has_rental_suite: boolean | null
   rental_income: number | null
+  status: string | null
+}
+
+export const STATUS_OPTIONS = ['Interested', 'Buyable', 'Pass'] as const
+export type StatusOption = typeof STATUS_OPTIONS[number]
+
+export const STATUS_COLORS: Record<string, string> = {
+  Interested: '#4f46e5',
+  Buyable: '#16a34a',
+  Pass: '#9ca3af',
+}
+
+function StatusBadge({ status }: { status: string | null }) {
+  if (!status) return null
+  return (
+    <span className="status-badge" style={{ background: STATUS_COLORS[status] ?? '#888' }}>
+      {status}
+    </span>
+  )
 }
 
 function formatPrice(price: number | null, currency: string | null) {
@@ -70,7 +89,10 @@ function ListingCard({ p }: { p: Property }) {
     >
       {img && <img src={img} alt={p.title} className="listing-img" />}
       <div className="listing-body">
-        <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
+        <div className="listing-price-row">
+          <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
+          <StatusBadge status={p.status} />
+        </div>
         <div className="listing-address">{address || p.url}</div>
         <div className="listing-stats">
           {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
@@ -90,6 +112,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
+  const [statusFilter, setStatusFilter] = useState<string>('All')
 
   async function fetchListings() {
     try {
@@ -149,9 +172,25 @@ function App() {
 
       {listings.length > 0 && (
         <section className="listings-section">
-          <h2>Saved Listings ({listings.length})</h2>
+          <div className="listings-header">
+            <h2>Saved Listings ({listings.length})</h2>
+            <div className="status-filter">
+              {['All', ...STATUS_OPTIONS].map((s) => (
+                <button
+                  key={s}
+                  className={`filter-btn${statusFilter === s ? ' active' : ''}`}
+                  onClick={() => setStatusFilter(s)}
+                  style={statusFilter === s && s !== 'All' ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="listings-grid">
-            {listings.map((p) => <ListingCard key={p.id} p={p} />)}
+            {listings
+              .filter((p) => statusFilter === 'All' || p.status === statusFilter)
+              .map((p) => <ListingCard key={p.id} p={p} />)}
           </div>
         </section>
       )}

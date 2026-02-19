@@ -1,3 +1,5 @@
+mod models;
+mod store;
 mod db;
 mod images;
 mod parser;

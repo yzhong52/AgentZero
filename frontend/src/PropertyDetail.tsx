@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Property } from './App'
+import type { Property, ImageEntry } from './App'
 
 function formatPrice(price: number | null, currency: string | null) {
     if (price == null) return null
@@ -9,6 +9,44 @@ function formatPrice(price: number | null, currency: string | null) {
         currency: currency ?? 'CAD',
         maximumFractionDigits: 0,
     }).format(price)
+}
+
+function formatImgDate(dateStr: string) {
+    if (!dateStr) return ''
+    return new Date(dateStr).toLocaleDateString('en-CA', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    })
+}
+
+function ImageTile({
+    img,
+    alt,
+    className,
+    wrapperClass,
+    onDelete,
+}: {
+    img: ImageEntry
+    alt: string
+    className: string
+    wrapperClass: string
+    onDelete: (id: number) => void
+}) {
+    return (
+        <div className={wrapperClass}>
+            <img src={img.url} alt={alt} className={className} />
+            <span className="image-created-at">{formatImgDate(img.created_at)}</span>
+            <button
+                className="image-delete-btn"
+                onClick={(e) => { e.stopPropagation(); onDelete(img.id) }}
+                title="Delete image"
+                aria-label="Delete image"
+            >
+                ×
+            </button>
+        </div>
+    )
 }
 
 export function PropertyDetail() {
@@ -61,6 +99,19 @@ export function PropertyDetail() {
         }
     }
 
+    async function handleDeleteImage(imageId: number) {
+        if (!property) return
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/images/${imageId}`, {
+                method: 'DELETE',
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+            setProperty({ ...property, images: property.images.filter((img) => img.id !== imageId) })
+        } catch (err: any) {
+            setError(err?.message || String(err))
+        }
+    }
+
     if (loading) return <div className="loading">Loading...</div>
     if (error) return <div className="error-msg">{error}</div>
     if (!property) return <div className="error-msg">Property not found</div>
@@ -80,8 +131,8 @@ export function PropertyDetail() {
                 <button className="back-btn" onClick={() => navigate('/')}>
                     ← Back
                 </button>
-                <button 
-                    className="refresh-btn" 
+                <button
+                    className="refresh-btn"
                     onClick={handleRefresh}
                     disabled={refreshing}
                     title="Refresh property data from source"
@@ -96,15 +147,23 @@ export function PropertyDetail() {
             <div className="detail-images">
                 {property.images.length > 0 ? (
                     <div className="image-carousel">
-                        <img src={property.images[0]} alt={property.title} className="main-image" />
+                        <ImageTile
+                            img={property.images[0]}
+                            alt={property.title}
+                            className="main-image"
+                            wrapperClass="image-wrapper main-image-wrapper"
+                            onDelete={handleDeleteImage}
+                        />
                         {property.images.length > 1 && (
                             <div className="image-thumbnails">
-                                {property.images.map((img, idx) => (
-                                    <img
-                                        key={idx}
-                                        src={img}
-                                        alt={`${property.title} ${idx + 1}`}
+                                {property.images.map((img) => (
+                                    <ImageTile
+                                        key={img.id}
+                                        img={img}
+                                        alt={property.title}
                                         className="thumbnail"
+                                        wrapperClass="image-wrapper thumbnail-wrapper"
+                                        onDelete={handleDeleteImage}
                                     />
                                 ))}
                             </div>

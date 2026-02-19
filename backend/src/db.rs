@@ -3,6 +3,13 @@ use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
 
 #[derive(Serialize, Clone)]
+pub struct ImageEntry {
+    pub id: i64,
+    pub url: String,
+    pub created_at: String,
+}
+
+#[derive(Serialize, Clone)]
 pub struct Property {
     pub id: i64,
     pub url: String,
@@ -22,7 +29,7 @@ pub struct Property {
     pub lat: Option<f64>,
     pub lon: Option<f64>,
     /// Populated from images_cache, not stored directly in listings.
-    pub images: Vec<String>,
+    pub images: Vec<ImageEntry>,
     pub created_at: String,
 }
 
@@ -164,7 +171,7 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
 
     for prop in &mut properties {
-        prop.images = list_resolved_images(pool, prop.id).await.unwrap_or_default();
+        prop.images = list_images_with_meta(pool, prop.id).await.unwrap_or_default();
     }
 
     Ok(properties)
@@ -239,8 +246,8 @@ pub async fn insert_image_url(
     position: i64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT INTO images_cache (listing_id, source_url, position)
-         VALUES (?, ?, ?)
+        "INSERT INTO images_cache (listing_id, source_url, position, created_at)
+         VALUES (?, ?, ?, datetime('now'))
          ON CONFLICT(listing_id, source_url) DO UPDATE SET position = excluded.position",
     )
     .bind(listing_id)
@@ -289,17 +296,55 @@ pub async fn update_cached_image(
     Ok(())
 }
 
-/// Resolved image URLs for a listing: local_path if cached, source_url as fallback.
-pub async fn list_resolved_images(
+/// Resolved images for a listing with metadata: local_path if cached, source_url as fallback.
+pub async fn list_images_with_meta(
     pool: &SqlitePool,
     listing_id: i64,
-) -> Result<Vec<String>, sqlx::Error> {
+) -> Result<Vec<ImageEntry>, sqlx::Error> {
     let rows = sqlx::query(
-        "SELECT COALESCE(local_path, source_url) AS url
+        "SELECT id, COALESCE(local_path, source_url) AS url, created_at
          FROM images_cache WHERE listing_id = ? ORDER BY position",
     )
     .bind(listing_id)
     .fetch_all(pool)
     .await?;
-    Ok(rows.iter().map(|r| r.get("url")).collect())
+    Ok(rows
+        .iter()
+        .map(|r| ImageEntry {
+            id: r.get("id"),
+            url: r.get("url"),
+            created_at: r.get("created_at"),
+        })
+        .collect())
+}
+
+/// Returns the local_path for an image (None if not downloaded, or row not found).
+/// The outer Option is None when the row doesn't exist for this listing.
+pub async fn get_image_local_path(
+    pool: &SqlitePool,
+    image_id: i64,
+    listing_id: i64,
+) -> Result<Option<Option<String>>, sqlx::Error> {
+    let row = sqlx::query(
+        "SELECT local_path FROM images_cache WHERE id = ? AND listing_id = ?",
+    )
+    .bind(image_id)
+    .bind(listing_id)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|r| r.get::<Option<String>, _>("local_path")))
+}
+
+/// Delete an image_cache row. Call after removing any file from the object store.
+pub async fn delete_image_record(
+    pool: &SqlitePool,
+    image_id: i64,
+    listing_id: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM images_cache WHERE id = ? AND listing_id = ?")
+        .bind(image_id)
+        .bind(listing_id)
+        .execute(pool)
+        .await?;
+    Ok(())
 }

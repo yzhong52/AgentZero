@@ -5,9 +5,9 @@ use axum::{
     Json, Router,
     extract::{Query, State, Path},
     http::StatusCode,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
 };
-use object_store::local::LocalFileSystem;
+use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
 use tower_http::services::ServeDir;
 use reqwest::Client;
@@ -158,6 +158,7 @@ fn extract_images(document: &Html) -> Vec<String> {
 
 /// Extracts structured property fields from JSON-LD blocks.
 /// Looks for the item whose @type includes "RealEstateListing".
+/// `images` is always left empty here — call `extract_image_urls` separately.
 fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> db::Property {
     let listing = json_ld.iter().find(|v| {
         let t = &v["@type"];
@@ -222,15 +223,26 @@ fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> db::Proper
     p.lat = entity["geo"]["latitude"].as_f64();
     p.lon = entity["geo"]["longitude"].as_f64();
 
-    // images from mainEntity.image array
-    if let Some(imgs) = entity["image"].as_array() {
-        p.images = imgs
-            .iter()
-            .filter_map(|img| img["url"].as_str().map(str::to_string))
-            .collect();
-    }
-
     p
+}
+
+/// Extracts image source URLs from mainEntity.image[] in the RealEstateListing JSON-LD block.
+fn extract_image_urls(json_ld: &[JsonValue]) -> Vec<String> {
+    let listing = json_ld.iter().find(|v| {
+        let t = &v["@type"];
+        t == "RealEstateListing"
+            || t.as_array()
+                .map(|a| a.iter().any(|x| x == "RealEstateListing"))
+                .unwrap_or(false)
+    });
+    listing
+        .and_then(|l| l["mainEntity"]["image"].as_array())
+        .map(|imgs| {
+            imgs.iter()
+                .filter_map(|img| img["url"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 async fn parse(
@@ -282,13 +294,14 @@ async fn save_listing(
     };
 
     let property = extract_property(parsed.as_str(), &title, &json_ld);
+    let image_urls = extract_image_urls(&json_ld);
 
     let saved = db::save(&state.db, &property)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     // Register image URLs in images_cache, preserving parser ordering.
-    for (position, url) in property.images.iter().enumerate() {
+    for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
     }
 
@@ -302,7 +315,7 @@ async fn save_listing(
     )
     .await;
 
-    let images = db::list_resolved_images(&state.db, saved.id)
+    let images = db::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
@@ -339,13 +352,14 @@ async fn refresh_listing(
     let mut updated = extract_property(parsed.as_str(), &title, &json_ld);
     updated.id = id;
     updated.url = url.to_string();
+    let image_urls = extract_image_urls(&json_ld);
 
     let saved = db::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     // Update image URLs in images_cache
-    for (position, url) in updated.images.iter().enumerate() {
+    for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
     }
 
@@ -359,11 +373,40 @@ async fn refresh_listing(
     )
     .await;
 
-    let images = db::list_resolved_images(&state.db, saved.id)
+    let images = db::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     Ok(Json(db::Property { images, ..saved }))
+}
+
+async fn delete_image(
+    State(state): State<AppState>,
+    Path((listing_id, image_id)): Path<(i64, i64)>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    // Verify the image exists and belongs to this listing; get its local_path.
+    let local_path = db::get_image_local_path(&state.db, image_id, listing_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?
+        .ok_or((StatusCode::NOT_FOUND, "Image not found".to_string()))?;
+
+    // Delete the file from the object store when it was successfully downloaded.
+    if let Some(path) = local_path {
+        // path looks like "/images/1/abc123.jpg"; strip prefix to get object key.
+        let object_key = path
+            .strip_prefix(&format!("{}/", state.images_url_prefix))
+            .unwrap_or(&path);
+        if let Err(e) = state.store.delete(&ObjectPath::from(object_key)).await {
+            tracing::warn!("Failed to delete image file {}: {}", object_key, e);
+            // Proceed to remove the DB record even if file deletion fails.
+        }
+    }
+
+    db::delete_image_record(&state.db, image_id, listing_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn list_listings(
@@ -409,7 +452,16 @@ mod tests {
         let title = extract_title(&document);
         let url = "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332";
 
-        let property = extract_property(url, &title, &json_ld);
+        let image_urls = extract_image_urls(&json_ld);
+        let images: Vec<db::ImageEntry> = image_urls
+            .into_iter()
+            .enumerate()
+            .map(|(i, url)| db::ImageEntry { id: i as i64, url, created_at: String::new() })
+            .collect();
+        let property = db::Property {
+            images,
+            ..extract_property(url, &title, &json_ld)
+        };
 
         insta::assert_json_snapshot!(property);
     }
@@ -461,6 +513,7 @@ async fn main() {
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
         .route("/api/listings/:id", put(refresh_listing))
+        .route("/api/listings/:id/images/:image_id", delete(delete_image))
         .nest_service("/images", ServeDir::new(&images_dir))
         .with_state(state)
         .layer(cors);

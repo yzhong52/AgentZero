@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
 
+export type ImageEntry = {
+  id: number
+  url: string
+  created_at: string
+}
+
 export type Property = {
   id: number
   url: string
@@ -20,7 +26,7 @@ export type Property = {
   year_built: number | null
   lat: number | null
   lon: number | null
-  images: string[]
+  images: ImageEntry[]
   created_at: string
 }
 
@@ -35,7 +41,7 @@ function formatPrice(price: number | null, currency: string | null) {
 
 function ListingCard({ p }: { p: Property }) {
   const navigate = useNavigate()
-  const img = p.images[0]
+  const img = p.images[0]?.url
   const address = [p.street_address, p.city, p.region, p.postal_code]
     .filter(Boolean)
     .join(', ')

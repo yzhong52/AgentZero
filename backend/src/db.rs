@@ -31,6 +31,7 @@ pub struct Property {
     /// Populated from images_cache, not stored directly in listings.
     pub images: Vec<ImageEntry>,
     pub created_at: String,
+    pub updated_at: Option<String>,
 }
 
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -55,8 +56,8 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
         r#"INSERT INTO listings
                (url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                bedrooms, bathrooms, sqft, year_built, lat, lon, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(url) DO UPDATE SET
                title          = excluded.title,
                description    = excluded.description,
@@ -72,7 +73,8 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                sqft           = excluded.sqft,
                year_built     = excluded.year_built,
                lat            = excluded.lat,
-               lon            = excluded.lon"#,
+               lon            = excluded.lon,
+               updated_at     = datetime('now')"#,
     )
     .bind(&p.url)
     .bind(&p.title)
@@ -96,7 +98,7 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -123,7 +125,8 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                sqft           = ?,
                year_built     = ?,
                lat            = ?,
-               lon            = ?
+               lon            = ?,
+               updated_at     = datetime('now')
            WHERE id = ?"#,
     )
     .bind(&p.title)
@@ -148,7 +151,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     let row = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -162,7 +165,7 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at
+                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -198,6 +201,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         lon: row.get("lon"),
         images: vec![], // populated separately from images_cache
         created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
     }
 }
 

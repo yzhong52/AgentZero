@@ -208,7 +208,10 @@ export function PropertyDetail() {
                         <strong>Longitude:</strong> {property.lon ?? 'N/A'}
                     </div>
                     <div className="meta-item">
-                        <strong>Saved:</strong> {new Date(property.created_at).toLocaleDateString()}
+                        <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <div className="meta-item">
+                        <strong>Last refreshed:</strong> {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </div>
                 </div>
             </div>

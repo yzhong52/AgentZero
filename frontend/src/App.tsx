@@ -28,6 +28,7 @@ export type Property = {
   lon: number | null
   images: ImageEntry[]
   created_at: string
+  updated_at: string | null
 }
 
 function formatPrice(price: number | null, currency: string | null) {

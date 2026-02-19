@@ -188,6 +188,7 @@ fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> db::Proper
         lon: None,
         images: Vec::new(),
         created_at: String::new(),
+        updated_at: None,
     };
 
     let Some(listing) = listing else {

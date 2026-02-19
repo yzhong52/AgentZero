@@ -377,6 +377,39 @@ export function PropertyDetail() {
                                 <div className="tracked-field"><label>Rental income (monthly)</label><span className="tracked-value">{moneyLabel(property.rental_income)}</span></div>
                             </div>
                         </div>
+
+                        <div className="tracked-group">
+                            <h4>Nearby Schools <span className="school-source-note">(Fraser Institute rating /10)</span></h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field">
+                                    <label>Elementary</label>
+                                    <span className="tracked-value school-entry">
+                                        {property.school_elementary ?? '—'}
+                                        {property.school_elementary_rating != null && (
+                                            <span className="school-rating">{property.school_elementary_rating.toFixed(1)}</span>
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Middle</label>
+                                    <span className="tracked-value school-entry">
+                                        {property.school_middle ?? '—'}
+                                        {property.school_middle_rating != null && (
+                                            <span className="school-rating">{property.school_middle_rating.toFixed(1)}</span>
+                                        )}
+                                    </span>
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Secondary</label>
+                                    <span className="tracked-value school-entry">
+                                        {property.school_secondary ?? '—'}
+                                        {property.school_secondary_rating != null && (
+                                            <span className="school-rating">{property.school_secondary_rating.toFixed(1)}</span>
+                                        )}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="detail-metadata">

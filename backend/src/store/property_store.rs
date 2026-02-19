@@ -29,29 +29,38 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
                 parking_garage, land_sqft, ac, radiant_floor_heating,
+                school_elementary, school_elementary_rating,
+                school_middle, school_middle_rating,
+                school_secondary, school_secondary_rating,
                 updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(url) DO UPDATE SET
-               title                = excluded.title,
-               description          = excluded.description,
-               price                = excluded.price,
-               price_currency       = excluded.price_currency,
-               street_address       = excluded.street_address,
-               city                 = excluded.city,
-               region               = excluded.region,
-               postal_code          = excluded.postal_code,
-               country              = excluded.country,
-               bedrooms             = excluded.bedrooms,
-               bathrooms            = excluded.bathrooms,
-               sqft                 = excluded.sqft,
-               year_built           = excluded.year_built,
-               lat                  = excluded.lat,
-               lon                  = excluded.lon,
-               parking_garage       = excluded.parking_garage,
-               land_sqft            = excluded.land_sqft,
-               ac                   = excluded.ac,
-               radiant_floor_heating = excluded.radiant_floor_heating,
-               updated_at           = datetime('now')"#,
+               title                    = excluded.title,
+               description              = excluded.description,
+               price                    = excluded.price,
+               price_currency           = excluded.price_currency,
+               street_address           = excluded.street_address,
+               city                     = excluded.city,
+               region                   = excluded.region,
+               postal_code              = excluded.postal_code,
+               country                  = excluded.country,
+               bedrooms                 = excluded.bedrooms,
+               bathrooms                = excluded.bathrooms,
+               sqft                     = excluded.sqft,
+               year_built               = excluded.year_built,
+               lat                      = excluded.lat,
+               lon                      = excluded.lon,
+               parking_garage           = excluded.parking_garage,
+               land_sqft                = excluded.land_sqft,
+               ac                       = excluded.ac,
+               radiant_floor_heating    = excluded.radiant_floor_heating,
+               school_elementary        = excluded.school_elementary,
+               school_elementary_rating = excluded.school_elementary_rating,
+               school_middle            = excluded.school_middle,
+               school_middle_rating     = excluded.school_middle_rating,
+               school_secondary         = excluded.school_secondary,
+               school_secondary_rating  = excluded.school_secondary_rating,
+               updated_at               = datetime('now')"#,
     )
     .bind(&p.url)
     .bind(&p.title)
@@ -73,6 +82,12 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     .bind(p.land_sqft)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
+    .bind(&p.school_elementary)
+    .bind(p.school_elementary_rating)
+    .bind(&p.school_middle)
+    .bind(p.school_middle_rating)
+    .bind(&p.school_secondary)
+    .bind(p.school_secondary_rating)
     .execute(pool)
     .await?;
 
@@ -83,7 +98,10 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname
+                status, nickname,
+                school_elementary, school_elementary_rating,
+                school_middle, school_middle_rating,
+                school_secondary, school_secondary_rating
          FROM listings WHERE url = ?",
     )
     .bind(&p.url)
@@ -112,11 +130,17 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                year_built            = ?,
                lat                   = ?,
                lon                   = ?,
-               parking_garage        = ?,
-               land_sqft             = ?,
-               ac                    = ?,
-               radiant_floor_heating = ?,
-               updated_at            = datetime('now')
+               parking_garage           = ?,
+               land_sqft                = ?,
+               ac                       = ?,
+               radiant_floor_heating    = ?,
+               school_elementary        = ?,
+               school_elementary_rating = ?,
+               school_middle            = ?,
+               school_middle_rating     = ?,
+               school_secondary         = ?,
+               school_secondary_rating  = ?,
+               updated_at               = datetime('now')
            WHERE id = ?"#,
     )
     .bind(&p.title)
@@ -138,6 +162,12 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.land_sqft)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
+    .bind(&p.school_elementary)
+    .bind(p.school_elementary_rating)
+    .bind(&p.school_middle)
+    .bind(p.school_middle_rating)
+    .bind(&p.school_secondary)
+    .bind(p.school_secondary_rating)
     .bind(id)
     .execute(pool)
     .await?;
@@ -149,7 +179,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname
+                status, nickname,
+                school_elementary, school_elementary_rating,
+                school_middle, school_middle_rating,
+                school_secondary, school_secondary_rating
          FROM listings WHERE id = ?",
     )
     .bind(id)
@@ -168,7 +201,10 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
                 parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                 skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                 mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname
+                status, nickname,
+                school_elementary, school_elementary_rating,
+                school_middle, school_middle_rating,
+                school_secondary, school_secondary_rating
          FROM listings ORDER BY created_at DESC",
     )
     .fetch_all(pool)
@@ -223,6 +259,12 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         rental_income: row.get("rental_income"),
         status: row.get("status"),
         nickname: row.get("nickname"),
+        school_elementary: row.get("school_elementary"),
+        school_elementary_rating: row.get("school_elementary_rating"),
+        school_middle: row.get("school_middle"),
+        school_middle_rating: row.get("school_middle_rating"),
+        school_secondary: row.get("school_secondary"),
+        school_secondary_rating: row.get("school_secondary_rating"),
     }
 }
 
@@ -246,7 +288,10 @@ pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Resu
                radiant_floor_heating = ?, ac = ?,
                mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
                has_rental_suite = ?, rental_income = ?,
-               status = ?
+               status = ?,
+               school_elementary = ?, school_elementary_rating = ?,
+               school_middle = ?, school_middle_rating = ?,
+               school_secondary = ?, school_secondary_rating = ?
            WHERE id = ?"#,
     )
     .bind(d.parking_garage)
@@ -264,6 +309,12 @@ pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Resu
     .bind(d.has_rental_suite)
     .bind(d.rental_income)
     .bind(&d.status)
+    .bind(&d.school_elementary)
+    .bind(d.school_elementary_rating)
+    .bind(&d.school_middle)
+    .bind(d.school_middle_rating)
+    .bind(&d.school_secondary)
+    .bind(d.school_secondary_rating)
     .bind(id)
     .execute(pool)
     .await?;

@@ -7,6 +7,63 @@ use std::sync::OnceLock;
 
 use crate::db;
 
+static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
+
+fn nearby_schools_re() -> &'static Regex {
+    NEARBY_SCHOOLS_RE.get_or_init(|| {
+        Regex::new(r#""nearbySchools":\s*(\[[^\]]*\])"#).unwrap()
+    })
+}
+
+pub struct SchoolInfo {
+    pub elementary: Option<(String, Option<f64>)>,
+    pub middle: Option<(String, Option<f64>)>,
+    pub secondary: Option<(String, Option<f64>)>,
+}
+
+/// Extracts nearby school names and GreatSchools ratings from Redfin's embedded JSON.
+/// Redfin categorises schools as "E" (elementary), "M" (middle), "H" (high/secondary).
+/// Returns None if no school data is found in the page.
+pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
+    let caps = nearby_schools_re().captures(html)?;
+    let json_str = caps.get(1)?.as_str();
+    let schools: JsonValue = serde_json::from_str(json_str).ok()?;
+    let arr = schools.as_array()?;
+
+    let mut elementary: Option<(String, Option<f64>)> = None;
+    let mut middle: Option<(String, Option<f64>)> = None;
+    let mut secondary: Option<(String, Option<f64>)> = None;
+
+    for s in arr {
+        let name = match s["name"].as_str().or_else(|| s["schoolName"].as_str()) {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+        let rating = s["rating"].as_f64()
+            .or_else(|| s["greatSchoolsRating"].as_f64())
+            .or_else(|| s["score"].as_f64());
+        let level = s["levelCode"].as_str()
+            .or_else(|| s["type"].as_str())
+            .or_else(|| s["gradeRange"].as_str())
+            .unwrap_or("");
+
+        let lower = level.to_lowercase();
+        if (lower.contains('e') || lower.starts_with("k") || lower.contains("elementary") || lower.contains("primary")) && elementary.is_none() {
+            elementary = Some((name, rating));
+        } else if (lower.contains('m') || lower.contains("middle") || lower.contains("junior")) && middle.is_none() {
+            middle = Some((name, rating));
+        } else if (lower.contains('h') || lower.contains("high") || lower.contains("secondary")) && secondary.is_none() {
+            secondary = Some((name, rating));
+        }
+    }
+
+    if elementary.is_none() && middle.is_none() && secondary.is_none() {
+        return None;
+    }
+
+    Some(SchoolInfo { elementary, middle, secondary })
+}
+
 static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
 static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 
@@ -217,6 +274,12 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         rental_income: None,
         status: None,
         nickname: None,
+        school_elementary: None,
+        school_elementary_rating: None,
+        school_middle: None,
+        school_middle_rating: None,
+        school_secondary: None,
+        school_secondary_rating: None,
     })
 }
 

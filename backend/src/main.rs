@@ -24,7 +24,7 @@ use url::Url;
 
 use parser::{
     ParseResult, extract_description, extract_image_urls, extract_images, extract_json_ld,
-    extract_lot_size, extract_property, extract_title, meta_map,
+    extract_lot_size, extract_property, extract_schools, extract_title, meta_map,
 };
 
 #[derive(Clone)]
@@ -134,6 +134,11 @@ async fn save_listing(
     let mut property = extract_property(parsed.as_str(), &title, &json_ld)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
     property.land_sqft = extract_lot_size(&html);
+    if let Some(schools) = extract_schools(&html) {
+        if let Some((name, rating)) = schools.elementary { property.school_elementary = Some(name); property.school_elementary_rating = rating; }
+        if let Some((name, rating)) = schools.middle     { property.school_middle = Some(name);     property.school_middle_rating = rating; }
+        if let Some((name, rating)) = schools.secondary  { property.school_secondary = Some(name);  property.school_secondary_rating = rating; }
+    }
     let image_urls = extract_image_urls(&json_ld);
 
     let saved = db::save(&state.db, &property)
@@ -193,6 +198,11 @@ async fn refresh_listing(
     let mut updated = extract_property(parsed.as_str(), &title, &json_ld)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
     updated.land_sqft = extract_lot_size(&html);
+    if let Some(schools) = extract_schools(&html) {
+        if let Some((name, rating)) = schools.elementary { updated.school_elementary = Some(name); updated.school_elementary_rating = rating; }
+        if let Some((name, rating)) = schools.middle     { updated.school_middle = Some(name);     updated.school_middle_rating = rating; }
+        if let Some((name, rating)) = schools.secondary  { updated.school_secondary = Some(name);  updated.school_secondary_rating = rating; }
+    }
     updated.id = id;
     updated.url = url.to_string();
     let image_urls = extract_image_urls(&json_ld);

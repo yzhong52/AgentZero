@@ -46,6 +46,12 @@ export type Property = {
   rental_income: number | null
   status: string | null
   nickname: string | null
+  school_elementary: string | null
+  school_elementary_rating: number | null
+  school_middle: string | null
+  school_middle_rating: number | null
+  school_secondary: string | null
+  school_secondary_rating: number | null
 }
 
 export const STATUS_OPTIONS = ['Interested', 'Buyable', 'Pass'] as const

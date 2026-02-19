@@ -59,6 +59,13 @@ pub struct Property {
     pub status: Option<String>,
     /// User-assigned nickname / alias for this listing.
     pub nickname: Option<String>,
+    // nearby schools (name + Fraser Institute rating 1-10)
+    pub school_elementary: Option<String>,
+    pub school_elementary_rating: Option<f64>,
+    pub school_middle: Option<String>,
+    pub school_middle_rating: Option<f64>,
+    pub school_secondary: Option<String>,
+    pub school_secondary_rating: Option<f64>,
 }
 
 /// User-provided details for a property (subset of Property fields).
@@ -80,4 +87,10 @@ pub struct UserDetails {
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,
     pub status: Option<String>,
+    pub school_elementary: Option<String>,
+    pub school_elementary_rating: Option<f64>,
+    pub school_middle: Option<String>,
+    pub school_middle_rating: Option<f64>,
+    pub school_secondary: Option<String>,
+    pub school_secondary_rating: Option<f64>,
 }

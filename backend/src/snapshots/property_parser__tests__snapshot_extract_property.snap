@@ -1,6 +1,5 @@
 ---
 source: src/main.rs
-assertion_line: 326
 expression: property
 ---
 {
@@ -224,5 +223,13 @@ expression: property
   "hoa_monthly": null,
   "monthly_total": null,
   "has_rental_suite": null,
-  "rental_income": null
+  "rental_income": null,
+  "status": null,
+  "nickname": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null
 }

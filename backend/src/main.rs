@@ -2,7 +2,7 @@ mod models;
 mod store;
 mod db;
 mod images;
-mod parser;
+mod parsers;
 
 use axum::{
     Json, Router,
@@ -21,12 +21,9 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
-use url::Url;
 
-use parser::{
-    ParseResult, extract_description, extract_image_urls, extract_images, extract_json_ld,
-    extract_lot_size, extract_property, extract_schools, extract_title, meta_map,
-};
+use url::Url;
+use parsers::{ParseResult, extract_description, extract_images, extract_json_ld, extract_title, meta_map};
 
 #[derive(Clone)]
 struct AppState {
@@ -128,21 +125,10 @@ async fn save_listing(
         .await
         .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
 
-    // `Html` is !Send, so extract everything in a block and drop it before the next await.
-    let (json_ld, title) = {
-        let document = Html::parse_document(&html);
-        (extract_json_ld(&document), extract_title(&document))
-    };
-
-    let mut property = extract_property(parsed.as_str(), &title, &json_ld)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
-    property.land_sqft = extract_lot_size(&html);
-    if let Some(schools) = extract_schools(&html) {
-        if let Some((name, rating)) = schools.elementary { property.school_elementary = Some(name); property.school_elementary_rating = rating; }
-        if let Some((name, rating)) = schools.middle     { property.school_middle = Some(name);     property.school_middle_rating = rating; }
-        if let Some((name, rating)) = schools.secondary  { property.school_secondary = Some(name);  property.school_secondary_rating = rating; }
-    }
-    let image_urls = extract_image_urls(&json_ld);
+    let listing = parsers::parse(parsed.as_str(), &html)
+        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
+    let property = listing.property;
+    let image_urls = listing.image_urls;
 
     let saved = db::save(&state.db, &property)
         .await
@@ -192,23 +178,12 @@ async fn refresh_listing(
         .await
         .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
 
-    // Extract everything in a block
-    let (json_ld, title) = {
-        let document = Html::parse_document(&html);
-        (extract_json_ld(&document), extract_title(&document))
-    };
-
-    let mut updated = extract_property(parsed.as_str(), &title, &json_ld)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No RealEstateListing found in page".to_string()))?;
-    updated.land_sqft = extract_lot_size(&html);
-    if let Some(schools) = extract_schools(&html) {
-        if let Some((name, rating)) = schools.elementary { updated.school_elementary = Some(name); updated.school_elementary_rating = rating; }
-        if let Some((name, rating)) = schools.middle     { updated.school_middle = Some(name);     updated.school_middle_rating = rating; }
-        if let Some((name, rating)) = schools.secondary  { updated.school_secondary = Some(name);  updated.school_secondary_rating = rating; }
-    }
+    let listing = parsers::parse(parsed.as_str(), &html)
+        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
+    let mut updated = listing.property;
     updated.id = id;
     updated.url = url.to_string();
-    let image_urls = extract_image_urls(&json_ld);
+    let image_urls = listing.image_urls;
 
     // Record price change history before overwriting.
     if property.price != updated.price {
@@ -380,7 +355,7 @@ async fn list_listings(
 #[cfg(test)]
 mod tests {
     use scraper::Html;
-    use crate::{db, parser};
+    use crate::{db, parsers};
 
     #[test]
     fn snapshot_redfin_3662_oak_st() {
@@ -388,14 +363,14 @@ mod tests {
             .expect("fixture not found — run from backend/");
         let document = Html::parse_document(&html);
 
-        let result = parser::ParseResult {
+        let result = parsers::ParseResult {
             url: "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332"
                 .to_string(),
-            title: parser::extract_title(&document),
-            description: parser::extract_description(&document),
-            images: parser::extract_images(&document),
-            raw_json_ld: parser::extract_json_ld(&document),
-            meta: parser::meta_map(&document),
+            title: parsers::extract_title(&document),
+            description: parsers::extract_description(&document),
+            images: parsers::extract_images(&document),
+            raw_json_ld: parsers::extract_json_ld(&document),
+            meta: parsers::meta_map(&document),
         };
 
         insta::assert_json_snapshot!(result);
@@ -405,21 +380,15 @@ mod tests {
     fn snapshot_extract_property() {
         let html = std::fs::read_to_string("fixtures/redfin_3662_oak_st.html")
             .expect("fixture not found — run from backend/");
-        let document = Html::parse_document(&html);
-        let json_ld = parser::extract_json_ld(&document);
-        let title = parser::extract_title(&document);
         let url = "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332";
 
-        let image_urls = parser::extract_image_urls(&json_ld);
-        let images: Vec<db::ImageEntry> = image_urls
+        let listing = parsers::redfin::parse(url, &html).expect("parse failed");
+        let images: Vec<db::ImageEntry> = listing.image_urls
             .into_iter()
             .enumerate()
             .map(|(i, url)| db::ImageEntry { id: i as i64, url, created_at: String::new() })
             .collect();
-        let property = db::Property {
-            images,
-            ..parser::extract_property(url, &title, &json_ld).unwrap()
-        };
+        let property = db::Property { images, ..listing.property };
 
         insta::assert_json_snapshot!(property);
     }

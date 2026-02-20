@@ -1,19 +1,38 @@
+/// Redfin-specific listing parser.
+///
+/// Redfin embeds structured data in two places:
+///   - JSON-LD (`RealEstateListing`) for core fields and image URLs.
+///   - An escaped JSON blob in a `<script>` tag for lot size and nearby schools.
+
 use regex::Regex;
-use scraper::{Html, Selector};
-use serde::Serialize;
+use scraper::Html;
 use serde_json::Value as JsonValue;
-use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use crate::db;
+use super::{ParsedListing, extract_json_ld, extract_title};
 
+// ── Static regexes ────────────────────────────────────────────────────────────
+
+static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
+static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
+
+fn garage_re() -> &'static Regex {
+    GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
+}
+
+fn lot_size_re() -> &'static Regex {
+    LOT_SIZE_RE.get_or_init(|| Regex::new(r#"lotSize\\?\":(\d+)"#).unwrap())
+}
 
 fn nearby_schools_re() -> &'static Regex {
     NEARBY_SCHOOLS_RE.get_or_init(|| {
         Regex::new(r#""nearbySchools":\s*(\[[^\]]*\])"#).unwrap()
     })
 }
+
+// ── School extraction ─────────────────────────────────────────────────────────
 
 pub struct SchoolInfo {
     pub elementary: Option<(String, Option<f64>)>,
@@ -22,8 +41,8 @@ pub struct SchoolInfo {
 }
 
 /// Extracts nearby school names and GreatSchools ratings from Redfin's embedded JSON.
-/// Redfin categorises schools as "E" (elementary), "M" (middle), "H" (high/secondary).
-/// Returns None if no school data is found in the page.
+/// Redfin categorises schools as "e" (elementary), "m" (middle), "h" (high/secondary).
+/// Returns `None` if no school data is found in the page.
 pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
     let caps = nearby_schools_re().captures(html)?;
     let json_str = caps.get(1)?.as_str();
@@ -48,7 +67,7 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
             .unwrap_or("");
 
         let lower = level.to_lowercase();
-        if (lower.contains('e') || lower.starts_with("k") || lower.contains("elementary") || lower.contains("primary")) && elementary.is_none() {
+        if (lower.contains('e') || lower.starts_with('k') || lower.contains("elementary") || lower.contains("primary")) && elementary.is_none() {
             elementary = Some((name, rating));
         } else if (lower.contains('m') || lower.contains("middle") || lower.contains("junior")) && middle.is_none() {
             middle = Some((name, rating));
@@ -64,25 +83,20 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
     Some(SchoolInfo { elementary, middle, secondary })
 }
 
-static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
-static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
-
-fn garage_re() -> &'static Regex {
-    GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
-}
+// ── Lot size ──────────────────────────────────────────────────────────────────
 
 /// Extracts lot size (sqft) from the raw HTML source.
-/// Redfin embeds `"lotSize":3480` as escaped JSON in a script block — not in JSON-LD.
+/// Redfin embeds `"lotSize":3480` as escaped JSON in a script block.
 pub fn extract_lot_size(html: &str) -> Option<i64> {
-    LOT_SIZE_RE
-        .get_or_init(|| Regex::new(r#"lotSize\\?\":(\d+)"#).unwrap())
+    lot_size_re()
         .captures(html)
         .and_then(|c| c.get(1))
         .and_then(|m| m.as_str().parse::<i64>().ok())
 }
 
+// ── Amenity features ──────────────────────────────────────────────────────────
+
 /// Parses `amenityFeature` array entries for parking count, AC, and radiant floor heating.
-/// Only sets a field to `Some(true)` for booleans when the feature has `value: true`.
 fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>) {
     let mut parking_garage: Option<i64> = None;
     let mut ac: Option<bool> = None;
@@ -112,100 +126,11 @@ fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>,
     (parking_garage, ac, radiant)
 }
 
-#[derive(Serialize)]
-pub struct ParseResult {
-    pub url: String,
-    pub title: String,
-    pub description: String,
-    pub images: Vec<String>,
-    pub raw_json_ld: Vec<JsonValue>,
-    pub meta: BTreeMap<String, String>,
-}
-
-pub fn extract_json_ld(document: &Html) -> Vec<JsonValue> {
-    let selector = Selector::parse("script[type=\"application/ld+json\"]").unwrap();
-    let mut out = Vec::new();
-    for el in document.select(&selector) {
-        if let Some(text) = el.first_child().and_then(|n| n.value().as_text()) {
-            let s = text.trim();
-            if s.is_empty() {
-                continue;
-            }
-            if let Ok(v) = serde_json::from_str::<JsonValue>(s) {
-                if v.is_array() {
-                    if let Some(arr) = v.as_array() {
-                        for item in arr {
-                            out.push(item.clone());
-                        }
-                    }
-                } else {
-                    out.push(v);
-                }
-            }
-        }
-    }
-    out
-}
-
-pub fn meta_map(document: &Html) -> BTreeMap<String, String> {
-    let mut m = BTreeMap::new();
-    let selector = Selector::parse("meta").unwrap();
-    for el in document.select(&selector) {
-        let name = el
-            .value()
-            .attr("property")
-            .or_else(|| el.value().attr("name"))
-            .unwrap_or("");
-        if name.is_empty() {
-            continue;
-        }
-        if let Some(content) = el.value().attr("content") {
-            m.insert(name.to_string(), content.to_string());
-        }
-    }
-    m
-}
-
-pub fn extract_title(document: &Html) -> String {
-    let og = Selector::parse("meta[property=\"og:title\"]").unwrap();
-    if let Some(el) = document.select(&og).next() {
-        if let Some(content) = el.value().attr("content") {
-            return content.to_string();
-        }
-    }
-    let title = Selector::parse("title").unwrap();
-    if let Some(el) = document.select(&title).next() {
-        return el.text().collect::<Vec<_>>().join("").trim().to_string();
-    }
-    String::new()
-}
-
-pub fn extract_description(document: &Html) -> String {
-    let sel =
-        Selector::parse("meta[property=\"og:description\"], meta[name=\"description\"]").unwrap();
-    if let Some(el) = document.select(&sel).next() {
-        if let Some(content) = el.value().attr("content") {
-            return content.to_string();
-        }
-    }
-    String::new()
-}
-
-pub fn extract_images(document: &Html) -> Vec<String> {
-    let sel = Selector::parse("meta[property=\"og:image\"]").unwrap();
-    let mut out = Vec::new();
-    for el in document.select(&sel) {
-        if let Some(content) = el.value().attr("content") {
-            out.push(content.to_string());
-        }
-    }
-    out
-}
+// ── JSON-LD extraction ────────────────────────────────────────────────────────
 
 /// Extracts structured property fields from JSON-LD blocks.
-/// Looks for the item whose @type includes "RealEstateListing".
-/// Returns None if no matching block is found.
-/// `images` is always left empty here — call `extract_image_urls` separately.
+/// Looks for the item whose `@type` includes `"RealEstateListing"`.
+/// `images` is always left empty — `extract_image_urls` handles that.
 pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option<db::Property> {
     let listing = json_ld.iter().find(|v| {
         let t = &v["@type"];
@@ -261,7 +186,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         parking_garage,
         parking_covered: None,
         parking_open: None,
-        land_sqft: None, // set from raw HTML by caller via extract_lot_size()
+        land_sqft: None,
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,
@@ -283,7 +208,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
     })
 }
 
-/// Extracts image source URLs from mainEntity.image[] in the RealEstateListing JSON-LD block.
+/// Extracts image source URLs from `mainEntity.image[]` in the JSON-LD block.
 pub fn extract_image_urls(json_ld: &[JsonValue]) -> Vec<String> {
     let listing = json_ld.iter().find(|v| {
         let t = &v["@type"];
@@ -300,4 +225,35 @@ pub fn extract_image_urls(json_ld: &[JsonValue]) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+// ── Entry point ───────────────────────────────────────────────────────────────
+
+/// Parses a Redfin listing page into a `ParsedListing`.
+/// Returns `None` if the page does not contain a `RealEstateListing` JSON-LD block.
+pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
+    let document = Html::parse_document(html);
+    let json_ld = extract_json_ld(&document);
+    let title = extract_title(&document);
+
+    let mut property = extract_property(url, &title, &json_ld)?;
+
+    property.land_sqft = extract_lot_size(html);
+    if let Some(schools) = extract_schools(html) {
+        if let Some((name, rating)) = schools.elementary {
+            property.school_elementary = Some(name);
+            property.school_elementary_rating = rating;
+        }
+        if let Some((name, rating)) = schools.middle {
+            property.school_middle = Some(name);
+            property.school_middle_rating = rating;
+        }
+        if let Some((name, rating)) = schools.secondary {
+            property.school_secondary = Some(name);
+            property.school_secondary_rating = rating;
+        }
+    }
+
+    let image_urls = extract_image_urls(&json_ld);
+    Some(ParsedListing { property, image_urls })
 }

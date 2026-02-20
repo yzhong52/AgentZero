@@ -119,10 +119,128 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 
 // ── Parser dispatch ───────────────────────────────────────────────────────────
 
-/// Parses a listing page by trying each registered parser in turn.
-/// Returns `None` if no parser recognises the page structure.
-pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
-    realtor::parse(url, html)
-        .or_else(|| redfin::parse(url, html))
-        .or_else(|| rew::parse(url, html))
+/// Merges two `Option<T>` values where redfin is primary.
+/// - If both are `Some` and differ, logs a warning and keeps redfin's value.
+/// - If only one is `Some`, uses that.
+macro_rules! merge_field {
+    ($field:expr, $redfin:expr, $rew:expr) => {
+        match (&$redfin, &$rew) {
+            (Some(r), Some(w)) if r != w => {
+                tracing::warn!(
+                    "merge conflict on {}: redfin={:?} rew={:?} — keeping redfin",
+                    $field, r, w
+                );
+                $redfin
+            }
+            (None, w) => w.clone(),
+            (r, _) => r.clone(),
+        }
+    };
+}
+
+/// Parses and merges data from multiple listing pages for the same property.
+///
+/// Strategy:
+/// - Redfin is the primary source for all fields.
+/// - rew.ca fills in any field that redfin left empty.
+/// - When both sources have a value and they differ, keeps redfin's and logs a warning.
+///
+/// `sources` is a slice of `(url, html)` pairs. Unknown URLs are ignored.
+pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
+    let redfin = sources
+        .iter()
+        .find(|(url, _)| url.contains("redfin"))
+        .and_then(|(url, html)| redfin::parse(url, html));
+
+    let rew = sources
+        .iter()
+        .find(|(url, _)| url.contains("rew.ca"))
+        .and_then(|(url, html)| rew::parse(url, html));
+
+    // At least one parser must succeed.
+    let (r, w) = match (redfin, rew) {
+        (None, None) => return None,
+        (Some(r), None) => return Some(r),
+        (None, Some(w)) => return Some(w),
+        (Some(r), Some(w)) => (r, w),
+    };
+
+    let rp = r.property;
+    let wp = w.property;
+
+    let merged = db::Property {
+        // Identity / URLs: redfin is canonical; carry rew_url from rew result.
+        id: rp.id,
+        redfin_url: rp.redfin_url.clone(),
+        realtor_url: rp.realtor_url.clone(),
+        rew_url: wp.rew_url.clone(),
+
+        // Scalar string fields — prefer non-empty redfin, fall back to rew.
+        title:       if rp.title.is_empty() { wp.title.clone() } else { rp.title.clone() },
+        description: if rp.description.is_empty() { wp.description.clone() } else { rp.description.clone() },
+
+        price:          merge_field!("price",          rp.price,          wp.price),
+        price_currency: merge_field!("price_currency", rp.price_currency, wp.price_currency),
+
+        street_address: merge_field!("street_address", rp.street_address, wp.street_address),
+        city:           merge_field!("city",           rp.city,           wp.city),
+        region:         merge_field!("region",         rp.region,         wp.region),
+        postal_code:    merge_field!("postal_code",    rp.postal_code,    wp.postal_code),
+        country:        merge_field!("country",        rp.country,        wp.country),
+
+        bedrooms:  merge_field!("bedrooms",  rp.bedrooms,  wp.bedrooms),
+        bathrooms: merge_field!("bathrooms", rp.bathrooms, wp.bathrooms),
+        sqft:      merge_field!("sqft",      rp.sqft,      wp.sqft),
+
+        year_built: merge_field!("year_built", rp.year_built, wp.year_built),
+
+        lat: merge_field!("lat", rp.lat, wp.lat),
+        lon: merge_field!("lon", rp.lon, wp.lon),
+
+        // Images: prefer redfin's (higher quality); fall back to rew's.
+        images: rp.images.clone(),
+
+        created_at: rp.created_at.clone(),
+        updated_at: rp.updated_at.clone(),
+        notes:      rp.notes.clone(),
+
+        parking_garage:  merge_field!("parking_garage",  rp.parking_garage,  wp.parking_garage),
+        parking_covered: merge_field!("parking_covered", rp.parking_covered, wp.parking_covered),
+        parking_open:    merge_field!("parking_open",    rp.parking_open,    wp.parking_open),
+        land_sqft:       merge_field!("land_sqft",       rp.land_sqft,       wp.land_sqft),
+
+        property_tax: merge_field!("property_tax", rp.property_tax, wp.property_tax),
+
+        skytrain_station:  rp.skytrain_station.clone(),
+        skytrain_walk_min: rp.skytrain_walk_min,
+
+        radiant_floor_heating: merge_field!("radiant_floor_heating", rp.radiant_floor_heating, wp.radiant_floor_heating),
+        ac:                    merge_field!("ac",                    rp.ac,                    wp.ac),
+
+        down_payment_pct:       rp.down_payment_pct,
+        mortgage_interest_rate: rp.mortgage_interest_rate,
+        amortization_years:     rp.amortization_years,
+        mortgage_monthly:       rp.mortgage_monthly,
+
+        hoa_monthly:   merge_field!("hoa_monthly",   rp.hoa_monthly,   wp.hoa_monthly),
+        monthly_total: rp.monthly_total,
+
+        has_rental_suite: merge_field!("has_rental_suite", rp.has_rental_suite, wp.has_rental_suite),
+        rental_income:    merge_field!("rental_income",    rp.rental_income,    wp.rental_income),
+
+        status:   rp.status.clone(),
+        nickname: rp.nickname.clone(),
+
+        school_elementary:        rp.school_elementary.clone(),
+        school_elementary_rating: rp.school_elementary_rating,
+        school_middle:            rp.school_middle.clone(),
+        school_middle_rating:     rp.school_middle_rating,
+        school_secondary:         rp.school_secondary.clone(),
+        school_secondary_rating:  rp.school_secondary_rating,
+    };
+
+    // Image URLs: prefer redfin's; supplement with rew's if redfin had none.
+    let image_urls = if r.image_urls.is_empty() { w.image_urls } else { r.image_urls };
+
+    Some(ParsedListing { property: merged, image_urls })
 }

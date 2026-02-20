@@ -18,7 +18,7 @@ use super::{ParsedListing, extract_json_ld, extract_title, extract_description};
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
 /// Strip currency symbols and commas, parse as i64.
-fn parse_money_i64(s: &str) -> Option<i64> {
+pub fn parse_money_i64(s: &str) -> Option<i64> {
     let clean: String = s.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
     clean.parse::<f64>().ok().map(|v| v as i64)
 }
@@ -39,7 +39,7 @@ fn find_section_value(document: &Html, label: &str) -> Option<String> {
 }
 
 /// Like `find_section_value` but matches if the label contains `label_substr`.
-fn find_section_value_contains(document: &Html, label_substr: &str) -> Option<String> {
+pub fn find_section_value_contains(document: &Html, label_substr: &str) -> Option<String> {
     find_section_value_pred(document, |t| t.contains(label_substr))
 }
 
@@ -122,7 +122,7 @@ fn extract_price(document: &Html) -> Option<i64> {
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-/// Parses a rew.ca listing page.
+/// Parses a rew.ca listing page into a full `ParsedListing`.
 /// Returns `None` if the URL is not rew.ca or no recognisable data is found.
 pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     if !url.contains("rew.ca") {

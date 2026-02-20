@@ -102,7 +102,7 @@ function App() {
       const resp = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ urls: [url.trim()] }),
       })
       if (!resp.ok) throw new Error(await resp.text())
       const saved: Property = await resp.json()

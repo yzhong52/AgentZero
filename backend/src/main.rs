@@ -38,7 +38,8 @@ struct AppState {
 
 #[derive(Deserialize)]
 struct SaveRequest {
-    url: String,
+    /// One or more listing URLs for the same property (e.g. redfin + rew).
+    urls: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -132,14 +133,23 @@ async fn save_listing(
     State(state): State<AppState>,
     Json(body): Json<SaveRequest>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
-    let url = body.url.trim();
-    let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL".to_string()))?;
+    if body.urls.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "At least one URL is required".to_string()));
+    }
 
-    let html = fetch_html(&state.client, &parsed)
-        .await
-        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+    // Fetch HTML for each URL, skipping any that fail.
+    let mut sources: Vec<(String, String)> = Vec::new();
+    for raw in &body.urls {
+        let url = raw.trim();
+        let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, format!("Invalid URL: {}", url)))?;
+        let html = fetch_html(&state.client, &parsed)
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
+        sources.push((parsed.to_string(), html));
+    }
 
-    let listing = parsers::parse(parsed.as_str(), &html)
+    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
+    let listing = parsers::parse_multi(&source_refs)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut property = listing.property;
     let image_urls = listing.image_urls;
@@ -195,17 +205,31 @@ async fn refresh_listing(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let url = property.redfin_url.clone()
-        .or_else(|| property.realtor_url.clone())
-        .or_else(|| property.rew_url.clone())
-        .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
-    let parsed = safe_url(&url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+    // Collect all stored source URLs and fetch each one.
+    let stored_urls: Vec<String> = [
+        property.redfin_url.clone(),
+        property.realtor_url.clone(),
+        property.rew_url.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
 
-    let html = fetch_html(&state.client, &parsed)
-        .await
-        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+    if stored_urls.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
+    }
 
-    let listing = parsers::parse(parsed.as_str(), &html)
+    let mut sources: Vec<(String, String)> = Vec::new();
+    for url in &stored_urls {
+        let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+        let html = fetch_html(&state.client, &parsed)
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
+        sources.push((parsed.to_string(), html));
+    }
+
+    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
+    let listing = parsers::parse_multi(&source_refs)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     updated.id = id;
@@ -380,18 +404,30 @@ async fn preview_refresh(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let source_url = stored.redfin_url.clone()
-        .or_else(|| stored.realtor_url.clone())
-        .or_else(|| stored.rew_url.clone())
-        .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
-    let parsed_url = safe_url(&source_url)
-        .ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+    let stored_urls: Vec<String> = [
+        stored.redfin_url.clone(),
+        stored.realtor_url.clone(),
+        stored.rew_url.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
 
-    let html = fetch_html(&state.client, &parsed_url)
-        .await
-        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+    if stored_urls.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
+    }
 
-    let listing = parsers::parse(parsed_url.as_str(), &html)
+    let mut sources: Vec<(String, String)> = Vec::new();
+    for url in &stored_urls {
+        let parsed_url = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+        let html = fetch_html(&state.client, &parsed_url)
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
+        sources.push((parsed_url.to_string(), html));
+    }
+
+    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
+    let listing = parsers::parse_multi(&source_refs)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
 
     // Return the parsed result without saving; mortgage params carried from stored.

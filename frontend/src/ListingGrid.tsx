@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Property, STATUS_COLORS } from './App'
+import { STATUS_COLORS, type Property } from './App'
 
 function formatPrice(price: number | null, currency: string | null) {
   if (price == null) return null

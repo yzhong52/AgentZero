@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Property } from './App'
+import type { Property } from './App'
 
 export type ColKey =
   | 'name' | 'price' | 'status' | 'address' | 'bedrooms' | 'bathrooms'

@@ -219,6 +219,8 @@ function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
 
 function toUserDetails(p: Property) {
     return {
+        redfin_url:             p.redfin_url,
+        realtor_url:            p.realtor_url,
         price:                  p.price,
         price_currency:         p.price_currency,
         street_address:         p.street_address,
@@ -836,9 +838,35 @@ export function PropertyDetail() {
                     </div>
 
                     <div className="detail-metadata">
+                        {(editMode ? draft : property)?.redfin_url !== undefined && (
+                            <div className="meta-item">
+                                <strong>Redfin:</strong>
+                                {editMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="url"
+                                        value={draft?.redfin_url ?? ''}
+                                        onChange={e => setDraftField('redfin_url', e.target.value || null)}
+                                        placeholder="https://www.redfin.ca/…"
+                                    />
+                                ) : property.redfin_url ? (
+                                    <a href={property.redfin_url} target="_blank" rel="noreferrer">{property.redfin_url}</a>
+                                ) : <span className="tracked-value">—</span>}
+                            </div>
+                        )}
                         <div className="meta-item">
-                            <strong>URL:</strong>
-                            <a href={property.url} target="_blank" rel="noreferrer">{property.url}</a>
+                            <strong>Realtor.ca:</strong>
+                            {editMode ? (
+                                <input
+                                    className="edit-input"
+                                    type="url"
+                                    value={draft?.realtor_url ?? ''}
+                                    onChange={e => setDraftField('realtor_url', e.target.value || null)}
+                                    placeholder="https://www.realtor.ca/real-estate/…"
+                                />
+                            ) : property.realtor_url ? (
+                                <a href={property.realtor_url} target="_blank" rel="noreferrer">{property.realtor_url}</a>
+                            ) : <span className="tracked-value">—</span>}
                         </div>
                         <div className="meta-item">
                             <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}

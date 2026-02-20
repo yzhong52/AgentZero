@@ -12,7 +12,8 @@ export type ImageEntry = {
 
 export type Property = {
   id: number
-  url: string
+  redfin_url: string | null
+  realtor_url: string | null
   title: string
   description: string
   price: number | null
@@ -105,7 +106,7 @@ function App() {
       })
       if (!resp.ok) throw new Error(await resp.text())
       const saved: Property = await resp.json()
-      setSavedMsg(`Saved: ${saved.title || saved.url}`)
+      setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url}`)
       setUrl('')
       fetchListings()
     } catch (err: any) {

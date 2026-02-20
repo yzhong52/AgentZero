@@ -155,9 +155,12 @@ async fn save_listing(
         property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
 
-    let saved = db::save(&state.db, &property)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let saved = if property.realtor_url.is_some() {
+        db::save_realtor(&state.db, &property).await
+    } else {
+        db::save_redfin(&state.db, &property).await
+    }
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     // Register image URLs in images_cache, preserving parser ordering.
     for (position, url) in image_urls.iter().enumerate() {
@@ -190,7 +193,9 @@ async fn refresh_listing(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let url = property.url.clone();
+    let url = property.redfin_url.clone()
+        .or_else(|| property.realtor_url.clone())
+        .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
     let parsed = safe_url(&url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
 
     let html = fetch_html(&state.client, &parsed)
@@ -201,7 +206,14 @@ async fn refresh_listing(
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     updated.id = id;
-    updated.url = url.clone();
+    // Preserve whichever URL was used to fetch.
+    if property.redfin_url.is_some() {
+        updated.redfin_url = property.redfin_url.clone();
+        updated.realtor_url = property.realtor_url.clone();
+    } else {
+        updated.realtor_url = property.realtor_url.clone();
+        updated.redfin_url = property.redfin_url.clone();
+    }
     let image_urls = listing.image_urls;
 
     // Preserve the user's mortgage parameters; re-calculate monthly payment.
@@ -369,7 +381,10 @@ async fn preview_refresh(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let parsed_url = safe_url(&stored.url)
+    let source_url = stored.redfin_url.clone()
+        .or_else(|| stored.realtor_url.clone())
+        .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
+    let parsed_url = safe_url(&source_url)
         .ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
 
     let html = fetch_html(&state.client, &parsed_url)
@@ -479,7 +494,7 @@ mod tests {
         let images: Vec<db::ImageEntry> = listing.image_urls
             .into_iter()
             .enumerate()
-            .map(|(i, url)| db::ImageEntry { id: i as i64, url, created_at: String::new() })
+            .map(|(i, img_url)| db::ImageEntry { id: i as i64, url: img_url, created_at: String::new() })
             .collect();
         let property = db::Property { images, ..listing.property };
 

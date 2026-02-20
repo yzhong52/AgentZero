@@ -6,7 +6,8 @@ use crate::models::image::ImageEntry;
 #[derive(Serialize, Clone)]
 pub struct Property {
     pub id: i64,
-    pub url: String,
+    pub redfin_url: Option<String>,
+    pub realtor_url: Option<String>,
     pub title: String,
     pub description: String,
     // cost
@@ -76,6 +77,9 @@ pub struct Property {
 /// so that no field is unintentionally cleared.
 #[derive(Deserialize)]
 pub struct UserDetails {
+    // source URLs (user can link or correct)
+    pub redfin_url: Option<String>,
+    pub realtor_url: Option<String>,
     // core parsed fields (user can correct parser errors)
     pub price: Option<i64>,
     pub price_currency: Option<String>,

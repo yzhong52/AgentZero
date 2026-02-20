@@ -6,6 +6,7 @@
 /// The top-level `parse()` function dispatches to the right parser based on the URL.
 
 pub mod redfin;
+pub mod realtor;
 
 use crate::db;
 use scraper::{Html, Selector};
@@ -120,7 +121,6 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 /// Parses a listing page by trying each registered parser in turn.
 /// Returns `None` if no parser recognises the page structure.
 pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
-    redfin::parse(url, html)
-    // Add further parsers here, e.g.:
-    // .or_else(|| zillow::parse(url, html))
+    realtor::parse(url, html)
+        .or_else(|| redfin::parse(url, html))
 }

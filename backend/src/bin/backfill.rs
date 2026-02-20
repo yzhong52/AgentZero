@@ -60,7 +60,8 @@ async fn main() {
             }
         };
 
-        println!("[{}/{}] {} — {} pending", i + 1, total, listing.url, pending.len());
+        let listing_url = listing.redfin_url.as_deref().or(listing.realtor_url.as_deref()).unwrap_or("?");
+        println!("[{}/{}] {} — {} pending", i + 1, total, listing_url, pending.len());
 
         if pending.is_empty() {
             continue;

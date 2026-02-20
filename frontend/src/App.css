@@ -606,6 +606,33 @@
   color: #888;
 }
 
+.info-icon {
+  position: relative;
+  cursor: help;
+  opacity: 0.5;
+  font-size: 0.85em;
+}
+
+.info-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  font-size: 0.78rem;
+  padding: 5px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.info-icon:hover .info-tooltip {
+  display: block;
+}
+
 .tracked-input,
 .tracked-select {
   background: #fafaf8;

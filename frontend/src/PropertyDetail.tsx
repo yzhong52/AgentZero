@@ -713,6 +713,8 @@ export function PropertyDetail() {
                                     } />
                                 <Field label="Property tax (annual)" viewVal={moneyLabel(p.property_tax)}
                                     editEl={<NumInput label="Property tax (annual)" value={draft?.property_tax ?? null} onChange={v => setDraftField('property_tax', v)} />} />
+                                <Field label="HOA / Strata (monthly)" viewVal={moneyLabel(p.hoa_monthly)}
+                                    editEl={<NumInput label="HOA / Strata (monthly)" value={draft?.hoa_monthly ?? null} onChange={v => setDraftField('hoa_monthly', v)} />} />
 
                                 {/* Mortgage params */}
                                 <Field label="Down payment %" viewVal={p.down_payment_pct != null ? `${(p.down_payment_pct * 100).toFixed(0)}%` : '—'}
@@ -767,10 +769,10 @@ export function PropertyDetail() {
                                         </div>
                                     } />
 
-                                <Field label="Mortgage (monthly)" viewVal={moneyLabel(p.mortgage_monthly)}
-                                    editEl={<NumInput label="Mortgage (monthly)" value={draft?.mortgage_monthly ?? null} onChange={v => setDraftField('mortgage_monthly', v)} />} />
-                                <Field label="HOA / Strata (monthly)" viewVal={moneyLabel(p.hoa_monthly)}
-                                    editEl={<NumInput label="HOA / Strata (monthly)" value={draft?.hoa_monthly ?? null} onChange={v => setDraftField('hoa_monthly', v)} />} />
+                                <div className="tracked-field">
+                                    <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from price, down payment %, interest rate, and amortization years</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(p.mortgage_monthly)}</span>
+                                </div>
                                 <Field label="Monthly total" viewVal={moneyLabel(p.monthly_total)}
                                     editEl={<NumInput label="Monthly total" value={draft?.monthly_total ?? null} onChange={v => setDraftField('monthly_total', v)} />} />
                             </div>

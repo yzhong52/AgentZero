@@ -7,7 +7,8 @@ use crate::store::image_store;
 pub async fn init(database_url: &str) -> SqlitePool {
     let opts = SqliteConnectOptions::from_str(database_url)
         .expect("Invalid DATABASE_URL")
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .foreign_keys(true);
 
     let pool = SqlitePool::connect_with(opts)
         .await

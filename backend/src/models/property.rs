@@ -22,7 +22,7 @@ pub struct Property {
     pub bedrooms: Option<i64>,
     pub bathrooms: Option<i64>,
     pub sqft: Option<i64>,
-    // bulding
+    // building
     pub year_built: Option<i64>,
     // location
     pub lat: Option<f64>,
@@ -33,7 +33,7 @@ pub struct Property {
     pub created_at: String,
     pub updated_at: Option<String>,
     pub notes: Option<String>,
-    // User-tracked fields (not populated by the parser)
+    // parking
     pub parking_garage: Option<i64>,
     pub parking_covered: Option<i64>,
     pub parking_open: Option<i64>,
@@ -46,11 +46,13 @@ pub struct Property {
     // amenities
     pub radiant_floor_heating: Option<bool>,
     pub ac: Option<bool>,
-    // finance
+    // mortgage
+    pub down_payment_pct: Option<f64>,
+    pub mortgage_interest_rate: Option<f64>,
+    pub amortization_years: Option<i64>,
     pub mortgage_monthly: Option<i64>,
     // cost
     pub hoa_monthly: Option<i64>,
-    // cost
     pub monthly_total: Option<i64>,
     // rental
     pub has_rental_suite: Option<bool>,
@@ -68,25 +70,49 @@ pub struct Property {
     pub school_secondary_rating: Option<f64>,
 }
 
-/// User-provided details for a property (subset of Property fields).
-/// Used for PATCH requests to update tracked information.
+/// All user-editable fields for a property.
+/// Sent as the body of PATCH /api/listings/:id/details.
+/// Every field is Option<T>; the frontend always sends the full current state
+/// so that no field is unintentionally cleared.
 #[derive(Deserialize)]
 pub struct UserDetails {
+    // core parsed fields (user can correct parser errors)
+    pub price: Option<i64>,
+    pub price_currency: Option<String>,
+    pub street_address: Option<String>,
+    pub city: Option<String>,
+    pub region: Option<String>,
+    pub postal_code: Option<String>,
+    pub bedrooms: Option<i64>,
+    pub bathrooms: Option<i64>,
+    pub sqft: Option<i64>,
+    pub year_built: Option<i64>,
+    // parking
     pub parking_garage: Option<i64>,
     pub parking_covered: Option<i64>,
     pub parking_open: Option<i64>,
     pub land_sqft: Option<i64>,
+    // finance
     pub property_tax: Option<i64>,
+    // location
     pub skytrain_station: Option<String>,
     pub skytrain_walk_min: Option<i64>,
+    // amenities
     pub radiant_floor_heating: Option<bool>,
     pub ac: Option<bool>,
+    // mortgage
+    pub down_payment_pct: Option<f64>,
+    pub mortgage_interest_rate: Option<f64>,
+    pub amortization_years: Option<i64>,
     pub mortgage_monthly: Option<i64>,
     pub hoa_monthly: Option<i64>,
     pub monthly_total: Option<i64>,
+    // rental
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,
+    // status / nickname
     pub status: Option<String>,
+    // nearby schools
     pub school_elementary: Option<String>,
     pub school_elementary_rating: Option<f64>,
     pub school_middle: Option<String>,

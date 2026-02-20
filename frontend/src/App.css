@@ -809,3 +809,97 @@ button.listing-card {
 .image-wrapper:hover .image-delete-btn {
   opacity: 1;
 }
+
+/* ── Edit mode ── */
+.edit-btn {
+  padding: 0.4em 1em;
+  border-radius: 6px;
+  border: 1px solid #6366f1;
+  background: #6366f1;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.save-btn {
+  padding: 0.4em 1em;
+  border-radius: 6px;
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.cancel-btn {
+  padding: 0.4em 1em;
+  border-radius: 6px;
+  border: 1px solid #9ca3af;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.save-btn:disabled, .cancel-btn:disabled, .edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.edit-input {
+  padding: 0.3em 0.55em;
+  border-radius: 5px;
+  border: 1px solid #6366f1;
+  font-size: 0.92rem;
+  background: #fff;
+  color: #111;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.edit-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(99,102,241,0.3); }
+
+.edit-price-row { display: flex; gap: 0.5rem; align-items: center; margin: 0.25rem 0; }
+.edit-price { font-size: 1.3rem; max-width: 200px; }
+
+.tracked-details-header { display: flex; align-items: center; gap: 0.75rem; }
+.edit-mode-badge {
+  font-size: 0.75rem;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.school-edit-row { display: flex; gap: 0.4rem; flex: 1; }
+.edit-rating { max-width: 80px; }
+
+/* ── Refresh diff modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.modal {
+  background: #fff;
+  color: #111;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+.modal h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+.no-changes { color: #666; margin-bottom: 1rem; }
+
+.diff-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 1.25rem; }
+.diff-table th { text-align: left; padding: 0.4em 0.6em; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }
+.diff-table td { padding: 0.4em 0.6em; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+.diff-field { font-weight: 500; white-space: nowrap; }
+.diff-old { color: #dc2626; }
+.diff-new { color: #16a34a; }
+
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }

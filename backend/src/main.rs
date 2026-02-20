@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
     extract::{Query, State, Path},
     http::StatusCode,
-    routing::{delete, get, patch, post, put},
+    routing::{delete, get, patch, post},
 };
 use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
@@ -49,6 +49,20 @@ struct NotesRequest {
 #[derive(Deserialize)]
 struct NicknameRequest {
     nickname: Option<String>,
+}
+
+/// Standard amortisation formula: monthly payment on a fixed-rate mortgage.
+/// Returns 0 if price is 0 or rate is 0 (handled gracefully).
+fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
+    let loan = price as f64 * (1.0 - down_pct);
+    if loan <= 0.0 { return 0; }
+    let n = (years * 12) as f64;
+    if annual_rate == 0.0 {
+        return (loan / n).round() as i64;
+    }
+    let r = annual_rate / 12.0;
+    let payment = loan * r * (1.0 + r).powf(n) / ((1.0 + r).powf(n) - 1.0);
+    payment.round() as i64
 }
 
 fn safe_url(input: &str) -> Option<Url> {
@@ -127,8 +141,19 @@ async fn save_listing(
 
     let listing = parsers::parse(parsed.as_str(), &html)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
-    let property = listing.property;
+    let mut property = listing.property;
     let image_urls = listing.image_urls;
+
+    // Auto-calculate mortgage with defaults on first save.
+    let down_pct = 0.20_f64;
+    let rate     = 0.05_f64;
+    let years    = 25_i64;
+    property.down_payment_pct       = Some(down_pct);
+    property.mortgage_interest_rate = Some(rate);
+    property.amortization_years     = Some(years);
+    if let Some(price) = property.price {
+        property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
 
     let saved = db::save(&state.db, &property)
         .await
@@ -161,18 +186,12 @@ async fn refresh_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
-    // Fetch existing listing to get the URL
-    let listings = db::list(&state.db)
+    let property = db::get_by_id(&state.db, id)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let property = listings
-        .iter()
-        .find(|p| p.id == id)
-        .ok_or((StatusCode::NOT_FOUND, "Listing not found".to_string()))?;
-
-    let url = &property.url;
-    let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+    let url = property.url.clone();
+    let parsed = safe_url(&url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
 
     let html = fetch_html(&state.client, &parsed)
         .await
@@ -182,8 +201,19 @@ async fn refresh_listing(
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     updated.id = id;
-    updated.url = url.to_string();
+    updated.url = url.clone();
     let image_urls = listing.image_urls;
+
+    // Preserve the user's mortgage parameters; re-calculate monthly payment.
+    let down_pct = property.down_payment_pct.unwrap_or(0.20);
+    let rate     = property.mortgage_interest_rate.unwrap_or(0.05);
+    let years    = property.amortization_years.unwrap_or(25);
+    updated.down_payment_pct       = Some(down_pct);
+    updated.mortgage_interest_rate = Some(rate);
+    updated.amortization_years     = Some(years);
+    if let Some(price) = updated.price {
+        updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
 
     // Record price change history before overwriting.
     if property.price != updated.price {
@@ -319,16 +349,79 @@ async fn patch_nickname(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Returns a single listing by ID.
+async fn get_listing(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<db::Property>, (StatusCode, String)> {
+    let p = db::get_by_id(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
+    Ok(Json(p))
+}
+
+/// Fetches and parses a listing without saving — used for the refresh diff preview.
+async fn preview_refresh(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Json<db::Property>, (StatusCode, String)> {
+    let stored = db::get_by_id(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
+
+    let parsed_url = safe_url(&stored.url)
+        .ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
+
+    let html = fetch_html(&state.client, &parsed_url)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+
+    let listing = parsers::parse(parsed_url.as_str(), &html)
+        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
+
+    // Return the parsed result without saving; mortgage params carried from stored.
+    let mut preview = listing.property;
+    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
+    let rate     = stored.mortgage_interest_rate.unwrap_or(0.05);
+    let years    = stored.amortization_years.unwrap_or(25);
+    preview.down_payment_pct       = Some(down_pct);
+    preview.mortgage_interest_rate = Some(rate);
+    preview.amortization_years     = Some(years);
+    if let Some(price) = preview.price {
+        preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
+
+    Ok(Json(preview))
+}
+
 /// Updates user-tracked details for a listing. `id` is the property/listing ID.
+/// Records a history entry if the price changed. Returns the updated property.
 async fn patch_details(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<db::UserDetails>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    db::update_details(&state.db, id, &body)
+) -> Result<Json<db::Property>, (StatusCode, String)> {
+    // Fetch current price before overwriting (for history).
+    let current = db::get_by_id(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
+
+    let updated = db::update_details(&state.db, id, &body)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-    Ok(StatusCode::NO_CONTENT)
+
+    if current.price != updated.price {
+        let old = current.price.map(|v| v.to_string());
+        let new = updated.price.map(|v| v.to_string());
+        let _ = db::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+    }
+
+    // Re-attach images (update_details doesn't load them).
+    let images = db::list_images_with_meta(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    Ok(Json(db::Property { images, ..updated }))
 }
 
 /// Returns price/field change history for a listing. `id` is the property/listing ID.
@@ -440,7 +533,8 @@ async fn main() {
     let app = Router::new()
         .route("/api/parse", get(parse))
         .route("/api/listings", post(save_listing).get(list_listings))
-        .route("/api/listings/:id", put(refresh_listing).delete(delete_listing))
+        .route("/api/listings/:id", get(get_listing).put(refresh_listing).delete(delete_listing))
+        .route("/api/listings/:id/preview", get(preview_refresh))
         .route("/api/listings/:id/notes", patch(patch_notes))
         .route("/api/listings/:id/nickname", patch(patch_nickname))
         .route("/api/listings/:id/details", patch(patch_details))

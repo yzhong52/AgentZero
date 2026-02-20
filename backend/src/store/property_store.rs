@@ -3,6 +3,20 @@ use std::str::FromStr;
 use crate::models::property::{Property, UserDetails};
 use crate::store::image_store;
 
+// Common column list — keep in sync with row_to_property().
+const COLS: &str = "id, url, title, description, price, price_currency,
+                    street_address, city, region, postal_code, country,
+                    bedrooms, bathrooms, sqft, year_built, lat, lon,
+                    created_at, updated_at, notes,
+                    parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                    skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
+                    down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
+                    hoa_monthly, monthly_total, has_rental_suite, rental_income,
+                    status, nickname,
+                    school_elementary, school_elementary_rating,
+                    school_middle, school_middle_rating,
+                    school_secondary, school_secondary_rating";
+
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
     let opts = SqliteConnectOptions::from_str(database_url)
@@ -30,11 +44,12 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
                 parking_garage, land_sqft, ac, radiant_floor_heating,
+                down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                 school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(url) DO UPDATE SET
                title                    = excluded.title,
                description              = excluded.description,
@@ -55,6 +70,10 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
                land_sqft                = excluded.land_sqft,
                ac                       = excluded.ac,
                radiant_floor_heating    = excluded.radiant_floor_heating,
+               down_payment_pct         = excluded.down_payment_pct,
+               mortgage_interest_rate   = excluded.mortgage_interest_rate,
+               amortization_years       = excluded.amortization_years,
+               mortgage_monthly         = excluded.mortgage_monthly,
                school_elementary        = excluded.school_elementary,
                school_elementary_rating = excluded.school_elementary_rating,
                school_middle            = excluded.school_middle,
@@ -83,6 +102,10 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     .bind(p.land_sqft)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
+    .bind(p.down_payment_pct)
+    .bind(p.mortgage_interest_rate)
+    .bind(p.amortization_years)
+    .bind(p.mortgage_monthly)
     .bind(&p.school_elementary)
     .bind(p.school_elementary_rating)
     .bind(&p.school_middle)
@@ -92,49 +115,36 @@ pub async fn save(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Err
     .execute(pool)
     .await?;
 
-    let row = sqlx::query(
-        "SELECT id, url, title, description, price, price_currency,
-                street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
-                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
-                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname,
-                school_elementary, school_elementary_rating,
-                school_middle, school_middle_rating,
-                school_secondary, school_secondary_rating
-         FROM listings WHERE url = ?",
-    )
-    .bind(&p.url)
-    .fetch_one(pool)
-    .await?;
-
-    Ok(row_to_property(&row))
+    fetch_one_by_url(pool, &p.url).await
 }
 
-/// Update an existing property by ID.
+/// Update an existing property by ID (called on refresh — overwrites parsed fields).
 pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
-               title                 = ?,
-               description           = ?,
-               price                 = ?,
-               price_currency        = ?,
-               street_address        = ?,
-               city                  = ?,
-               region                = ?,
-               postal_code           = ?,
-               country               = ?,
-               bedrooms              = ?,
-               bathrooms             = ?,
-               sqft                  = ?,
-               year_built            = ?,
-               lat                   = ?,
-               lon                   = ?,
+               title                    = ?,
+               description              = ?,
+               price                    = ?,
+               price_currency           = ?,
+               street_address           = ?,
+               city                     = ?,
+               region                   = ?,
+               postal_code              = ?,
+               country                  = ?,
+               bedrooms                 = ?,
+               bathrooms                = ?,
+               sqft                     = ?,
+               year_built               = ?,
+               lat                      = ?,
+               lon                      = ?,
                parking_garage           = ?,
                land_sqft                = ?,
                ac                       = ?,
                radiant_floor_heating    = ?,
+               down_payment_pct         = ?,
+               mortgage_interest_rate   = ?,
+               amortization_years       = ?,
+               mortgage_monthly         = ?,
                school_elementary        = ?,
                school_elementary_rating = ?,
                school_middle            = ?,
@@ -163,6 +173,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.land_sqft)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
+    .bind(p.down_payment_pct)
+    .bind(p.mortgage_interest_rate)
+    .bind(p.amortization_years)
+    .bind(p.mortgage_monthly)
     .bind(&p.school_elementary)
     .bind(p.school_elementary_rating)
     .bind(&p.school_middle)
@@ -173,43 +187,14 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .execute(pool)
     .await?;
 
-    let row = sqlx::query(
-        "SELECT id, url, title, description, price, price_currency,
-                street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
-                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
-                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname,
-                school_elementary, school_elementary_rating,
-                school_middle, school_middle_rating,
-                school_secondary, school_secondary_rating
-         FROM listings WHERE id = ?",
-    )
-    .bind(id)
-    .fetch_one(pool)
-    .await?;
-
-    Ok(row_to_property(&row))
+    fetch_one_by_id(pool, id).await
 }
 
 /// Retrieve all properties ordered by created_at (newest first).
 pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
-    let rows = sqlx::query(
-        "SELECT id, url, title, description, price, price_currency,
-                street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon, created_at, updated_at, notes,
-                parking_garage, parking_covered, parking_open, land_sqft, property_tax,
-                skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
-                mortgage_monthly, hoa_monthly, monthly_total, has_rental_suite, rental_income,
-                status, nickname,
-                school_elementary, school_elementary_rating,
-                school_middle, school_middle_rating,
-                school_secondary, school_secondary_rating
-         FROM listings ORDER BY created_at DESC",
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows = sqlx::query(&format!("SELECT {COLS} FROM listings ORDER BY created_at DESC"))
+        .fetch_all(pool)
+        .await?;
 
     let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
 
@@ -218,6 +203,121 @@ pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
     }
 
     Ok(properties)
+}
+
+/// Fetch a single property by ID (with images).
+pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
+    let mut p = fetch_one_by_id(pool, id).await?;
+    p.images = image_store::list_images_with_meta(pool, p.id).await.unwrap_or_default();
+    Ok(p)
+}
+
+/// Update the nickname/alias for a property.
+pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE listings SET nickname = ? WHERE id = ?")
+        .bind(nickname)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Update all user-editable fields; returns the refreshed record.
+pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Result<Property, sqlx::Error> {
+    sqlx::query(
+        r#"UPDATE listings SET
+               price = ?, price_currency = ?,
+               street_address = ?, city = ?, region = ?, postal_code = ?,
+               bedrooms = ?, bathrooms = ?, sqft = ?, year_built = ?,
+               parking_garage = ?, parking_covered = ?, parking_open = ?,
+               land_sqft = ?, property_tax = ?,
+               skytrain_station = ?, skytrain_walk_min = ?,
+               radiant_floor_heating = ?, ac = ?,
+               down_payment_pct = ?, mortgage_interest_rate = ?, amortization_years = ?,
+               mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
+               has_rental_suite = ?, rental_income = ?,
+               status = ?,
+               school_elementary = ?, school_elementary_rating = ?,
+               school_middle = ?, school_middle_rating = ?,
+               school_secondary = ?, school_secondary_rating = ?
+           WHERE id = ?"#,
+    )
+    .bind(d.price)
+    .bind(&d.price_currency)
+    .bind(&d.street_address)
+    .bind(&d.city)
+    .bind(&d.region)
+    .bind(&d.postal_code)
+    .bind(d.bedrooms)
+    .bind(d.bathrooms)
+    .bind(d.sqft)
+    .bind(d.year_built)
+    .bind(d.parking_garage)
+    .bind(d.parking_covered)
+    .bind(d.parking_open)
+    .bind(d.land_sqft)
+    .bind(d.property_tax)
+    .bind(&d.skytrain_station)
+    .bind(d.skytrain_walk_min)
+    .bind(d.radiant_floor_heating)
+    .bind(d.ac)
+    .bind(d.down_payment_pct)
+    .bind(d.mortgage_interest_rate)
+    .bind(d.amortization_years)
+    .bind(d.mortgage_monthly)
+    .bind(d.hoa_monthly)
+    .bind(d.monthly_total)
+    .bind(d.has_rental_suite)
+    .bind(d.rental_income)
+    .bind(&d.status)
+    .bind(&d.school_elementary)
+    .bind(d.school_elementary_rating)
+    .bind(&d.school_middle)
+    .bind(d.school_middle_rating)
+    .bind(&d.school_secondary)
+    .bind(d.school_secondary_rating)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    fetch_one_by_id(pool, id).await
+}
+
+/// Update the notes field for a property.
+pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE listings SET notes = ? WHERE id = ?")
+        .bind(notes)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Delete a listing and all associated records (images cascade via FK).
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM listings WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
+
+async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
+    let row = sqlx::query(&format!("SELECT {COLS} FROM listings WHERE id = ?"))
+        .bind(id)
+        .fetch_one(pool)
+        .await?;
+    Ok(row_to_property(&row))
+}
+
+async fn fetch_one_by_url(pool: &SqlitePool, url: &str) -> Result<Property, sqlx::Error> {
+    let row = sqlx::query(&format!("SELECT {COLS} FROM listings WHERE url = ?"))
+        .bind(url)
+        .fetch_one(pool)
+        .await?;
+    Ok(row_to_property(&row))
 }
 
 /// Convert a database row to a Property instance.
@@ -240,7 +340,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         year_built: row.get("year_built"),
         lat: row.get("lat"),
         lon: row.get("lon"),
-        images: vec![], // populated separately from images_cache
+        images: vec![],
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
@@ -253,6 +353,9 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         skytrain_walk_min: row.get("skytrain_walk_min"),
         radiant_floor_heating: row.get("radiant_floor_heating"),
         ac: row.get("ac"),
+        down_payment_pct: row.get("down_payment_pct"),
+        mortgage_interest_rate: row.get("mortgage_interest_rate"),
+        amortization_years: row.get("amortization_years"),
         mortgage_monthly: row.get("mortgage_monthly"),
         hoa_monthly: row.get("hoa_monthly"),
         monthly_total: row.get("monthly_total"),
@@ -267,76 +370,4 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         school_secondary: row.get("school_secondary"),
         school_secondary_rating: row.get("school_secondary_rating"),
     }
-}
-
-/// Update the nickname/alias for a property.
-pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE listings SET nickname = ? WHERE id = ?")
-        .bind(nickname)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-/// Update user-tracked fields for a property.
-pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Result<(), sqlx::Error> {
-    sqlx::query(
-        r#"UPDATE listings SET
-               parking_garage = ?, parking_covered = ?, parking_open = ?,
-               land_sqft = ?, property_tax = ?,
-               skytrain_station = ?, skytrain_walk_min = ?,
-               radiant_floor_heating = ?, ac = ?,
-               mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
-               has_rental_suite = ?, rental_income = ?,
-               status = ?,
-               school_elementary = ?, school_elementary_rating = ?,
-               school_middle = ?, school_middle_rating = ?,
-               school_secondary = ?, school_secondary_rating = ?
-           WHERE id = ?"#,
-    )
-    .bind(d.parking_garage)
-    .bind(d.parking_covered)
-    .bind(d.parking_open)
-    .bind(d.land_sqft)
-    .bind(d.property_tax)
-    .bind(&d.skytrain_station)
-    .bind(d.skytrain_walk_min)
-    .bind(d.radiant_floor_heating)
-    .bind(d.ac)
-    .bind(d.mortgage_monthly)
-    .bind(d.hoa_monthly)
-    .bind(d.monthly_total)
-    .bind(d.has_rental_suite)
-    .bind(d.rental_income)
-    .bind(&d.status)
-    .bind(&d.school_elementary)
-    .bind(d.school_elementary_rating)
-    .bind(&d.school_middle)
-    .bind(d.school_middle_rating)
-    .bind(&d.school_secondary)
-    .bind(d.school_secondary_rating)
-    .bind(id)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
-/// Update the notes field for a property.
-pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE listings SET notes = ? WHERE id = ?")
-        .bind(notes)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
-/// Delete a listing and all associated records (images cascade via FK).
-pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM listings WHERE id = ?")
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
 }

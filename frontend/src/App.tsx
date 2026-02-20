@@ -41,6 +41,9 @@ export type Property = {
   skytrain_walk_min: number | null
   radiant_floor_heating: boolean | null
   ac: boolean | null
+  down_payment_pct: number | null
+  mortgage_interest_rate: number | null
+  amortization_years: number | null
   mortgage_monthly: number | null
   hoa_monthly: number | null
   monthly_total: number | null

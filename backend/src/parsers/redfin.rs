@@ -192,6 +192,10 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         skytrain_walk_min: None,
         radiant_floor_heating,
         ac,
+        // Mortgage params are set by main.rs after parsing (save/refresh handlers).
+        down_payment_pct: None,
+        mortgage_interest_rate: None,
+        amortization_years: None,
         mortgage_monthly: None,
         hoa_monthly: None,
         monthly_total: None,

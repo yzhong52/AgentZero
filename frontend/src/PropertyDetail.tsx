@@ -374,7 +374,9 @@ export function PropertyDetail() {
                             <h4>Rental</h4>
                             <div className="tracked-fields">
                                 <div className="tracked-field"><label>Has rental suite</label><span className="tracked-value">{boolLabel(property.has_rental_suite)}</span></div>
-                                <div className="tracked-field"><label>Rental income (monthly)</label><span className="tracked-value">{moneyLabel(property.rental_income)}</span></div>
+                                {property.has_rental_suite !== false && (
+                                    <div className="tracked-field"><label>Rental income (monthly)</label><span className="tracked-value">{moneyLabel(property.rental_income)}</span></div>
+                                )}
                             </div>
                         </div>
 

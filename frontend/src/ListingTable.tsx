@@ -28,7 +28,7 @@ export const ALL_COLUMNS: ColDef[] = [
   { key: 'year_built',     label: 'Year Built',render: p => p.year_built ?? '—' },
   { key: 'land_sqft',      label: 'Land Sqft', render: p => p.land_sqft?.toLocaleString() ?? '—' },
   { key: 'parking_garage', label: 'Garage',    render: p => p.parking_garage ?? '—' },
-  { key: 'ac',             label: 'AC',        render: p => p.ac === null ? '—' : p.ac ? 'Yes' : 'No' },
+  { key: 'ac',             label: 'Air Conditioning', render: p => p.ac === null ? '—' : p.ac ? 'Yes' : 'No' },
   { key: 'monthly_total',  label: 'Monthly',   render: p => p.monthly_total ? `$${p.monthly_total.toLocaleString()}` : '—' },
   { key: 'hoa_monthly',    label: 'HOA',       render: p => p.hoa_monthly ? `$${p.hoa_monthly.toLocaleString()}` : '—' },
   { key: 'property_tax',   label: 'Tax/yr',    render: p => p.property_tax ? `$${p.property_tax.toLocaleString()}` : '—' },

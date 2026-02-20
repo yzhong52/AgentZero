@@ -838,22 +838,20 @@ export function PropertyDetail() {
                     </div>
 
                     <div className="detail-metadata">
-                        {(editMode ? draft : property)?.redfin_url !== undefined && (
-                            <div className="meta-item">
-                                <strong>Redfin:</strong>
-                                {editMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="url"
-                                        value={draft?.redfin_url ?? ''}
-                                        onChange={e => setDraftField('redfin_url', e.target.value || null)}
-                                        placeholder="https://www.redfin.ca/…"
-                                    />
-                                ) : property.redfin_url ? (
-                                    <a href={property.redfin_url} target="_blank" rel="noreferrer">{property.redfin_url}</a>
-                                ) : <span className="tracked-value">—</span>}
-                            </div>
-                        )}
+                        <div className="meta-item">
+                            <strong>Redfin:</strong>
+                            {editMode ? (
+                                <input
+                                    className="edit-input"
+                                    type="url"
+                                    value={draft?.redfin_url ?? ''}
+                                    onChange={e => setDraftField('redfin_url', e.target.value || null)}
+                                    placeholder="https://www.redfin.ca/…"
+                                />
+                            ) : property.redfin_url ? (
+                                <a href={property.redfin_url} target="_blank" rel="noreferrer">{property.redfin_url}</a>
+                            ) : <span className="tracked-value">—</span>}
+                        </div>
                         <div className="meta-item">
                             <strong>Realtor.ca:</strong>
                             {editMode ? (

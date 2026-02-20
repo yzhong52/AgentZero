@@ -298,6 +298,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                parking_open             = ?,
                property_tax             = ?,
                hoa_monthly              = ?,
+               monthly_total            = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -334,6 +335,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.parking_open)
     .bind(p.property_tax)
     .bind(p.hoa_monthly)
+    .bind(p.monthly_total)
     .bind(id)
     .execute(pool)
     .await?;

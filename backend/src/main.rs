@@ -52,6 +52,14 @@ struct NicknameRequest {
     nickname: Option<String>,
 }
 
+/// Sums mortgage + monthly property tax + HOA into a total monthly cost.
+fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
+    let mortgage = mortgage?; // require at least a mortgage payment
+    let tax_monthly = property_tax.map(|t| t / 12).unwrap_or(0);
+    let hoa_monthly = hoa.unwrap_or(0);
+    Some(mortgage + tax_monthly + hoa_monthly)
+}
+
 /// Standard amortisation formula: monthly payment on a fixed-rate mortgage.
 /// Returns 0 if price is 0 or rate is 0 (handled gracefully).
 fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
@@ -164,6 +172,7 @@ async fn save_listing(
     if let Some(price) = property.price {
         property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
+    property.monthly_total = compute_monthly_total(property.mortgage_monthly, property.property_tax, property.hoa_monthly);
 
     let saved = if property.realtor_url.is_some() {
         db::save_realtor(&state.db, &property).await
@@ -249,6 +258,7 @@ async fn refresh_listing(
     if let Some(price) = updated.price {
         updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
+    updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
 
     // Record price change history before overwriting.
     if property.price != updated.price {
@@ -441,6 +451,7 @@ async fn preview_refresh(
     if let Some(price) = preview.price {
         preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
+    preview.monthly_total = compute_monthly_total(preview.mortgage_monthly, preview.property_tax, preview.hoa_monthly);
 
     Ok(Json(preview))
 }
@@ -457,9 +468,17 @@ async fn patch_details(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let updated = db::update_details(&state.db, id, &body)
+    let mut updated = db::update_details(&state.db, id, &body)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    // Recompute monthly_total from the freshly saved values.
+    updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
+    let _ = sqlx::query("UPDATE listings SET monthly_total = ? WHERE id = ?")
+        .bind(updated.monthly_total)
+        .bind(id)
+        .execute(&state.db)
+        .await;
 
     if current.price != updated.price {
         let old = current.price.map(|v| v.to_string());

@@ -123,6 +123,19 @@ pub async fn get_image_local_path(
     Ok(row.map(|r| r.get::<Option<String>, _>("local_path")))
 }
 
+/// Delete all images_cache rows for a listing.
+/// Call after all image files have been removed from the object store.
+pub async fn delete_all_image_records(
+    pool: &SqlitePool,
+    listing_id: i64,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM images_cache WHERE listing_id = ?")
+        .bind(listing_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
 /// Delete an image_cache row. Call after removing any file from the object store.
 pub async fn delete_image_record(
     pool: &SqlitePool,

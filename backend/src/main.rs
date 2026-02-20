@@ -281,14 +281,14 @@ async fn patch_notes(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Deletes a listing: removes image files from the object store first, then
-/// removes the DB row (which cascades to images_cache and listing_history).
+/// Deletes a listing: removes image files from the object store, clears the
+/// images_cache rows, then removes the listing row itself.
 /// `id` is the property/listing ID.
 async fn delete_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    // Delete any locally-cached image files before touching the DB.
+    // 1. Delete locally-cached image files from the object store.
     let cached = db::list_cached_images(&state.db, id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
@@ -303,6 +303,12 @@ async fn delete_listing(
         }
     }
 
+    // 2. Remove images_cache rows (no CASCADE on this FK).
+    db::delete_all_image_records(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    // 3. Delete the listing row (listing_history cascades automatically).
     db::delete(&state.db, id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;

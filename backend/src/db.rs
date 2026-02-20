@@ -13,6 +13,7 @@ pub use crate::store::history_store::{insert_change, list_history};
 pub use crate::store::property_store::{init, save, update_by_id, list, update_details, update_notes, update_nickname, delete};
 pub use crate::store::image_store::{
     list_cached_images, insert_image_url, list_pending_image_urls,
-    update_cached_image, list_images_with_meta, get_image_local_path, delete_image_record,
+    update_cached_image, list_images_with_meta, get_image_local_path,
+    delete_image_record, delete_all_image_records,
 };
 

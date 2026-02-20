@@ -146,7 +146,7 @@ async fn save_listing(
 
     // Auto-calculate mortgage with defaults on first save.
     let down_pct = 0.20_f64;
-    let rate     = 0.05_f64;
+    let rate     = 0.04_f64;
     let years    = 25_i64;
     property.down_payment_pct       = Some(down_pct);
     property.mortgage_interest_rate = Some(rate);
@@ -206,7 +206,7 @@ async fn refresh_listing(
 
     // Preserve the user's mortgage parameters; re-calculate monthly payment.
     let down_pct = property.down_payment_pct.unwrap_or(0.20);
-    let rate     = property.mortgage_interest_rate.unwrap_or(0.05);
+    let rate     = property.mortgage_interest_rate.unwrap_or(0.04);
     let years    = property.amortization_years.unwrap_or(25);
     updated.down_payment_pct       = Some(down_pct);
     updated.mortgage_interest_rate = Some(rate);
@@ -382,7 +382,7 @@ async fn preview_refresh(
     // Return the parsed result without saving; mortgage params carried from stored.
     let mut preview = listing.property;
     let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate     = stored.mortgage_interest_rate.unwrap_or(0.05);
+    let rate     = stored.mortgage_interest_rate.unwrap_or(0.04);
     let years    = stored.amortization_years.unwrap_or(25);
     preview.down_payment_pct       = Some(down_pct);
     preview.mortgage_interest_rate = Some(rate);

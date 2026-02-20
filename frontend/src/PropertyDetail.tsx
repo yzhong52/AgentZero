@@ -541,6 +541,14 @@ export function PropertyDetail() {
                         <button className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
                     </>
                 )}
+                <button
+                    className="delete-btn"
+                    onClick={handleDelete}
+                    disabled={deleting || editMode}
+                    title="Delete this listing"
+                >
+                    {deleting ? 'Deleting…' : 'Delete'}
+                </button>
             </div>
 
             {error && <div className="message error">{error}</div>}
@@ -901,16 +909,6 @@ export function PropertyDetail() {
                         </div>
                     )}
                 </div>
-            </div>
-
-            <div className="danger-zone">
-                <button
-                    className="delete-btn-subtle"
-                    onClick={handleDelete}
-                    disabled={deleting || editMode}
-                >
-                    {deleting ? 'Deleting…' : 'Delete this listing'}
-                </button>
             </div>
         </div>
     )

@@ -221,6 +221,7 @@ function toUserDetails(p: Property) {
     return {
         redfin_url:             p.redfin_url,
         realtor_url:            p.realtor_url,
+        rew_url:                p.rew_url,
         price:                  p.price,
         price_currency:         p.price_currency,
         street_address:         p.street_address,
@@ -866,6 +867,20 @@ export function PropertyDetail() {
                                 />
                             ) : property.realtor_url ? (
                                 <a href={property.realtor_url} target="_blank" rel="noreferrer">{property.realtor_url}</a>
+                            ) : <span className="tracked-value">—</span>}
+                        </div>
+                        <div className="meta-item">
+                            <strong>rew.ca:</strong>
+                            {editMode ? (
+                                <input
+                                    className="edit-input"
+                                    type="url"
+                                    value={draft?.rew_url ?? ''}
+                                    onChange={e => setDraftField('rew_url', e.target.value || null)}
+                                    placeholder="https://www.rew.ca/properties/…"
+                                />
+                            ) : property.rew_url ? (
+                                <a href={property.rew_url} target="_blank" rel="noreferrer">{property.rew_url}</a>
                             ) : <span className="tracked-value">—</span>}
                         </div>
                         <div className="meta-item">

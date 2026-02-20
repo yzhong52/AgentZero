@@ -14,6 +14,7 @@ export type Property = {
   id: number
   redfin_url: string | null
   realtor_url: string | null
+  rew_url: string | null
   title: string
   description: string
   price: number | null
@@ -124,7 +125,7 @@ function App() {
         <div className="input-row">
           <input
             type="url"
-            placeholder="https://example.com/listing"
+            placeholder="Redfin or rew.ca URL"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />

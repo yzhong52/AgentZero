@@ -294,6 +294,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                school_middle_rating     = ?,
                school_secondary         = ?,
                school_secondary_rating  = ?,
+               parking_covered          = ?,
+               parking_open             = ?,
+               property_tax             = ?,
+               hoa_monthly              = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -326,6 +330,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.school_middle_rating)
     .bind(&p.school_secondary)
     .bind(p.school_secondary_rating)
+    .bind(p.parking_covered)
+    .bind(p.parking_open)
+    .bind(p.property_tax)
+    .bind(p.hoa_monthly)
     .bind(id)
     .execute(pool)
     .await?;

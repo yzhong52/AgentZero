@@ -596,22 +596,7 @@ export function PropertyDetail() {
                             aria-label="Property nickname"
                         />
                         {nickname && <div className="detail-subtitle">{property.title}</div>}
-                        {editMode && draft ? (
-                            <div className="edit-price-row">
-                                <input
-                                    className="edit-input edit-price"
-                                    type="number"
-                                    value={draft.price ?? ''}
-                                    onChange={e => {
-                                        const updated = recalcMortgage({ ...draft, price: e.target.value ? Number(e.target.value) : null })
-                                        setDraft(updated)
-                                    }}
-                                    placeholder="Price"
-                                />
-                            </div>
-                        ) : (
-                            <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
-                        )}
+                        <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
                     </div>
 
                     {!editMode && address && <div className="detail-address">{address}</div>}
@@ -708,6 +693,22 @@ export function PropertyDetail() {
                         <div className="tracked-group">
                             <h4>Financials</h4>
                             <div className="tracked-fields">
+                                <Field label="Price" viewVal={formatPrice(p.price, p.price_currency) ?? '—'}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>Price</label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                value={draft?.price ?? ''}
+                                                onChange={e => {
+                                                    const updated = recalcMortgage({ ...draft!, price: e.target.value ? Number(e.target.value) : null })
+                                                    setDraft(updated)
+                                                }}
+                                                placeholder="Price"
+                                            />
+                                        </div>
+                                    } />
                                 <Field label="Property tax (annual)" viewVal={moneyLabel(p.property_tax)}
                                     editEl={<NumInput label="Property tax (annual)" value={draft?.property_tax ?? null} onChange={v => setDraftField('property_tax', v)} />} />
 

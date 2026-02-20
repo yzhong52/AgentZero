@@ -12,6 +12,7 @@ use axum::{
 };
 use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
+use tokio::fs;
 use tower_http::services::ServeDir;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, REFERER, USER_AGENT};
@@ -34,6 +35,8 @@ struct AppState {
     store: Arc<dyn object_store::ObjectStore>,
     /// Prefix for public image URLs. Local: "/images". S3: "https://bucket.s3…".
     images_url_prefix: String,
+    /// Root directory where image files are written (local filesystem only).
+    images_dir: String,
 }
 
 #[derive(Deserialize)]
@@ -266,6 +269,13 @@ async fn delete_image(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
+    // If no images remain for this listing, remove the empty per-listing directory.
+    let dir = format!("{}/{}", state.images_dir, listing_id);
+    if let Err(e) = fs::remove_dir(&dir).await {
+        // Not empty (other images remain) or already gone — both are fine.
+        tracing::debug!("Could not remove image dir {}: {}", dir, e);
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -303,12 +313,18 @@ async fn delete_listing(
         }
     }
 
-    // 2. Remove images_cache rows (no CASCADE on this FK).
+    // 2. Remove the per-listing image directory (now empty after step 1).
+    let dir = format!("{}/{}", state.images_dir, id);
+    if let Err(e) = fs::remove_dir(&dir).await {
+        tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
+    }
+
+    // 3. Remove images_cache rows (no CASCADE on this FK).
     db::delete_all_image_records(&state.db, id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    // 3. Delete the listing row (listing_history cascades automatically).
+    // 4. Delete the listing row (listing_history cascades automatically).
     db::delete(&state.db, id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
@@ -440,6 +456,7 @@ async fn main() {
         client,
         store,
         images_url_prefix,
+        images_dir,
     };
 
     let cors = CorsLayer::new()
@@ -460,7 +477,7 @@ async fn main() {
         .route("/api/listings/:id/details", patch(patch_details))
         .route("/api/listings/:id/history", get(get_history))
         .route("/api/listings/:id/images/:image_id", delete(delete_image))
-        .nest_service("/images", ServeDir::new(&images_dir))
+        .nest_service("/images", ServeDir::new(&state.images_dir))
         .with_state(state)
         .layer(cors);
 

@@ -4,7 +4,7 @@ use crate::models::property::{Property, UserDetails};
 use crate::store::image_store;
 
 // Common column list — keep in sync with row_to_property().
-const COLS: &str = "id, redfin_url, realtor_url, title, description, price, price_currency,
+const COLS: &str = "id, redfin_url, realtor_url, rew_url, title, description, price, price_currency,
                     street_address, city, region, postal_code, country,
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
@@ -202,6 +202,65 @@ pub async fn save_realtor(pool: &SqlitePool, p: &Property) -> Result<Property, s
     fetch_one_by_realtor_url(pool, url).await
 }
 
+/// Save (insert or update) a rew.ca listing, deduplicating by rew_url.
+pub async fn save_rew(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
+    let url = p.rew_url.as_deref().unwrap_or("");
+    sqlx::query(
+        r#"INSERT INTO listings
+               (rew_url, title, description, price, price_currency,
+                street_address, city, region, postal_code, country,
+                bedrooms, bathrooms, sqft, year_built, lat, lon,
+                parking_garage, land_sqft, property_tax, hoa_monthly,
+                updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(rew_url) DO UPDATE SET
+               title                    = excluded.title,
+               description              = excluded.description,
+               price                    = excluded.price,
+               price_currency           = excluded.price_currency,
+               street_address           = excluded.street_address,
+               city                     = excluded.city,
+               region                   = excluded.region,
+               postal_code              = excluded.postal_code,
+               country                  = excluded.country,
+               bedrooms                 = excluded.bedrooms,
+               bathrooms                = excluded.bathrooms,
+               sqft                     = excluded.sqft,
+               year_built               = excluded.year_built,
+               lat                      = excluded.lat,
+               lon                      = excluded.lon,
+               parking_garage           = excluded.parking_garage,
+               land_sqft                = excluded.land_sqft,
+               property_tax             = excluded.property_tax,
+               hoa_monthly              = excluded.hoa_monthly,
+               updated_at               = datetime('now')"#,
+    )
+    .bind(&p.rew_url)
+    .bind(&p.title)
+    .bind(&p.description)
+    .bind(p.price)
+    .bind(&p.price_currency)
+    .bind(&p.street_address)
+    .bind(&p.city)
+    .bind(&p.region)
+    .bind(&p.postal_code)
+    .bind(&p.country)
+    .bind(p.bedrooms)
+    .bind(p.bathrooms)
+    .bind(p.sqft)
+    .bind(p.year_built)
+    .bind(p.lat)
+    .bind(p.lon)
+    .bind(p.parking_garage)
+    .bind(p.land_sqft)
+    .bind(p.property_tax)
+    .bind(p.hoa_monthly)
+    .execute(pool)
+    .await?;
+
+    fetch_one_by_rew_url(pool, url).await
+}
+
 /// Update an existing property by ID (called on refresh — overwrites parsed fields).
 pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
     sqlx::query(
@@ -310,7 +369,7 @@ pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>)
 pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Result<Property, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
-               redfin_url = ?, realtor_url = ?,
+               redfin_url = ?, realtor_url = ?, rew_url = ?,
                price = ?, price_currency = ?,
                street_address = ?, city = ?, region = ?, postal_code = ?,
                bedrooms = ?, bathrooms = ?, sqft = ?, year_built = ?,
@@ -329,6 +388,7 @@ pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Resu
     )
     .bind(&d.redfin_url)
     .bind(&d.realtor_url)
+    .bind(&d.rew_url)
     .bind(d.price)
     .bind(&d.price_currency)
     .bind(&d.street_address)
@@ -415,12 +475,21 @@ async fn fetch_one_by_realtor_url(pool: &SqlitePool, url: &str) -> Result<Proper
     Ok(row_to_property(&row))
 }
 
+async fn fetch_one_by_rew_url(pool: &SqlitePool, url: &str) -> Result<Property, sqlx::Error> {
+    let row = sqlx::query(&format!("SELECT {COLS} FROM listings WHERE rew_url = ?"))
+        .bind(url)
+        .fetch_one(pool)
+        .await?;
+    Ok(row_to_property(&row))
+}
+
 /// Convert a database row to a Property instance.
 fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
     Property {
         id: row.get("id"),
         redfin_url: row.get("redfin_url"),
         realtor_url: row.get("realtor_url"),
+        rew_url: row.get("rew_url"),
         title: row.get("title"),
         description: row.get("description"),
         price: row.get("price"),

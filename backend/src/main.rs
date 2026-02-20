@@ -157,6 +157,8 @@ async fn save_listing(
 
     let saved = if property.realtor_url.is_some() {
         db::save_realtor(&state.db, &property).await
+    } else if property.rew_url.is_some() {
+        db::save_rew(&state.db, &property).await
     } else {
         db::save_redfin(&state.db, &property).await
     }
@@ -195,6 +197,7 @@ async fn refresh_listing(
 
     let url = property.redfin_url.clone()
         .or_else(|| property.realtor_url.clone())
+        .or_else(|| property.rew_url.clone())
         .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
     let parsed = safe_url(&url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
 
@@ -206,14 +209,10 @@ async fn refresh_listing(
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     updated.id = id;
-    // Preserve whichever URL was used to fetch.
-    if property.redfin_url.is_some() {
-        updated.redfin_url = property.redfin_url.clone();
-        updated.realtor_url = property.realtor_url.clone();
-    } else {
-        updated.realtor_url = property.realtor_url.clone();
-        updated.redfin_url = property.redfin_url.clone();
-    }
+    // Preserve all source URLs from the stored property.
+    updated.redfin_url = property.redfin_url.clone();
+    updated.realtor_url = property.realtor_url.clone();
+    updated.rew_url = property.rew_url.clone();
     let image_urls = listing.image_urls;
 
     // Preserve the user's mortgage parameters; re-calculate monthly payment.
@@ -383,6 +382,7 @@ async fn preview_refresh(
 
     let source_url = stored.redfin_url.clone()
         .or_else(|| stored.realtor_url.clone())
+        .or_else(|| stored.rew_url.clone())
         .ok_or((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()))?;
     let parsed_url = safe_url(&source_url)
         .ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;

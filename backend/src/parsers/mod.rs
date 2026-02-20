@@ -7,6 +7,7 @@
 
 pub mod redfin;
 pub mod realtor;
+pub mod rew;
 
 use crate::db;
 use scraper::{Html, Selector};
@@ -123,4 +124,5 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     realtor::parse(url, html)
         .or_else(|| redfin::parse(url, html))
+        .or_else(|| rew::parse(url, html))
 }

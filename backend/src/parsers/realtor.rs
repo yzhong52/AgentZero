@@ -161,14 +161,25 @@ fn extract_from_next_listing(url: &str, title: &str, description: &str, listing:
         })
         .unwrap_or_default();
 
-    // Property tax
-    let property_tax = listing["PropertyTaxYear"].as_i64()
-        .and(listing["PropertyTax"].as_str().and_then(|s| s.replace(['$', ','], "").trim().parse().ok()));
+    // Property tax — realtor.ca uses "AnnualPropertyTaxes" (e.g. "$12,124.80").
+    // Parse as f64 to handle decimals, then round to i64.
+    let property_tax: Option<i64> = [
+        listing["AnnualPropertyTaxes"].as_str(),
+        listing["Details"]["AnnualPropertyTaxes"].as_str(),
+        listing["PropertyTax"].as_str(),
+    ]
+    .into_iter()
+    .flatten()
+    .find_map(|s| {
+        let clean: String = s.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
+        clean.parse::<f64>().ok().map(|v| v as i64)
+    });
 
     Some(db::Property {
         id: 0,
         redfin_url: None,
         realtor_url: Some(url.to_string()),
+        rew_url: None,
         title: title.to_string(),
         description: description.to_string(),
         price,
@@ -301,6 +312,7 @@ fn extract_from_json_ld(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         id: 0,
         redfin_url: None,
         realtor_url: Some(url.to_string()),
+        rew_url: None,
         title: title.to_string(),
         description: listing["description"].as_str().unwrap_or("").to_string(),
         price: listing["offers"]["price"].as_i64(),
@@ -380,4 +392,49 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     }
 
     None
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_html(listing_json: &str) -> String {
+        format!(
+            r#"<html><head></head><body>
+            <script id="__NEXT_DATA__" type="application/json">
+            {{"props":{{"pageProps":{{"listing":{listing_json}}}}}}}
+            </script>
+            </body></html>"#
+        )
+    }
+
+    #[test]
+    fn test_annual_property_taxes_top_level() {
+        let html = make_html(r#"{
+            "AnnualPropertyTaxes": "$12,124.80",
+            "Property": {
+                "Price": "$1,500,000",
+                "Address": {"AddressText": "909 W 18TH AV|Vancouver, British Columbia V5Z 1V1"}
+            },
+            "Building": {}
+        }"#);
+        let result = parse("https://www.realtor.ca/real-estate/29346355/test", &html).unwrap();
+        assert_eq!(result.property.property_tax, Some(12124));
+    }
+
+    #[test]
+    fn test_annual_property_taxes_nested_details() {
+        let html = make_html(r#"{
+            "Details": {"AnnualPropertyTaxes": "$5,000.00"},
+            "Property": {
+                "Price": "$800,000",
+                "Address": {"AddressText": "123 Main St|Vancouver, British Columbia V5T 1A1"}
+            },
+            "Building": {}
+        }"#);
+        let result = parse("https://www.realtor.ca/real-estate/123/test", &html).unwrap();
+        assert_eq!(result.property.property_tax, Some(5000));
+    }
 }

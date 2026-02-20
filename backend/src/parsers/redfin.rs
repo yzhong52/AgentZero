@@ -165,6 +165,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         id: 0,
         redfin_url: Some(url.to_string()),
         realtor_url: None,
+        rew_url: None,
         title: title.to_string(),
         description,
         price,

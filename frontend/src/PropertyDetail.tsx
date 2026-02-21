@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Property, ImageEntry } from './App'
+import type { Property } from './App'
 import { STATUS_OPTIONS, STATUS_COLORS } from './App'
 
 type HistoryEntry = {
@@ -35,6 +35,7 @@ function formatPrice(price: number | null, currency: string | null) {
     }).format(price)
 }
 
+
 function formatImgDate(dateStr: string) {
     if (!dateStr) return ''
     return new Date(dateStr).toLocaleDateString('en-CA', {
@@ -53,30 +54,6 @@ function calcMortgage(price: number | null, downPct: number, rate: number, years
     return Math.round(loan * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1))
 }
 
-// ── Image tile ────────────────────────────────────────────────────────────────
-
-function ImageTile({
-    img, alt, className, wrapperClass, onDelete,
-}: {
-    img: ImageEntry
-    alt: string
-    className: string
-    wrapperClass: string
-    onDelete: (id: number) => void
-}) {
-    return (
-        <div className={wrapperClass}>
-            <img src={img.url} alt={alt} className={className} />
-            <span className="image-created-at">{formatImgDate(img.created_at)}</span>
-            <button
-                className="image-delete-btn"
-                onClick={(e) => { e.stopPropagation(); onDelete(img.id) }}
-                title="Delete image"
-                aria-label="Delete image"
-            >×</button>
-        </div>
-    )
-}
 
 // ── Edit helpers ──────────────────────────────────────────────────────────────
 
@@ -246,7 +223,6 @@ function toUserDetails(p: Property) {
         amortization_years:     p.amortization_years,
         mortgage_monthly:       p.mortgage_monthly,
         hoa_monthly:            p.hoa_monthly,
-        monthly_total:          p.monthly_total,
         has_rental_suite:       p.has_rental_suite,
         rental_income:          p.rental_income,
         status:                 p.status,
@@ -289,6 +265,12 @@ export function PropertyDetail() {
 
     // Delete
     const [deleting, setDeleting] = useState(false)
+
+    // Lightbox
+    const [lightboxOpen, setLightboxOpen] = useState(false)
+    const [activeIdx, setActiveIdx] = useState(0)
+    const thumbsRef = useRef<HTMLDivElement>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)
 
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -488,7 +470,7 @@ export function PropertyDetail() {
         }
     }
 
-    // ── Render ────────────────────────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────────────────────
 
     if (loading) return <div className="loading">Loading...</div>
     if (error && !property) return <div className="error-msg">{error}</div>
@@ -557,30 +539,83 @@ export function PropertyDetail() {
             {error && <div className="message error">{error}</div>}
             {refreshMsg && <div className="message success">{refreshMsg}</div>}
 
-            <div className="detail-images">
-                {property.images.length > 0 ? (
-                    <div className="image-carousel">
-                        <ImageTile
-                            img={property.images[0]}
-                            alt={property.title}
-                            className="main-image"
-                            wrapperClass="image-wrapper main-image-wrapper"
-                            onDelete={handleDeleteImage}
-                        />
-                        {property.images.length > 1 && (
-                            <div className="image-thumbnails">
-                                {property.images.map(img => (
-                                    <ImageTile
+            {lightboxOpen && property.images.length > 0 && (
+                <div className="modal-overlay" onClick={() => setLightboxOpen(false)}>
+                    <div className="lightbox-panel" onClick={e => e.stopPropagation()}>
+                        <div className="lightbox-header">
+                            <button className="lightbox-close" onClick={() => setLightboxOpen(false)}>✕</button>
+                            <span className="lightbox-title">{property.nickname || property.title}</span>
+                            <span className="lightbox-count">{property.images.length} photos</span>
+                        </div>
+                        <div className="lightbox-body">
+                            <div className="lightbox-thumbs" ref={thumbsRef}>
+                                {property.images.map((img, i) => (
+                                    <img
                                         key={img.id}
-                                        img={img}
-                                        alt={property.title}
-                                        className="thumbnail"
-                                        wrapperClass="image-wrapper thumbnail-wrapper"
-                                        onDelete={handleDeleteImage}
+                                        src={img.url}
+                                        alt={`${i + 1}`}
+                                        className={`lightbox-thumb${activeIdx === i ? ' active' : ''}`}
+                                        onClick={() => {
+                                            setActiveIdx(i)
+                                            scrollRef.current
+                                                ?.querySelectorAll<HTMLElement>('.lightbox-item')
+                                                [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                                        }}
                                     />
                                 ))}
                             </div>
-                        )}
+                            <div
+                                className="lightbox-scroll"
+                                ref={scrollRef}
+                                onScroll={() => {
+                                    const container = scrollRef.current
+                                    if (!container) return
+                                    const items = container.querySelectorAll<HTMLElement>('.lightbox-item')
+                                    let closest = 0
+                                    let minDist = Infinity
+                                    items.forEach((el, i) => {
+                                        const dist = Math.abs(el.getBoundingClientRect().top - container.getBoundingClientRect().top)
+                                        if (dist < minDist) { minDist = dist; closest = i }
+                                    })
+                                    if (closest !== activeIdx) {
+                                        setActiveIdx(closest)
+                                        const thumb = thumbsRef.current?.querySelectorAll<HTMLElement>('.lightbox-thumb')[closest]
+                                        thumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                                    }
+                                }}
+                            >
+                                {property.images.map((img, i) => (
+                                    <div key={img.id} className="lightbox-item">
+                                        <img src={img.url} alt={`${property.title} — ${i + 1}`} className="lightbox-img" />
+                                        <span className="lightbox-caption">{i + 1} / {property.images.length}</span>
+                                        <span className="lightbox-date">{formatImgDate(img.created_at)}</span>
+                                        <button
+                                            className="lightbox-delete-btn"
+                                            title="Delete image"
+                                            onClick={e => { e.stopPropagation(); handleDeleteImage(img.id) }}
+                                        >✕</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="detail-images">
+                {property.images.length > 0 ? (
+                    <div className="image-grid" onClick={() => setLightboxOpen(true)}>
+                        {property.images.slice(0, 3).map((img, i) => (
+                            <div
+                                key={img.id}
+                                className={`image-grid-cell${i === 0 ? ' image-grid-main' : ''}`}
+                            >
+                                <img src={img.url} alt={property.title} className="image-grid-img" />
+                                {i === 2 && property.images.length > 3 && (
+                                    <div className="image-grid-more">+{property.images.length - 3}</div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <div className="no-image">No images available</div>
@@ -774,8 +809,10 @@ export function PropertyDetail() {
                                     <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from price, down payment %, interest rate, and amortization years</span></span></label>
                                     <span className="tracked-value">{moneyLabel(p.mortgage_monthly)}</span>
                                 </div>
-                                <Field label="Monthly total" viewVal={moneyLabel(p.monthly_total)}
-                                    editEl={<NumInput label="Monthly total" value={draft?.monthly_total ?? null} onChange={v => setDraftField('monthly_total', v)} />} />
+                                <div className="tracked-field">
+                                    <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">Mortgage + property tax (monthly) + HOA / strata fee</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(p.monthly_total)}</span>
+                                </div>
                             </div>
                         </div>
 

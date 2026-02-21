@@ -6,9 +6,12 @@ use crate::models::image::ImageEntry;
 #[derive(Serialize, Clone)]
 pub struct Property {
     pub id: i64,
+
+    // urls
     pub redfin_url: Option<String>,
     pub realtor_url: Option<String>,
     pub rew_url: Option<String>,
+
     pub title: String,
     pub description: String,
     // cost
@@ -55,6 +58,7 @@ pub struct Property {
     pub mortgage_monthly: Option<i64>,
     // cost
     pub hoa_monthly: Option<i64>,
+    // Derived field: sum of mortgage, monthly property tax, and HOA fee
     pub monthly_total: Option<i64>,
     // rental
     pub has_rental_suite: Option<bool>,

@@ -38,6 +38,18 @@ cargo install cargo-watch  # one-time install
 cargo watch -x run
 ```
 
+## Snapshot Testing
+
+```
+cargo install cargo-insta
+```
+
+Review snapshots
+
+```
+cargo insta test --review
+```
+
 ## API
 
 - **GET /** — Serves the UI.

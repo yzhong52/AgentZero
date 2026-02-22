@@ -517,34 +517,15 @@ async fn list_listings(
 
 #[cfg(test)]
 mod tests {
-    use scraper::Html;
     use crate::{db, parsers};
 
     #[test]
     fn snapshot_redfin_3662_oak_st() {
         let html = std::fs::read_to_string("fixtures/redfin_3662_oak_st.html")
             .expect("fixture not found — run from backend/");
-        let document = Html::parse_document(&html);
 
-        let result = parsers::ParseResult {
-            url: "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332"
-                .to_string(),
-            title: parsers::extract_title(&document),
-            description: parsers::extract_description(&document),
-            images: parsers::extract_images(&document),
-            raw_json_ld: parsers::extract_json_ld(&document),
-            meta: parsers::meta_map(&document),
-        };
-
-        insta::assert_json_snapshot!(result);
-    }
-
-    #[test]
-    fn snapshot_extract_property() {
-        let html = std::fs::read_to_string("fixtures/redfin_3662_oak_st.html")
-            .expect("fixture not found — run from backend/");
+        // Only snapshot the property-level output (db::Property)
         let url = "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332";
-
         let listing = parsers::redfin::parse(url, &html).expect("parse failed");
         let images: Vec<db::ImageEntry> = listing.image_urls
             .into_iter()

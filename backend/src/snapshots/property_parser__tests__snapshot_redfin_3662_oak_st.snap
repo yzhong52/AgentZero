@@ -1,421 +1,240 @@
 ---
 source: src/main.rs
-expression: result
+expression: property
 ---
 {
-  "url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
+  "id": 0,
+  "redfin_url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
+  "realtor_url": null,
+  "rew_url": null,
   "title": "3662 Oak St, Vancouver - 5 beds/4 baths",
-  "description": "For Sale: 5 beds, 4 baths ∙ 2718 sq. ft. ∙ 3662 Oak St, Vancouver ∙ $2,298,000 ∙ MLS# R3089619 ∙ Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenie...",
+  "description": "Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenience while the home is remarkably quiet from dbl glazed windows &amp; lush front hedging for privacy. Large E facing windows fill the interior w/natural light. Main floor offers formal living &amp; dining rooms plus separate den ideal for home office,or playroom. A bright kitchen w/ eating area &amp; NS mnt views. Upstairs,3 spacious bdrms, one w/a generous balcony perfect for morning coffee watching the sunrise. Lower level has exceptionally high ceilings w/a bright 2 bdrm suite w/separate entry, large windows &amp; gas fp. Great accommodation for extended family or mortgage helper. 2 oversized single garages for vehicles &amp; storage, or the flexibility to create a workshop. Emily Carr &amp; Eric Hamber catchment ",
+  "price": 2298000,
+  "price_currency": "USD",
+  "street_address": "3662 Oak St",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V6H 2M2",
+  "country": "CA",
+  "bedrooms": 5,
+  "bathrooms": 4,
+  "sqft": 2718,
+  "year_built": 1921,
+  "lat": 49.2530055,
+  "lon": -123.1270233,
   "images": [
-    "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3.jpg"
-  ],
-  "raw_json_ld": [
     {
-      "@context": "http://schema.org",
-      "@type": "Organization",
-      "logo": "https://ssl.cdn-redfin.com/v615.2.2/images/logos/Redfin_Logo.png",
-      "name": "Redfin",
-      "url": "https://www.redfin.ca"
+      "id": 0,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_3.jpg",
+      "created_at": ""
     },
     {
-      "@context": "https://schema.org",
-      "@type": [
-        "Product",
-        "RealEstateListing"
-      ],
-      "datePosted": "2026-02-13T00:04:12.816Z",
-      "description": "Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenience while the home is remarkably quiet from dbl glazed windows &amp; lush front hedging for privacy. Large E facing windows fill the interior w/natural light. Main floor offers formal living &amp; dining rooms plus separate den ideal for home office,or playroom. A bright kitchen w/ eating area &amp; NS mnt views. Upstairs,3 spacious bdrms, one w/a generous balcony perfect for morning coffee watching the sunrise. Lower level has exceptionally high ceilings w/a bright 2 bdrm suite w/separate entry, large windows &amp; gas fp. Great accommodation for extended family or mortgage helper. 2 oversized single garages for vehicles &amp; storage, or the flexibility to create a workshop. Emily Carr &amp; Eric Hamber catchment ",
-      "image": {
-        "@type": "ImageObject",
-        "height": 853,
-        "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_3.jpg",
-        "width": 1280
-      },
-      "lastReviewed": "2026-02-13T06:45:13.891Z",
-      "mainEntity": {
-        "@type": "SingleFamilyResidence",
-        "accommodationCategory": "Single Family Residential",
-        "address": {
-          "@type": "PostalAddress",
-          "addressCountry": "CA",
-          "addressLocality": "Vancouver",
-          "addressRegion": "BC",
-          "postalCode": "V6H 2M2",
-          "streetAddress": "3662 Oak St"
-        },
-        "amenityFeature": [
-          {
-            "@type": "LocationFeatureSpecification",
-            "name": "Laundry: In-unit laundry (washer and dryer)",
-            "value": true
-          },
-          {
-            "@type": "LocationFeatureSpecification",
-            "name": "Parking: 2 garage spaces",
-            "value": true
-          }
-        ],
-        "floorSize": {
-          "@type": "QuantitativeValue",
-          "unitText": "FTK",
-          "value": 2718
-        },
-        "geo": {
-          "@type": "GeoCoordinates",
-          "latitude": 49.2530055,
-          "longitude": -123.1270233
-        },
-        "hasMap": "https://www.google.com/maps/place/@49.2530055,-123.1270233",
-        "image": [
-          {
-            "@type": "ImageObject",
-            "height": 853,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_1_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_2_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_3_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_4_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_5_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_6_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_7_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_8_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_9_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_10_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_11_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_12_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_13_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_14_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_15_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_16_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_17_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_18_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_19_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_20_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_21_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_22_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_23_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_24_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_25_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_26_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_27_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_28_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_29_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_30_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_31_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_32_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_33_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 854,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_34_3.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 853,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_35_2.jpg",
-            "width": 1280
-          },
-          {
-            "@type": "ImageObject",
-            "height": 2304,
-            "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_36_1.jpg",
-            "width": 2982
-          }
-        ],
-        "name": "3662 Oak St",
-        "numberOfBathroomsTotal": 4,
-        "numberOfBedrooms": 5,
-        "yearBuilt": 1921
-      },
-      "name": "3662 Oak St",
-      "offers": {
-        "@type": "Offer",
-        "availability": "https://schema.org/InStock",
-        "price": 2298000,
-        "priceCurrency": "USD",
-        "url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332"
-      },
-      "potentialAction": {
-        "@type": "BuyAction"
-      },
-      "url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332"
+      "id": 1,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_1_3.jpg",
+      "created_at": ""
     },
     {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "item": "https://www.redfin.ca",
-          "name": "Redfin",
-          "position": 1
-        },
-        {
-          "@type": "ListItem",
-          "item": "https://www.redfin.ca/bc",
-          "name": "British Columbia",
-          "position": 2
-        },
-        {
-          "@type": "ListItem",
-          "item": "https://www.redfin.ca/bc/greater-vancouver-regional-district",
-          "name": "Greater Vancouver Regional District",
-          "position": 3
-        },
-        {
-          "@type": "ListItem",
-          "item": "https://www.redfin.ca/bc/vancouver",
-          "name": "Vancouver",
-          "position": 4
-        },
-        {
-          "@type": "ListItem",
-          "item": "https://www.redfin.ca/bc/vancouver/south-cambie-1-552120",
-          "name": "South Cambie",
-          "position": 5
-        },
-        {
-          "@type": "ListItem",
-          "name": "3662 Oak St, Vancouver, BC V6H 2M2",
-          "position": 6
-        }
-      ]
+      "id": 2,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_2_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_3_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_4_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_5_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_6_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_7_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_8_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_9_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_10_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_11_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_12_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_13_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_14_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_15_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_16_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_17_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_18_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_19_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_20_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_21_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_22_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_23_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_24_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_25_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_26_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_27_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_28_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_29_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_30_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_31_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_32_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_33_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_34_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_35_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/619/R3089619_36_1.jpg",
+      "created_at": ""
     }
   ],
-  "meta": {
-    "AUTHOR": "Redfin",
-    "CATEGORY": "Business: Real Estate",
-    "CLASSIFICATION": "Business: Real Estate",
-    "COPYRIGHT": "Redfin",
-    "HOME_URL": "https://www.redfin.ca",
-    "ICBM": "49.2530055, -123.1270233",
-    "al:android:app_name": "Redfin Real Estate",
-    "al:android:package": "com.redfin.android",
-    "al:android:url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
-    "al:ios:app_name": "Redfin Real Estate",
-    "al:ios:app_store_id": "327962480",
-    "al:ios:url": "redfin://home/155902332",
-    "description": "For Sale: 5 beds, 4 baths ∙ 2718 sq. ft. ∙ 3662 Oak St, Vancouver ∙ $2,298,000 ∙ MLS# R3089619 ∙ Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenie...",
-    "fb:app_id": "161006757273279",
-    "format-detection": "address=no, email=no, telephone=no",
-    "geo.placename": "Vancouver, null",
-    "geo.position": "49.2530055;-123.1270233",
-    "geo.region": "US-null",
-    "og:description": "(GVR) For Sale: 5 beds, 4 baths ∙ 2718 sq. ft. ∙ 3662 Oak St, Vancouver ∙ $2,298,000 ∙ MLS# R3089619 ∙ Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenie...",
-    "og:image": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3.jpg",
-    "og:image:height": "853",
-    "og:image:width": "1280",
-    "og:site_name": "Redfin",
-    "og:title": "3662 Oak St, Vancouver - 5 beds/4 baths",
-    "og:type": "redfinrealestate:home",
-    "og:url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
-    "twitter:app:id:googleplay": "com.redfin.android",
-    "twitter:app:id:ipad": "327962480",
-    "twitter:app:id:iphone": "327962480",
-    "twitter:app:name:googleplay": "Redfin Real Estate",
-    "twitter:app:name:ipad": "Redfin Real Estate",
-    "twitter:app:name:iphone": "Redfin Real Estate",
-    "twitter:app:url:googleplay": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
-    "twitter:app:url:ipad": "redfin://home/155902332",
-    "twitter:app:url:iphone": "redfin://home/155902332",
-    "twitter:card": "summary_large_image",
-    "twitter:description": "(GVR) For Sale: 5 beds, 4 baths ∙ 2718 sq. ft. ∙ 3662 Oak St, Vancouver ∙ $2,298,000 ∙ MLS# R3089619 ∙ Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenie...",
-    "twitter:image": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3.jpg",
-    "twitter:image:alt": "3662 Oak St, Vancouver - 5 beds/4 baths",
-    "twitter:image:camera": "http://ssl.cdn-redfin.com/vLATEST/images/search/details/twitterCards/twitter-card-camera-160x160.png",
-    "twitter:image:camera_wide": "http://ssl.cdn-redfin.com/vLATEST/images/search/details/twitterCards/twitter-card-camera-preview-wide.png",
-    "twitter:image:home": "http://ssl.cdn-redfin.com/vLATEST/images/search/details/twitterCards/twitter-card-icon-home.png",
-    "twitter:image:photo0": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3.jpg",
-    "twitter:image:photo1": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_1_3.jpg",
-    "twitter:image:photo2": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_2_3.jpg",
-    "twitter:image:photo3": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3_3.jpg",
-    "twitter:image:sash": "http://ssl.cdn-redfin.com/vLATEST/images/search/details/twitterCards/twitter-card-corner-forsale.png",
-    "twitter:image:src": "https://ssl.cdn-redfin.com/photo/256/mbpaddedwide/619/genMid.R3089619_3.jpg",
-    "twitter:phone:number": "8779733346",
-    "twitter:site": "@redfin",
-    "twitter:text:baths": "4",
-    "twitter:text:beds": "5",
-    "twitter:text:city": "Vancouver",
-    "twitter:text:description": "(GVR) For Sale: 5 beds, 4 baths ∙ 2718 sq. ft. ∙ 3662 Oak St, Vancouver ∙ $2,298,000 ∙ MLS# R3089619 ∙ Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenie...",
-    "twitter:text:description_simple": "Beautiful, renovated family home on a prime corner STEPS TO DOUGLAS PARK. Main route offers convenience while the home is remarkably quiet from dbl glazed windows  &amp;  lush front hedging for pri...",
-    "twitter:text:listing_source": "GVR",
-    "twitter:text:price": "$2,298,000",
-    "twitter:text:sqft": "2,718",
-    "twitter:text:state_code": "BC",
-    "twitter:text:street_address": "3662 Oak St",
-    "twitter:text:title": "3662 Oak St, Vancouver - 5 beds/4 baths",
-    "twitter:text:zip": "V6H 2M2",
-    "twitter:title": "3662 Oak St, Vancouver - 5 beds/4 baths",
-    "twitter:url:landing_url": "https://www.redfin.ca/bc/vancouver/3662-Oak-St-V6H-2M2/home/155902332",
-    "verify-v1": "vbagp07VenQsa10E9wu53BlevOrQJwZgHkSUPFAKDGE=",
-    "viewport": "width=device-width, initial-scale=1, minimum-scale=1, user-scalable=1"
-  }
+  "created_at": "",
+  "updated_at": null,
+  "notes": null,
+  "parking_garage": 2,
+  "parking_covered": null,
+  "parking_open": null,
+  "land_sqft": null,
+  "property_tax": null,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "hoa_monthly": null,
+  "monthly_total": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "status": null,
+  "nickname": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null
 }

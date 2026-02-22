@@ -17,6 +17,7 @@ use super::{ParsedListing, extract_json_ld, extract_title};
 static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
 static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
+static TAX_ANNUAL_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -29,6 +30,12 @@ fn lot_size_re() -> &'static Regex {
 fn nearby_schools_re() -> &'static Regex {
     NEARBY_SCHOOLS_RE.get_or_init(|| {
         Regex::new(r#""nearbySchools":\s*(\[[^\]]*\])"#).unwrap()
+    })
+}
+
+fn tax_annual_re() -> &'static Regex {
+    TAX_ANNUAL_RE.get_or_init(|| {
+        Regex::new(r"Tax Annual Amount:\s*\$?([\d,]+)").unwrap()
     })
 }
 
@@ -81,6 +88,16 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
     }
 
     Some(SchoolInfo { elementary, middle, secondary })
+}
+
+// ── Property tax ──────────────────────────────────────────────────────────────
+
+/// Extracts annual property tax from Redfin's property details section.
+/// Matches "Tax Annual Amount: $9,082.04" in the rendered HTML.
+pub fn extract_property_tax(html: &str) -> Option<i64> {
+    let caps = tax_annual_re().captures(html)?;
+    let digits: String = caps.get(1)?.as_str().chars().filter(|c| c.is_ascii_digit()).collect();
+    digits.parse().ok()
 }
 
 // ── Lot size ──────────────────────────────────────────────────────────────────
@@ -245,6 +262,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let mut property = extract_property(url, &title, &json_ld)?;
 
     property.land_sqft = extract_lot_size(html);
+    property.property_tax = extract_property_tax(html);
     if let Some(schools) = extract_schools(html) {
         if let Some((name, rating)) = schools.elementary {
             property.school_elementary = Some(name);

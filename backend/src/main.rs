@@ -555,6 +555,23 @@ mod tests {
 
         insta::assert_json_snapshot!(property);
     }
+
+    #[test]
+    fn snapshot_extract_property_829_e14th() {
+        let html = std::fs::read_to_string("fixtures/829 E 14th Ave, Vancouver, BC V5T 2N5 _ MLS# R3090427 _ Redfin.html")
+            .expect("fixture not found — run from backend/");
+        let url = "https://www.redfin.ca/bc/vancouver/829-E-14th-Ave-V5T-2N5/home/155809679";
+
+        let listing = parsers::redfin::parse(url, &html).expect("parse failed");
+        let images: Vec<db::ImageEntry> = listing.image_urls
+            .into_iter()
+            .enumerate()
+            .map(|(i, img_url)| db::ImageEntry { id: i as i64, url: img_url, created_at: String::new() })
+            .collect();
+        let property = db::Property { images, ..listing.property };
+
+        insta::assert_json_snapshot!(property);
+    }
 }
 
 #[tokio::main]

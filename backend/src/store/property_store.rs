@@ -44,13 +44,13 @@ pub async fn save_redfin(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                (redfin_url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
-                parking_garage, land_sqft, ac, radiant_floor_heating,
+                parking_garage, land_sqft, property_tax, ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                 school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(redfin_url) DO UPDATE SET
                title                    = excluded.title,
                description              = excluded.description,
@@ -69,6 +69,7 @@ pub async fn save_redfin(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                lon                      = excluded.lon,
                parking_garage           = excluded.parking_garage,
                land_sqft                = excluded.land_sqft,
+               property_tax             = excluded.property_tax,
                ac                       = excluded.ac,
                radiant_floor_heating    = excluded.radiant_floor_heating,
                down_payment_pct         = excluded.down_payment_pct,
@@ -101,6 +102,7 @@ pub async fn save_redfin(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(p.lon)
     .bind(p.parking_garage)
     .bind(p.land_sqft)
+    .bind(p.property_tax)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
     .bind(p.down_payment_pct)
@@ -127,13 +129,13 @@ pub async fn save_realtor(pool: &SqlitePool, p: &Property) -> Result<Property, s
                (realtor_url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
-                parking_garage, land_sqft, ac, radiant_floor_heating,
+                parking_garage, land_sqft, property_tax, ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                 school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(realtor_url) DO UPDATE SET
                title                    = excluded.title,
                description              = excluded.description,
@@ -152,6 +154,7 @@ pub async fn save_realtor(pool: &SqlitePool, p: &Property) -> Result<Property, s
                lon                      = excluded.lon,
                parking_garage           = excluded.parking_garage,
                land_sqft                = excluded.land_sqft,
+               property_tax             = excluded.property_tax,
                ac                       = excluded.ac,
                radiant_floor_heating    = excluded.radiant_floor_heating,
                down_payment_pct         = excluded.down_payment_pct,
@@ -184,6 +187,7 @@ pub async fn save_realtor(pool: &SqlitePool, p: &Property) -> Result<Property, s
     .bind(p.lon)
     .bind(p.parking_garage)
     .bind(p.land_sqft)
+    .bind(p.property_tax)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
     .bind(p.down_payment_pct)

@@ -1,0 +1,256 @@
+---
+source: src/main.rs
+assertion_line: 573
+expression: property
+---
+{
+  "id": 0,
+  "redfin_url": "https://www.redfin.ca/bc/vancouver/829-E-14th-Ave-V5T-2N5/home/155809679",
+  "realtor_url": null,
+  "rew_url": null,
+  "title": "829 E 14th Ave, Vancouver - 5 beds/3 baths",
+  "description": "CHARACTER! Beautiful pre-WW1 home w/ vintage details perched at the top of the hill &amp; elevated above the street, offering added privacy, views + light. Top floor has 3 beds +1 bath w/ claw tub. Big deck off bedroom shows off panoramic views. Main floor has it all, grand living room w/ stained glass + over height ceilings, updated kitchen flows into bright dining room w/ skylights &amp; sliding door onto 2nd big deck + a guest bedroom + an office. Original fir floors throughout, heated floors in main floor bath. Fully finished basement easily accessed or closed off from main floor + its own patio. 200 amps. 3 storage rooms incl a big workshop - so much room for your all your hobbies! Great back yard w/ gardens. 2 pkg spots off the alley. Open House this Thur 6-7pm, Sun 2-4pm ",
+  "price": 2198000,
+  "price_currency": "USD",
+  "street_address": "829 E 14th Ave",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V5T 2N5",
+  "country": "CA",
+  "bedrooms": 5,
+  "bathrooms": 3,
+  "sqft": 2280,
+  "year_built": 1911,
+  "lat": 49.2581041,
+  "lon": -123.08652,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_1_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_2_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_3_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_4_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_5_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_6_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_7_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_8_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_9_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_10_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_11_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_12_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_13_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_14_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_15_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_16_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_17_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_18_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_19_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_20_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_21_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_22_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_23_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_24_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_25_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_26_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_27_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_28_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_29_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_30_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_31_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_32_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_33_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_34_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_35_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_36_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 37,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_37_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 38,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_38_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 39,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/427/R3090427_39_1.jpg",
+      "created_at": ""
+    }
+  ],
+  "created_at": "",
+  "updated_at": null,
+  "notes": null,
+  "parking_garage": null,
+  "parking_covered": null,
+  "parking_open": null,
+  "land_sqft": 4026,
+  "property_tax": 9726,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "hoa_monthly": null,
+  "monthly_total": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "status": null,
+  "nickname": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null
+}

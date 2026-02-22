@@ -30,6 +30,7 @@ struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
     store: Arc<dyn object_store::ObjectStore>,
+    /// TODO: Yuchen - remove this redundant config as we are not using S3 yet. 
     /// Prefix for public image URLs. Local: "/images". S3: "https://bucket.s3…".
     images_url_prefix: String,
     /// Root directory where image files are written (local filesystem only).

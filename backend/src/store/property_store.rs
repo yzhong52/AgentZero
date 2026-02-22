@@ -36,209 +36,137 @@ pub async fn init(database_url: &str) -> SqlitePool {
     pool
 }
 
-/// Save (insert or update) a Redfin listing, deduplicating by redfin_url.
-pub async fn save_redfin(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
-    let url = p.redfin_url.as_deref().unwrap_or("");
+
+/// Save (insert or update) a listing, deduplicating by the appropriate URL field.
+pub async fn save_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
+    // Always upsert all three unique keys if present
     sqlx::query(
         r#"INSERT INTO listings
-               (redfin_url, title, description, price, price_currency,
+               (redfin_url, realtor_url, rew_url, title, description, price, price_currency,
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
                 parking_garage, land_sqft, property_tax, ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
-                school_elementary, school_elementary_rating,
+                hoa_monthly, school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
            ON CONFLICT(redfin_url) DO UPDATE SET
-               title                    = excluded.title,
-               description              = excluded.description,
-               price                    = excluded.price,
-               price_currency           = excluded.price_currency,
-               street_address           = excluded.street_address,
-               city                     = excluded.city,
-               region                   = excluded.region,
-               postal_code              = excluded.postal_code,
-               country                  = excluded.country,
-               bedrooms                 = excluded.bedrooms,
-               bathrooms                = excluded.bathrooms,
-               sqft                     = excluded.sqft,
-               year_built               = excluded.year_built,
-               lat                      = excluded.lat,
-               lon                      = excluded.lon,
-               parking_garage           = excluded.parking_garage,
-               land_sqft                = excluded.land_sqft,
-               property_tax             = excluded.property_tax,
-               ac                       = excluded.ac,
-               radiant_floor_heating    = excluded.radiant_floor_heating,
-               down_payment_pct         = excluded.down_payment_pct,
-               mortgage_interest_rate   = excluded.mortgage_interest_rate,
-               amortization_years       = excluded.amortization_years,
-               mortgage_monthly         = excluded.mortgage_monthly,
-               school_elementary        = excluded.school_elementary,
-               school_elementary_rating = excluded.school_elementary_rating,
-               school_middle            = excluded.school_middle,
-               school_middle_rating     = excluded.school_middle_rating,
-               school_secondary         = excluded.school_secondary,
-               school_secondary_rating  = excluded.school_secondary_rating,
-               updated_at               = datetime('now')"#,
+               realtor_url               = excluded.realtor_url,
+               rew_url                   = excluded.rew_url,
+               title                     = excluded.title,
+               description               = excluded.description,
+               price                     = excluded.price,
+               price_currency            = excluded.price_currency,
+               street_address            = excluded.street_address,
+               city                      = excluded.city,
+               region                    = excluded.region,
+               postal_code               = excluded.postal_code,
+               country                   = excluded.country,
+               bedrooms                  = excluded.bedrooms,
+               bathrooms                 = excluded.bathrooms,
+               sqft                      = excluded.sqft,
+               year_built                = excluded.year_built,
+               lat                       = excluded.lat,
+               lon                       = excluded.lon,
+               parking_garage            = excluded.parking_garage,
+               land_sqft                 = excluded.land_sqft,
+               property_tax              = excluded.property_tax,
+               ac                        = excluded.ac,
+               radiant_floor_heating     = excluded.radiant_floor_heating,
+               down_payment_pct          = excluded.down_payment_pct,
+               mortgage_interest_rate    = excluded.mortgage_interest_rate,
+               amortization_years        = excluded.amortization_years,
+               mortgage_monthly          = excluded.mortgage_monthly,
+               hoa_monthly               = excluded.hoa_monthly,
+               school_elementary         = excluded.school_elementary,
+               school_elementary_rating  = excluded.school_elementary_rating,
+               school_middle             = excluded.school_middle,
+               school_middle_rating      = excluded.school_middle_rating,
+               school_secondary          = excluded.school_secondary,
+               school_secondary_rating   = excluded.school_secondary_rating,
+               updated_at                = datetime('now'),
+               realtor_url               = excluded.realtor_url,
+               rew_url                   = excluded.rew_url
+           ON CONFLICT(realtor_url) DO UPDATE SET
+               redfin_url                = excluded.redfin_url,
+               rew_url                   = excluded.rew_url,
+               title                     = excluded.title,
+               description               = excluded.description,
+               price                     = excluded.price,
+               price_currency            = excluded.price_currency,
+               street_address            = excluded.street_address,
+               city                      = excluded.city,
+               region                    = excluded.region,
+               postal_code               = excluded.postal_code,
+               country                   = excluded.country,
+               bedrooms                  = excluded.bedrooms,
+               bathrooms                 = excluded.bathrooms,
+               sqft                      = excluded.sqft,
+               year_built                = excluded.year_built,
+               lat                       = excluded.lat,
+               lon                       = excluded.lon,
+               parking_garage            = excluded.parking_garage,
+               land_sqft                 = excluded.land_sqft,
+               property_tax              = excluded.property_tax,
+               ac                        = excluded.ac,
+               radiant_floor_heating     = excluded.radiant_floor_heating,
+               down_payment_pct          = excluded.down_payment_pct,
+               mortgage_interest_rate    = excluded.mortgage_interest_rate,
+               amortization_years        = excluded.amortization_years,
+               mortgage_monthly          = excluded.mortgage_monthly,
+               hoa_monthly               = excluded.hoa_monthly,
+               school_elementary         = excluded.school_elementary,
+               school_elementary_rating  = excluded.school_elementary_rating,
+               school_middle             = excluded.school_middle,
+               school_middle_rating      = excluded.school_middle_rating,
+               school_secondary          = excluded.school_secondary,
+               school_secondary_rating   = excluded.school_secondary_rating,
+               updated_at                = datetime('now'),
+               redfin_url                = excluded.redfin_url,
+               rew_url                   = excluded.rew_url
+           ON CONFLICT(rew_url) DO UPDATE SET
+               redfin_url                = excluded.redfin_url,
+               realtor_url               = excluded.realtor_url,
+               title                     = excluded.title,
+               description               = excluded.description,
+               price                     = excluded.price,
+               price_currency            = excluded.price_currency,
+               street_address            = excluded.street_address,
+               city                      = excluded.city,
+               region                    = excluded.region,
+               postal_code               = excluded.postal_code,
+               country                   = excluded.country,
+               bedrooms                  = excluded.bedrooms,
+               bathrooms                 = excluded.bathrooms,
+               sqft                      = excluded.sqft,
+               year_built                = excluded.year_built,
+               lat                       = excluded.lat,
+               lon                       = excluded.lon,
+               parking_garage            = excluded.parking_garage,
+               land_sqft                 = excluded.land_sqft,
+               property_tax              = excluded.property_tax,
+               ac                        = excluded.ac,
+               radiant_floor_heating     = excluded.radiant_floor_heating,
+               down_payment_pct          = excluded.down_payment_pct,
+               mortgage_interest_rate    = excluded.mortgage_interest_rate,
+               amortization_years        = excluded.amortization_years,
+               mortgage_monthly          = excluded.mortgage_monthly,
+               hoa_monthly               = excluded.hoa_monthly,
+               school_elementary         = excluded.school_elementary,
+               school_elementary_rating  = excluded.school_elementary_rating,
+               school_middle             = excluded.school_middle,
+               school_middle_rating      = excluded.school_middle_rating,
+               school_secondary          = excluded.school_secondary,
+               school_secondary_rating   = excluded.school_secondary_rating,
+               updated_at                = datetime('now'),
+               redfin_url                = excluded.redfin_url,
+               realtor_url               = excluded.realtor_url
+        "#
     )
     .bind(&p.redfin_url)
-    .bind(&p.title)
-    .bind(&p.description)
-    .bind(p.price)
-    .bind(&p.price_currency)
-    .bind(&p.street_address)
-    .bind(&p.city)
-    .bind(&p.region)
-    .bind(&p.postal_code)
-    .bind(&p.country)
-    .bind(p.bedrooms)
-    .bind(p.bathrooms)
-    .bind(p.sqft)
-    .bind(p.year_built)
-    .bind(p.lat)
-    .bind(p.lon)
-    .bind(p.parking_garage)
-    .bind(p.land_sqft)
-    .bind(p.property_tax)
-    .bind(p.ac)
-    .bind(p.radiant_floor_heating)
-    .bind(p.down_payment_pct)
-    .bind(p.mortgage_interest_rate)
-    .bind(p.amortization_years)
-    .bind(p.mortgage_monthly)
-    .bind(&p.school_elementary)
-    .bind(p.school_elementary_rating)
-    .bind(&p.school_middle)
-    .bind(p.school_middle_rating)
-    .bind(&p.school_secondary)
-    .bind(p.school_secondary_rating)
-    .execute(pool)
-    .await?;
-
-    fetch_one_by_redfin_url(pool, url).await
-}
-
-/// Save (insert or update) a Realtor.ca listing, deduplicating by realtor_url.
-pub async fn save_realtor(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
-    let url = p.realtor_url.as_deref().unwrap_or("");
-    sqlx::query(
-        r#"INSERT INTO listings
-               (realtor_url, title, description, price, price_currency,
-                street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon,
-                parking_garage, land_sqft, property_tax, ac, radiant_floor_heating,
-                down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
-                school_elementary, school_elementary_rating,
-                school_middle, school_middle_rating,
-                school_secondary, school_secondary_rating,
-                updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-           ON CONFLICT(realtor_url) DO UPDATE SET
-               title                    = excluded.title,
-               description              = excluded.description,
-               price                    = excluded.price,
-               price_currency           = excluded.price_currency,
-               street_address           = excluded.street_address,
-               city                     = excluded.city,
-               region                   = excluded.region,
-               postal_code              = excluded.postal_code,
-               country                  = excluded.country,
-               bedrooms                 = excluded.bedrooms,
-               bathrooms                = excluded.bathrooms,
-               sqft                     = excluded.sqft,
-               year_built               = excluded.year_built,
-               lat                      = excluded.lat,
-               lon                      = excluded.lon,
-               parking_garage           = excluded.parking_garage,
-               land_sqft                = excluded.land_sqft,
-               property_tax             = excluded.property_tax,
-               ac                       = excluded.ac,
-               radiant_floor_heating    = excluded.radiant_floor_heating,
-               down_payment_pct         = excluded.down_payment_pct,
-               mortgage_interest_rate   = excluded.mortgage_interest_rate,
-               amortization_years       = excluded.amortization_years,
-               mortgage_monthly         = excluded.mortgage_monthly,
-               school_elementary        = excluded.school_elementary,
-               school_elementary_rating = excluded.school_elementary_rating,
-               school_middle            = excluded.school_middle,
-               school_middle_rating     = excluded.school_middle_rating,
-               school_secondary         = excluded.school_secondary,
-               school_secondary_rating  = excluded.school_secondary_rating,
-               updated_at               = datetime('now')"#,
-    )
     .bind(&p.realtor_url)
-    .bind(&p.title)
-    .bind(&p.description)
-    .bind(p.price)
-    .bind(&p.price_currency)
-    .bind(&p.street_address)
-    .bind(&p.city)
-    .bind(&p.region)
-    .bind(&p.postal_code)
-    .bind(&p.country)
-    .bind(p.bedrooms)
-    .bind(p.bathrooms)
-    .bind(p.sqft)
-    .bind(p.year_built)
-    .bind(p.lat)
-    .bind(p.lon)
-    .bind(p.parking_garage)
-    .bind(p.land_sqft)
-    .bind(p.property_tax)
-    .bind(p.ac)
-    .bind(p.radiant_floor_heating)
-    .bind(p.down_payment_pct)
-    .bind(p.mortgage_interest_rate)
-    .bind(p.amortization_years)
-    .bind(p.mortgage_monthly)
-    .bind(&p.school_elementary)
-    .bind(p.school_elementary_rating)
-    .bind(&p.school_middle)
-    .bind(p.school_middle_rating)
-    .bind(&p.school_secondary)
-    .bind(p.school_secondary_rating)
-    .execute(pool)
-    .await?;
-
-    fetch_one_by_realtor_url(pool, url).await
-}
-
-/// Save (insert or update) a rew.ca listing, deduplicating by rew_url.
-pub async fn save_rew(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
-    let url = p.rew_url.as_deref().unwrap_or("");
-    sqlx::query(
-        r#"INSERT INTO listings
-               (rew_url, title, description, price, price_currency,
-                street_address, city, region, postal_code, country,
-                bedrooms, bathrooms, sqft, year_built, lat, lon,
-                parking_garage, land_sqft, property_tax, hoa_monthly,
-                updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-           ON CONFLICT(rew_url) DO UPDATE SET
-               title                    = excluded.title,
-               description              = excluded.description,
-               price                    = excluded.price,
-               price_currency           = excluded.price_currency,
-               street_address           = excluded.street_address,
-               city                     = excluded.city,
-               region                   = excluded.region,
-               postal_code              = excluded.postal_code,
-               country                  = excluded.country,
-               bedrooms                 = excluded.bedrooms,
-               bathrooms                = excluded.bathrooms,
-               sqft                     = excluded.sqft,
-               year_built               = excluded.year_built,
-               lat                      = excluded.lat,
-               lon                      = excluded.lon,
-               parking_garage           = excluded.parking_garage,
-               land_sqft                = excluded.land_sqft,
-               property_tax             = excluded.property_tax,
-               hoa_monthly              = excluded.hoa_monthly,
-               updated_at               = datetime('now')"#,
-    )
     .bind(&p.rew_url)
     .bind(&p.title)
     .bind(&p.description)
@@ -258,11 +186,32 @@ pub async fn save_rew(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx:
     .bind(p.parking_garage)
     .bind(p.land_sqft)
     .bind(p.property_tax)
+    .bind(p.ac)
+    .bind(p.radiant_floor_heating)
+    .bind(p.down_payment_pct)
+    .bind(p.mortgage_interest_rate)
+    .bind(p.amortization_years)
+    .bind(p.mortgage_monthly)
     .bind(p.hoa_monthly)
+    .bind(&p.school_elementary)
+    .bind(p.school_elementary_rating)
+    .bind(&p.school_middle)
+    .bind(p.school_middle_rating)
+    .bind(&p.school_secondary)
+    .bind(p.school_secondary_rating)
     .execute(pool)
     .await?;
 
-    fetch_one_by_rew_url(pool, url).await
+    // Prefer to fetch by redfin_url, then realtor_url, then rew_url
+    if let Some(url) = &p.redfin_url {
+        fetch_one_by_redfin_url(pool, url).await
+    } else if let Some(url) = &p.realtor_url {
+        fetch_one_by_realtor_url(pool, url).await
+    } else if let Some(url) = &p.rew_url {
+        fetch_one_by_rew_url(pool, url).await
+    } else {
+        Err(sqlx::Error::RowNotFound)
+    }
 }
 
 /// Update an existing property by ID (called on refresh — overwrites parsed fields).

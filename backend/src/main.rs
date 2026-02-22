@@ -174,14 +174,9 @@ async fn save_listing(
     }
     property.monthly_total = compute_monthly_total(property.mortgage_monthly, property.property_tax, property.hoa_monthly);
 
-    let saved = if property.realtor_url.is_some() {
-        db::save_realtor(&state.db, &property).await
-    } else if property.rew_url.is_some() {
-        db::save_rew(&state.db, &property).await
-    } else {
-        db::save_redfin(&state.db, &property).await
-    }
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let saved = db::save_listing(&state.db, &property)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     // Register image URLs in images_cache, preserving parser ordering.
     for (position, url) in image_urls.iter().enumerate() {

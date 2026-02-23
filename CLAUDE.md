@@ -19,11 +19,52 @@ Starts at `http://localhost:5173/`. Proxies `/api/*` to the backend.
 
 ## API
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/parse?url=<url>` | Fetch & parse a listing URL (no DB write) |
-| POST | `/api/listings` | `{"url":"..."}` — parse + save to DB |
-| GET | `/api/listings` | Return all saved listings (newest first) |
+Below are the public HTTP endpoints exposed by the backend. All endpoints return JSON unless noted.
+
+- **GET /api/parse?url=<url>**
+	- Description: Fetch the given URL and run the parser, returning parsed fields (title, description, images, address, price, beds, baths, sqft, etc.). This does not write to the DB.
+	- Response (200): { "url": "...", "title": "...", "description": "...", "images": ["..."], "meta": {...} }
+
+- **POST /api/listings**
+	- Description: Parse and save one or more listing source URLs as a single property. Use when you have multiple source URLs (Redfin, Realtor, etc.) for the same property.
+	- Body (JSON): { "urls": ["https://redfin.example/...", "https://rew.example/..."] }
+	- Response (200): the saved `Property` record (includes `id`, parsed fields, and `images` metadata).
+	- Errors: 400 for invalid request, 502 for fetch failures, 422 if no supported listing format found.
+
+- **GET /api/listings**
+	- Description: Return all saved properties, newest first. Each record includes cached `images` metadata (id, local_path, position).
+
+- **GET /api/listings/:id**
+	- Description: Get a single property by ID (includes images and metadata).
+
+- **PUT /api/listings/:id**
+	- Description: Refresh an existing listing by re-fetching its stored source URLs and re-parsing; overwrites parsed fields but preserves user-edits like mortgage settings.
+
+- **DELETE /api/listings/:id**
+	- Description: Delete a property and associated data (images cascade via FK).
+
+- **GET /api/listings/:id/preview**
+	- Description: Run a preview refresh (fetch/parse) without saving changes — useful for validating parser output.
+
+- **PATCH /api/listings/:id/notes**
+	- Description: Update the `notes` field. Body: `{ "notes": "..." }`.
+
+- **PATCH /api/listings/:id/nickname**
+	- Description: Update the user-visible `nickname`/alias. Body: `{ "nickname": "My shortlist" }`.
+
+- **PATCH /api/listings/:id/details**
+	- Description: Apply user-edited fields (partial) to a listing. Accepts the same shape as `UserDetails` in the codebase — common fields: `price`, `price_currency`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `year_built`, `mortgage_monthly`, etc.
+	- Body (example): `{ "price": 110000, "city": "Vancouver", "bedrooms": 3 }`
+
+- **GET /api/listings/:id/history**
+	- Description: Get the change history for a property (price changes etc.).
+
+- **DELETE /api/listings/:id/images/:image_id**
+	- Description: Delete a cached image for the listing. This removes the DB record and the underlying file/object-store key.
+
+Notes:
+- Cached images are served from `/images/<object_key>` by the webserver (local filesystem in dev). The stored `local_path` values are of the form `/images/<listing_id>/<sha256>.<ext>`.
+- Most endpoints return `500` for unexpected DB errors; handlers attempt to translate fetch/parse failures into `502` / `422` where appropriate.
 
 ## Tests
 

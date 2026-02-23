@@ -78,16 +78,24 @@ fn find_residence(json_ld: &[JsonValue]) -> Option<&JsonValue> {
 // ── Image extraction ──────────────────────────────────────────────────────────
 
 fn extract_image_urls(document: &Html) -> Vec<String> {
-    // rew.ca embeds images as <img src="https://assets-listings.rew.ca/...">
-    let sel = Selector::parse("img[src*='assets-listings.rew.ca']").unwrap();
+    // rew.ca images appear in two forms depending on how the page was captured:
+    //   - Lazy-loaded (browser save): `data-src="https://assets-listings.rew.ca/…?fill=blur&w=753…"`
+    //   - Directly served (curl): `src="https://assets-listings.rew.ca/…?w=750…"`
+    // In both cases the URL has Imgix sizing/quality params that limit resolution.
+    // Stripping the query string yields the full-resolution original.
+    let sel = Selector::parse(
+        "img[data-src*='assets-listings.rew.ca'], img[src*='assets-listings.rew.ca']",
+    ).unwrap();
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
     for el in document.select(&sel) {
-        if let Some(src) = el.value().attr("src") {
-            // Deduplicate and skip thumbnails (they often appear twice)
-            if seen.insert(src.to_string()) {
-                out.push(src.to_string());
-            }
+        let raw = el.value().attr("data-src")
+            .or_else(|| el.value().attr("src"))
+            .unwrap_or("");
+        // Strip Imgix query params to get the full-resolution original.
+        let clean = raw.split('?').next().unwrap_or(raw);
+        if !clean.is_empty() && seen.insert(clean.to_string()) {
+            out.push(clean.to_string());
         }
     }
     out

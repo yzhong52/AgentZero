@@ -45,7 +45,7 @@ function ListingCard({ p }: { p: Property }) {
           {p.sqft != null && <span>{p.sqft.toLocaleString()} sqft</span>}
           {p.year_built != null && <span>Built {p.year_built}</span>}
         </div>
-        <div className="listing-title">{p.nickname ?? p.title}</div>
+        <div className="listing-title">{p.title}</div>
       </div>
     </button>
   )

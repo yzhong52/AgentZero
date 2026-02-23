@@ -42,11 +42,6 @@ struct NotesRequest {
     notes: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct NicknameRequest {
-    nickname: Option<String>,
-}
-
 /// Sums mortgage + monthly property tax + HOA into a total monthly cost.
 pub(crate) fn compute_monthly_total(
     mortgage_monthly: Option<i64>,
@@ -253,18 +248,6 @@ async fn delete_listing(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Updates the nickname for a listing. `id` is the property/listing ID.
-async fn patch_nickname(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Json(body): Json<NicknameRequest>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    db::update_nickname(&state.db, id, body.nickname.as_deref())
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Returns a single listing by ID.
 async fn get_listing(
     State(state): State<AppState>,
@@ -291,6 +274,8 @@ async fn patch_details(
     // Merge every provided field from the request body over the stored values.
     // Fields absent from the body (None) are left unchanged.
     let mut updated = current.clone();
+
+    updated.title = body.title.clone().unwrap_or(updated.title.clone());
 
     if body.redfin_url.is_some() { updated.redfin_url = body.redfin_url.clone(); }
     if body.realtor_url.is_some() { updated.realtor_url = body.realtor_url.clone(); }
@@ -505,7 +490,6 @@ async fn main() {
         .route("/api/listings/:id/refresh",           put(api::refresh::refresh_listing))
         .route("/api/listings/:id/preview",           get(api::refresh::preview_refresh))
         .route("/api/listings/:id/notes",             patch(patch_notes))
-        .route("/api/listings/:id/nickname",          patch(patch_nickname))
         .route("/api/listings/:id/details",           patch(patch_details))
         .route("/api/listings/:id/history",           get(get_history))
         .route("/api/listings/:id/images/:image_id",  delete(delete_image))

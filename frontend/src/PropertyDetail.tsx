@@ -185,6 +185,7 @@ function str(v: unknown): string {
 }
 
 const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
+    { key: 'title', label: 'Title' },
     { key: 'price', label: 'Price' },
     { key: 'street_address', label: 'Address' },
     { key: 'city', label: 'City' },
@@ -215,6 +216,7 @@ function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
 
 function toUserDetails(p: Property) {
     return {
+        title: p.title,
         redfin_url: p.redfin_url,
         realtor_url: p.realtor_url,
         rew_url: p.rew_url,
@@ -273,8 +275,8 @@ export function PropertyDetail() {
     const [notes, setNotes] = useState<string>('')
     const [notesSaving, setNotesSaving] = useState(false)
 
-    // Nickname (inline header)
-    const [nickname, setNickname] = useState<string>('')
+    // Title (inline header)
+    const [titleDraft, setTitleDraft] = useState<string>('')
 
     // Edit mode
     const [editMode, setEditMode] = useState(false)
@@ -311,7 +313,7 @@ export function PropertyDetail() {
             const p: Property = await resp.json()
             setProperty(p)
             setNotes(p.notes ?? '')
-            setNickname(p.nickname ?? '')
+            setTitleDraft(p.title ?? '')
 
             const histResp = await fetch(`/api/listings/${id}/history`)
             if (histResp.ok) setHistory(await histResp.json())
@@ -448,6 +450,7 @@ export function PropertyDetail() {
             if (!resp.ok) throw new Error(await resp.text())
             const updated: Property = await resp.json()
             setProperty(updated)
+            setTitleDraft(updated.title ?? '')
             setDiffModal(null)
             setRefreshMsg('Property updated successfully')
             setTimeout(() => setRefreshMsg(null), 3000)
@@ -480,16 +483,17 @@ export function PropertyDetail() {
         }
     }
 
-    // ── Nickname ──────────────────────────────────────────────────────────────
+    // ── Title (inline) ─────────────────────────────────────────────────────────
 
-    async function handleNicknameSave() {
-        if (!property) return
-        setProperty({ ...property, nickname: nickname || null })
+    async function handleTitleSave() {
+        if (!property || !titleDraft.trim()) return
+        const newTitle = titleDraft.trim()
+        setProperty({ ...property, title: newTitle })
         try {
-            const resp = await fetch(`/api/listings/${property.id}/nickname`, {
+            const resp = await fetch(`/api/listings/${property.id}/details`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname: nickname || null }),
+                body: JSON.stringify({ title: newTitle }),
             })
             if (!resp.ok) throw new Error(await resp.text())
         } catch (err: any) {
@@ -633,7 +637,7 @@ export function PropertyDetail() {
                     <div className="lightbox-panel" onClick={e => e.stopPropagation()}>
                         <div className="lightbox-header">
                             <button className="lightbox-close" onClick={() => setLightboxOpen(false)}>✕</button>
-                            <span className="lightbox-title">{property.nickname || property.title}</span>
+                            <span className="lightbox-title">{property.title}</span>
                             <span className="lightbox-count">{property.images.length} photos</span>
                         </div>
                         <div className="lightbox-body">
@@ -715,14 +719,13 @@ export function PropertyDetail() {
                 <div className="detail-content">
                     <div className="detail-header">
                         <input
-                            className="nickname-input"
-                            value={nickname}
-                            onChange={e => setNickname(e.target.value)}
-                            onBlur={handleNicknameSave}
-                            placeholder={property.title}
-                            aria-label="Property nickname"
+                            className="title-input"
+                            value={titleDraft}
+                            onChange={e => setTitleDraft(e.target.value)}
+                            onBlur={handleTitleSave}
+                            placeholder="(no title)"
+                            aria-label="Property title"
                         />
-                        {nickname && <div className="detail-subtitle">{property.title}</div>}
                         <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
                     </div>
 

@@ -88,6 +88,8 @@ pub struct Property {
 /// so that no field is unintentionally cleared.
 #[derive(Deserialize)]
 pub struct UserDetails {
+    // title (user can correct parser output)
+    pub title: Option<String>,
     // source URLs (user can link or correct)
     pub redfin_url: Option<String>,
     pub realtor_url: Option<String>,

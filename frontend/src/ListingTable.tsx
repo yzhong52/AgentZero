@@ -18,7 +18,7 @@ function formatPrice(price: number | null, currency: string | null) {
 }
 
 export const ALL_COLUMNS: ColDef[] = [
-  { key: 'name',           label: 'Name',      render: p => p.nickname ?? p.title },
+  { key: 'name',           label: 'Name',      render: p => p.title },
   { key: 'price',          label: 'Price',     render: p => formatPrice(p.price, p.price_currency) ?? '—' },
   { key: 'status',         label: 'Status',    render: p => p.status ?? '—' },
   { key: 'address',        label: 'Address',   render: p => [p.street_address, p.city].filter(Boolean).join(', ') || '—' },

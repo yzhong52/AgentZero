@@ -229,16 +229,6 @@ pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Err
     Ok(p)
 }
 
-/// Update the nickname/alias for a property.
-pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE listings SET nickname = ? WHERE id = ?")
-        .bind(nickname)
-        .bind(id)
-        .execute(pool)
-        .await?;
-    Ok(())
-}
-
 // `update_details` removed — use `update_by_id` after merging `UserDetails` in the caller.
 
 /// Update the notes field for a property.
@@ -448,6 +438,7 @@ mod tests {
 
         // Prepare user details to update many fields
         let details = UserDetails {
+            title: None,
             redfin_url: Some("https://example.com/2-updated".to_string()),
             realtor_url: Some("https://realtor.example/2".to_string()),
             rew_url: Some("https://rew.example/2".to_string()),

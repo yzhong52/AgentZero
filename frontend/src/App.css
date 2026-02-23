@@ -848,8 +848,8 @@
   color: #1c1c1e;
 }
 
-/* editable nickname replaces the h1 */
-.nickname-input {
+/* editable title as the h1 */
+.title-input {
   width: 100%;
   font-size: 1.8rem;
   font-weight: 700;
@@ -865,21 +865,15 @@
   box-sizing: border-box;
 }
 
-.nickname-input:hover,
-.nickname-input:focus {
+.title-input:hover,
+.title-input:focus {
   outline: none;
   border-bottom-color: #4f46e5;
 }
 
-.nickname-input::placeholder {
+.title-input::placeholder {
   color: #1c1c1e;
   opacity: 1;
-}
-
-.detail-subtitle {
-  font-size: 0.85rem;
-  color: #999;
-  margin-bottom: 0.4rem;
 }
 
 .detail-price {

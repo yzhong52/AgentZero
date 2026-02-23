@@ -8,7 +8,7 @@ use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, compu
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
-/// Parser-produced fields are overwritten. User-only fields (notes, status, nickname,
+/// Parser-produced fields are overwritten. User-only fields (notes, status,
 /// skytrain info, rental details) are never touched by `update_by_id` and remain intact.
 /// Fields the parser may produce but that users can also set manually (schools, HOA fee)
 /// are preserved from the stored record when the parser returns nothing for them.
@@ -107,7 +107,7 @@ pub async fn refresh_listing(
     }
 
     // ── 7. Persist parsed fields ──────────────────────────────────────────────
-    // `update_by_id` intentionally omits user-only columns (notes, status, nickname,
+    // `update_by_id` intentionally omits user-only columns (notes, status,
     // has_rental_suite, rental_income, skytrain_*) so those remain intact in the DB.
     let saved = db::update_by_id(&state.db, id, &updated)
         .await

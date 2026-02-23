@@ -1,8 +1,8 @@
-/// Redfin-specific listing parser.
-///
-/// Redfin embeds structured data in two places:
-///   - JSON-LD (`RealEstateListing`) for core fields and image URLs.
-///   - An escaped JSON blob in a `<script>` tag for lot size and nearby schools.
+//! Redfin-specific listing parser.
+//!
+//! Redfin embeds structured data in two places:
+//!   - JSON-LD (`RealEstateListing`) for core fields and image URLs.
+//!   - An escaped JSON blob in a `<script>` tag for lot size and nearby schools.
 
 use regex::Regex;
 use scraper::Html;

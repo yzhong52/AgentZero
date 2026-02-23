@@ -1,23 +1,23 @@
-/// POST /api/listings — add a new listing.
-///
-/// Fetches and parses one or more listing URLs for the same property, saves
-/// the merged result to the DB, downloads images, and returns the saved record.
-///
-/// # Supported parsers
-///
-/// | Source      | Status  | Notes                                      |
-/// |-------------|---------|--------------------------------------------|
-/// | Redfin      | ✅ Works | Primary source; best structured data       |
-/// | REW.ca      | ✅ Works | Good supplement; includes property tax     |
-/// | Zillow      | ❌ Blocked | PerimeterX / CloudFront (403)            |
-/// | Realtor.ca  | ❌ Blocked | Imperva Incapsula                        |
-///
-/// # Blocked-host handling
-///
-/// When **all** submitted URLs are from known-blocked hosts (Zillow,
-/// Realtor.ca), a stub listing is saved containing only the URL(s) so the
-/// user can fill in details manually via the edit panel.  A mix of blocked
-/// and unrecognised URLs still returns 422.
+//! POST /api/listings — add a new listing.
+//!
+//! Fetches and parses one or more listing URLs for the same property, saves
+//! the merged result to the DB, downloads images, and returns the saved record.
+//!
+//! # Supported parsers
+//!
+//! | Source      | Status  | Notes                                      |
+//! |-------------|---------|--------------------------------------------|
+//! | Redfin      | ✅ Works | Primary source; best structured data       |
+//! | REW.ca      | ✅ Works | Good supplement; includes property tax     |
+//! | Zillow      | ❌ Blocked | PerimeterX / CloudFront (403)            |
+//! | Realtor.ca  | ❌ Blocked | Imperva Incapsula                        |
+//!
+//! # Blocked-host handling
+//!
+//! When **all** submitted URLs are from known-blocked hosts (Zillow,
+//! Realtor.ca), a stub listing is saved containing only the URL(s) so the
+//! user can fill in details manually via the edit panel.  A mix of blocked
+//! and unrecognised URLs still returns 422.
 
 use axum::{Json, extract::State, http::StatusCode};
 use serde::Deserialize;
@@ -77,7 +77,7 @@ pub async fn add_listing(
         None => {
             // Parsing yielded nothing.  Only save a stub when ALL URLs are
             // from known-blocked hosts — for unrecognised URLs return 422.
-            if !parsed_urls.iter().all(|u| is_blocked_host(u)) {
+            if !parsed_urls.iter().all(is_blocked_host) {
                 return Err((StatusCode::UNPROCESSABLE_ENTITY,
                     "No recognized listing format found in page".to_string()));
             }

@@ -239,7 +239,6 @@ pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>)
     Ok(())
 }
 
-/// Update all user-editable fields; returns the refreshed record.
 // `update_details` removed — use `update_by_id` after merging `UserDetails` in the caller.
 
 /// Update the notes field for a property.

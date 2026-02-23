@@ -1,9 +1,9 @@
-/// Parsers for different listing sources.
-///
-/// Each parser lives in its own submodule and exposes:
-///   - `parse(url: &str, html: &str) -> Option<ParsedListing>`
-///
-/// The top-level `parse()` function dispatches to the right parser based on the URL.
+//! Parsers for different listing sources.
+//!
+//! Each parser lives in its own submodule and exposes:
+//!   - `parse(url: &str, html: &str) -> Option<ParsedListing>`
+//!
+//! The top-level `parse()` function dispatches to the right parser based on the URL.
 
 pub mod redfin;
 pub mod realtor;

@@ -1,13 +1,13 @@
-/// rew.ca listing parser.
-///
-/// rew.ca renders a standard server-side HTML page (no bot protection like realtor.ca).
-/// Structured data comes from two places:
-///   1. A `SingleFamilyResidence` JSON-LD block — address, coordinates, URL.
-///   2. Inline HTML sections — price, tax, bedrooms, bathrooms, year built, lot size,
-///      parking, strata fee, and images.
-///
-/// The JSON-LD does NOT include price, tax, or most property facts, so we
-/// parse the HTML directly for those using CSS selectors.
+//! rew.ca listing parser.
+//!
+//! rew.ca renders a standard server-side HTML page (no bot protection like realtor.ca).
+//! Structured data comes from two places:
+//!   1. A `SingleFamilyResidence` JSON-LD block — address, coordinates, URL.
+//!   2. Inline HTML sections — price, tax, bedrooms, bathrooms, year built, lot size,
+//!      parking, strata fee, and images.
+//!
+//! The JSON-LD does NOT include price, tax, or most property facts, so we
+//! parse the HTML directly for those using CSS selectors.
 
 use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;

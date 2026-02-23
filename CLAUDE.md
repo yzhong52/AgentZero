@@ -17,6 +17,24 @@ npm --prefix frontend run dev
 ```
 Starts at `http://localhost:5173/`. Proxies `/api/*` to the backend.
 
+### One-command restart scripts
+Use these scripts to kill currently running processes, rebuild latest code, and restart fresh instances.
+
+```bash
+./scripts/run_backend.sh
+./scripts/run_frontend.sh
+```
+
+Defaults:
+- Backend log: `/tmp/agent_zero_backend.log`
+- Frontend log: `/tmp/agent_zero_frontend.log`
+
+Optional overrides:
+```bash
+BACKEND_PORT=8000 LOG_FILE=/tmp/backend.log ./scripts/run_backend.sh
+FRONTEND_PORT=5173 LOG_FILE=/tmp/frontend.log ./scripts/run_frontend.sh
+```
+
 ## API
 
 Below are the public HTTP endpoints exposed by the backend. All endpoints return JSON unless noted.
@@ -53,7 +71,7 @@ Below are the public HTTP endpoints exposed by the backend. All endpoints return
 	- Description: Update the user-visible `nickname`/alias. Body: `{ "nickname": "My shortlist" }`.
 
 - **PATCH /api/listings/:id/details**
-	- Description: Apply user-edited fields (partial) to a listing. Accepts the same shape as `UserDetails` in the codebase — common fields: `price`, `price_currency`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `year_built`, `mortgage_monthly`, etc.
+	- Description: Apply user-edited fields (partial) to a listing. Accepts the same shape as `UserDetails` in the codebase — common fields: `price`, `price_currency`, `offer_price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `year_built`, `mortgage_monthly`, etc.
 	- Body (example): `{ "price": 110000, "city": "Vancouver", "bedrooms": 3 }`
 
 - **GET /api/listings/:id/history**

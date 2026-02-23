@@ -242,5 +242,6 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
     // Image URLs: prefer redfin's; supplement with rew's if redfin had none.
     let image_urls = if r.image_urls.is_empty() { w.image_urls } else { r.image_urls };
 
+    tracing::info!("parse_multi: merged property_tax={:?}", merged.property_tax);
     Some(ParsedListing { property: merged, image_urls })
 }

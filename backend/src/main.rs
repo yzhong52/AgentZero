@@ -3,12 +3,13 @@ mod store;
 mod db;
 mod images;
 mod parsers;
+mod api;
 
 use axum::{
     Json, Router,
     extract::{Query, State, Path},
     http::StatusCode,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, put},
 };
 use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
@@ -26,7 +27,7 @@ use url::Url;
 use parsers::{ParseResult, extract_description, extract_images, extract_json_ld, extract_title, meta_map};
 
 #[derive(Clone)]
-struct AppState {
+pub(crate) struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
     store: Arc<dyn object_store::ObjectStore>,
@@ -37,11 +38,9 @@ struct AppState {
     images_dir: String,
 }
 
-#[derive(Deserialize)]
-struct SaveRequest {
-    /// One or more listing URLs for the same property (e.g. redfin + rew).
-    urls: Vec<String>,
-}
+// `SaveRequest` and the `save_listing` handler were removed; saving listings
+// is handled by the store layer or admin tools. The POST endpoint was removed
+// to simplify the public API surface.
 
 #[derive(Deserialize)]
 struct NotesRequest {
@@ -54,7 +53,7 @@ struct NicknameRequest {
 }
 
 /// Sums mortgage + monthly property tax + HOA into a total monthly cost.
-fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
+pub(crate) fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
     let mortgage = mortgage?; // require at least a mortgage payment
     let tax_monthly = property_tax.map(|t| t / 12).unwrap_or(0);
     let hoa_monthly = hoa.unwrap_or(0);
@@ -63,7 +62,7 @@ fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<i64>, hoa: 
 
 /// Standard amortisation formula: monthly payment on a fixed-rate mortgage.
 /// Returns 0 if price is 0 or rate is 0 (handled gracefully).
-fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
+pub(crate) fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
     let loan = price as f64 * (1.0 - down_pct);
     if loan <= 0.0 { return 0; }
     let n = (years * 12) as f64;
@@ -86,7 +85,7 @@ fn safe_url(input: &str) -> Option<Url> {
     }
 }
 
-async fn fetch_html(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
+pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
@@ -138,156 +137,9 @@ async fn parse(
     }))
 }
 
-async fn save_listing(
-    State(state): State<AppState>,
-    Json(body): Json<SaveRequest>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
-    if body.urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "At least one URL is required".to_string()));
-    }
+// `save_listing` handler removed; creating listings via POST is disabled.
 
-    // Fetch HTML for each URL, skipping any that fail.
-    let mut sources: Vec<(String, String)> = Vec::new();
-    for raw in &body.urls {
-        let url = raw.trim();
-        let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, format!("Invalid URL: {}", url)))?;
-        let html = fetch_html(&state.client, &parsed)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
-        sources.push((parsed.to_string(), html));
-    }
-
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing = parsers::parse_multi(&source_refs)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
-    let mut property = listing.property;
-    let image_urls = listing.image_urls;
-
-    // Auto-calculate mortgage with defaults on first save.
-    let down_pct = 0.20_f64;
-    let rate     = 0.04_f64;
-    let years    = 25_i64;
-    property.down_payment_pct       = Some(down_pct);
-    property.mortgage_interest_rate = Some(rate);
-    property.amortization_years     = Some(years);
-    if let Some(price) = property.price {
-        property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    property.monthly_total = compute_monthly_total(property.mortgage_monthly, property.property_tax, property.hoa_monthly);
-
-    let saved = db::save_listing(&state.db, &property)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-
-    // Register image URLs in images_cache, preserving parser ordering.
-    for (position, url) in image_urls.iter().enumerate() {
-        let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
-    }
-
-    // Download any pending images.
-    images::cache_images(
-        &state.db,
-        &state.client,
-        state.store.as_ref(),
-        saved.id,
-        &state.images_url_prefix,
-    )
-    .await;
-
-    let images = db::list_images_with_meta(&state.db, saved.id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-
-    Ok(Json(db::Property { images, ..saved }))
-}
-
-/// Refreshes a saved listing by re-fetching it from source. `id` is the property/listing ID.
-async fn refresh_listing(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
-    let property = db::get_by_id(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
-
-    // Collect all stored source URLs and fetch each one.
-    let stored_urls: Vec<String> = [
-        property.redfin_url.clone(),
-        property.realtor_url.clone(),
-        property.rew_url.clone(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-
-    if stored_urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
-    }
-
-    let mut sources: Vec<(String, String)> = Vec::new();
-    for url in &stored_urls {
-        let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
-        let html = fetch_html(&state.client, &parsed)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
-        sources.push((parsed.to_string(), html));
-    }
-
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing = parsers::parse_multi(&source_refs)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
-    let mut updated = listing.property;
-    updated.id = id;
-    // Preserve all source URLs from the stored property.
-    updated.redfin_url = property.redfin_url.clone();
-    updated.realtor_url = property.realtor_url.clone();
-    updated.rew_url = property.rew_url.clone();
-    let image_urls = listing.image_urls;
-
-    // Preserve the user's mortgage parameters; re-calculate monthly payment.
-    let down_pct = property.down_payment_pct.unwrap_or(0.20);
-    let rate     = property.mortgage_interest_rate.unwrap_or(0.04);
-    let years    = property.amortization_years.unwrap_or(25);
-    updated.down_payment_pct       = Some(down_pct);
-    updated.mortgage_interest_rate = Some(rate);
-    updated.amortization_years     = Some(years);
-    if let Some(price) = updated.price {
-        updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
-
-    // Record price change history before overwriting.
-    if property.price != updated.price {
-        let old = property.price.map(|v| v.to_string());
-        let new = updated.price.map(|v| v.to_string());
-        let _ = db::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
-    }
-
-    let saved = db::update_by_id(&state.db, id, &updated)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-
-    // Update image URLs in images_cache
-    for (position, url) in image_urls.iter().enumerate() {
-        let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
-    }
-
-    // Download any pending images
-    images::cache_images(
-        &state.db,
-        &state.client,
-        state.store.as_ref(),
-        id,
-        &state.images_url_prefix,
-    )
-    .await;
-
-    let images = db::list_images_with_meta(&state.db, saved.id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-
-    Ok(Json(db::Property { images, ..saved }))
-}
+// Refresh handler moved to `src/api/refresh.rs`.
 
 async fn delete_image(
     State(state): State<AppState>,
@@ -640,8 +492,10 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/parse", get(parse))
-        .route("/api/listings", post(save_listing).get(list_listings))
-        .route("/api/listings/:id", get(get_listing).put(refresh_listing).delete(delete_listing))
+            .route("/api/listings", get(list_listings))
+            .route("/api/listings/:id", get(get_listing))
+        .route("/api/listings/:id/delete", delete(delete_listing))
+        .route("/api/listings/:id/refresh", put(api::refresh::refresh_listing))
         .route("/api/listings/:id/preview", get(preview_refresh))
         .route("/api/listings/:id/notes", patch(patch_notes))
         .route("/api/listings/:id/nickname", patch(patch_nickname))

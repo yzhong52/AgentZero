@@ -370,7 +370,7 @@ export function PropertyDetail() {
         if (!property) return
         setApplying(true)
         try {
-            const resp = await fetch(`/api/listings/${property.id}`, { method: 'PUT' })
+            const resp = await fetch(`/api/listings/${property.id}/refresh`, { method: 'PUT' })
             if (!resp.ok) throw new Error(await resp.text())
             const updated: Property = await resp.json()
             setProperty(updated)
@@ -448,7 +448,7 @@ export function PropertyDetail() {
         if (!window.confirm(`Delete "${property.title}"? This cannot be undone.`)) return
         setDeleting(true)
         try {
-            const resp = await fetch(`/api/listings/${property.id}`, { method: 'DELETE' })
+            const resp = await fetch(`/api/listings/${property.id}/delete`, { method: 'DELETE' })
             if (!resp.ok) throw new Error(await resp.text())
             navigate('/')
         } catch (err: any) {

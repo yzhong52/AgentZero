@@ -477,6 +477,12 @@ fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
     if url.contains("zillow.com") {
         return zillow::parse(url, html).map(|parsed| (SourceKind::Zillow, parsed));
     }
+    if url.contains("realtor.ca") {
+        // Realtor.ca is blocked by Imperva Incapsula; parser always returns None.
+        // Branch is present so the URL is explicitly recognised rather than falling
+        // through to the unknown-URL None below.
+        return None;
+    }
     None
 }
 

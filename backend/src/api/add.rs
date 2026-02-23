@@ -3,9 +3,21 @@
 /// Fetches and parses one or more listing URLs for the same property, saves
 /// the merged result to the DB, downloads images, and returns the saved record.
 ///
-/// If Zillow is the only source and it returns a bot-protection page (Zillow
-/// blocks direct curl requests), a stub listing is saved with just the URL so
-/// the user can fill in details manually.
+/// # Supported parsers
+///
+/// | Source      | Status  | Notes                                      |
+/// |-------------|---------|--------------------------------------------|
+/// | Redfin      | ✅ Works | Primary source; best structured data       |
+/// | REW.ca      | ✅ Works | Good supplement; includes property tax     |
+/// | Zillow      | ❌ Blocked | PerimeterX / CloudFront (403)            |
+/// | Realtor.ca  | ❌ Blocked | Imperva Incapsula                        |
+///
+/// # Blocked-host handling
+///
+/// When **all** submitted URLs are from known-blocked hosts (Zillow,
+/// Realtor.ca), a stub listing is saved containing only the URL(s) so the
+/// user can fill in details manually via the edit panel.  A mix of blocked
+/// and unrecognised URLs still returns 422.
 
 use axum::{Json, extract::State, http::StatusCode};
 use serde::Deserialize;
@@ -40,16 +52,17 @@ pub async fn add_listing(
         .collect::<Result<_, _>>()?;
 
     // Fetch HTML for each URL.
-    // Zillow blocks scraping (403 / PerimeterX), so on any fetch error for a
-    // known Zillow URL we fall through with empty HTML — the stub path below
-    // will save the listing so the user can fill in details manually.
+    // Zillow (PerimeterX / CloudFront) and Realtor.ca (Imperva Incapsula)
+    // block all programmatic HTTP requests regardless of headers.  On any
+    // fetch error for a known-blocked host we fall through with empty HTML;
+    // the stub path below saves the listing so the user can fill in details
+    // manually.  Non-blocked hosts still return 502 on fetch failure.
     let mut sources: Vec<(String, String)> = Vec::new();
     for url in &parsed_urls {
-        let is_zillow = url.host_str().map(|h| h.contains("zillow.com")).unwrap_or(false);
         match fetch_html(&state.client, url).await {
             Ok(html) => sources.push((url.to_string(), html)),
-            Err(e) if is_zillow => {
-                tracing::info!("add_listing: Zillow fetch error ({}), will save stub for {}", e, url);
+            Err(e) if is_blocked_host(url) => {
+                tracing::info!("add_listing: fetch blocked ({}), will save stub for {}", e, url);
                 sources.push((url.to_string(), String::new()));
             }
             Err(e) => return Err((StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e))),
@@ -62,72 +75,25 @@ pub async fn add_listing(
     let (mut property, image_urls) = match listing_opt {
         Some(listing) => (listing.property, listing.image_urls),
         None => {
-            // Parsing failed — only proceed as a stub if ALL URLs are from known-
-            // but-unscrapeable sources (Zillow behind bot protection).  For truly
-            // unrecognised URLs return 422 as before.
-            let all_known_unscrapeable = parsed_urls.iter().all(|u| {
-                u.host_str().map(|h| h.contains("zillow.com")).unwrap_or(false)
-            });
-            if !all_known_unscrapeable {
+            // Parsing yielded nothing.  Only save a stub when ALL URLs are
+            // from known-blocked hosts — for unrecognised URLs return 422.
+            if !parsed_urls.iter().all(|u| is_blocked_host(u)) {
                 return Err((StatusCode::UNPROCESSABLE_ENTITY,
                     "No recognized listing format found in page".to_string()));
             }
-            // Build a minimal stub so the user can fill in details manually.
-            let first_url = parsed_urls[0].to_string();
-            tracing::info!("add_listing: Zillow bot-protection detected, saving stub for {}", first_url);
-            let stub = db::Property {
-                id: 0,
-                redfin_url: None,
-                realtor_url: None,
-                rew_url: None,
-                zillow_url: Some(first_url.clone()),
-                title: "Zillow listing (fill in details)".to_string(),
-                description: String::new(),
-                price: None,
-                price_currency: Some("USD".to_string()),
-                offer_price: None,
-                street_address: None,
-                city: None,
-                region: None,
-                postal_code: None,
-                country: None,
-                bedrooms: None,
-                bathrooms: None,
-                sqft: None,
-                year_built: None,
-                lat: None,
-                lon: None,
-                images: vec![],
-                created_at: String::new(),
-                updated_at: None,
-                notes: None,
-                parking_garage: None,
-                parking_covered: None,
-                parking_open: None,
-                land_sqft: None,
-                property_tax: None,
-                skytrain_station: None,
-                skytrain_walk_min: None,
-                radiant_floor_heating: None,
-                ac: None,
-                down_payment_pct: Some(0.20),
-                mortgage_interest_rate: Some(0.04),
-                amortization_years: Some(25),
-                mortgage_monthly: None,
-                hoa_monthly: None,
-                monthly_total: None,
-                monthly_cost: None,
-                has_rental_suite: None,
-                rental_income: None,
-                status: None,
-                nickname: None,
-                school_elementary: None,
-                school_elementary_rating: None,
-                school_middle: None,
-                school_middle_rating: None,
-                school_secondary: None,
-                school_secondary_rating: None,
-            };
+            tracing::info!(
+                "add_listing: all URLs are from blocked hosts, saving stub for {:?}",
+                parsed_urls.iter().map(|u| u.as_str()).collect::<Vec<_>>(),
+            );
+            let mut stub = blank_stub();
+            // Populate whichever URL fields we know about.
+            for u in &parsed_urls {
+                match u.host_str().unwrap_or("") {
+                    h if h.contains("zillow.com")   => stub.zillow_url   = Some(u.to_string()),
+                    h if h.contains("realtor.ca")   => stub.realtor_url  = Some(u.to_string()),
+                    _ => {}
+                }
+            }
             (stub, vec![])
         }
     };
@@ -170,4 +136,77 @@ pub async fn add_listing(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
     Ok(Json(db::Property { images, ..saved }))
+}
+
+/// Returns `true` for hosts that are known to block programmatic HTTP
+/// requests at the infrastructure level (bot-protection CDNs), making
+/// HTML scraping impossible without a real browser.
+///
+/// - **zillow.com** — PerimeterX via CloudFront (`x-px-blocked: 1`)
+/// - **realtor.ca** — Imperva Incapsula
+fn is_blocked_host(url: &Url) -> bool {
+    match url.host_str().unwrap_or("") {
+        h if h.contains("zillow.com")  => true,
+        h if h.contains("realtor.ca") => true,
+        _ => false,
+    }
+}
+
+/// Constructs a blank `Property` with all fields zeroed/None and mortgage
+/// defaults pre-filled.  Used as a base for stub listings when scraping is
+/// blocked.  Callers should set the relevant URL field(s) after calling this.
+fn blank_stub() -> db::Property {
+    db::Property {
+        id: 0,
+        redfin_url: None,
+        realtor_url: None,
+        rew_url: None,
+        zillow_url: None,
+        title: String::new(),
+        description: String::new(),
+        price: None,
+        price_currency: None,
+        offer_price: None,
+        street_address: None,
+        city: None,
+        region: None,
+        postal_code: None,
+        country: None,
+        bedrooms: None,
+        bathrooms: None,
+        sqft: None,
+        year_built: None,
+        lat: None,
+        lon: None,
+        images: vec![],
+        created_at: String::new(),
+        updated_at: None,
+        notes: None,
+        parking_garage: None,
+        parking_covered: None,
+        parking_open: None,
+        land_sqft: None,
+        property_tax: None,
+        skytrain_station: None,
+        skytrain_walk_min: None,
+        radiant_floor_heating: None,
+        ac: None,
+        down_payment_pct: Some(0.20),
+        mortgage_interest_rate: Some(0.04),
+        amortization_years: Some(25),
+        mortgage_monthly: None,
+        hoa_monthly: None,
+        monthly_total: None,
+        monthly_cost: None,
+        has_rental_suite: None,
+        rental_income: None,
+        status: None,
+        nickname: None,
+        school_elementary: None,
+        school_elementary_rating: None,
+        school_middle: None,
+        school_middle_rating: None,
+        school_secondary: None,
+        school_secondary_rating: None,
+    }
 }

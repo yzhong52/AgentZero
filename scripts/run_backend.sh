@@ -30,9 +30,25 @@ if ! kill -0 "$PID" 2>/dev/null; then
   exit 1
 fi
 
-if curl -fsS "http://127.0.0.1:$PORT/api/listings" >/dev/null; then
-  echo "[backend] health check passed on http://127.0.0.1:$PORT"
-else
+for i in $(seq 1 20); do
+  curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/listings" 2>/dev/null
+  code=$?
+  if [ $code -eq 0 ]; then
+    echo -e "\033[32m[backend] health check passed ✅ http://127.0.0.1:$PORT\033[0m"
+    break
+  fi
+
+  if [ $code -eq 7 ]; then
+    echo "[backend] curl failed to connect (code $code); retrying ($i/20)..." >&2
+  else
+    echo "[backend] health check attempt $i failed (curl exit code $code); retrying ($i/20)..." >&2
+  fi
+
+  sleep 1
+done
+
+if [ $code -ne 0 ]; then
   echo "[backend] process is running but health check failed; inspect $LOG_FILE" >&2
+  tail -n 50 "$LOG_FILE" >&2 || true
   exit 1
 fi

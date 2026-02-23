@@ -29,11 +29,21 @@ if ! kill -0 "$PID" 2>/dev/null; then
   exit 1
 fi
 
-for _ in $(seq 1 20); do
-  if curl -fsS "http://127.0.0.1:$PORT" >/dev/null; then
-    echo "[frontend] health check passed on http://127.0.0.1:$PORT"
+for i in $(seq 1 20); do
+  curl -fsS -o /dev/null "http://127.0.0.1:$PORT" 2>/dev/null
+  code=$?
+  if [ $code -eq 0 ]; then
+    echo -e "\033[32m[frontend] health check passed ✅ http://127.0.0.1:$PORT\033[0m"
     exit 0
   fi
+
+  # If curl failed to connect (code 7) or other transient error, log and retry
+  if [ $code -eq 7 ]; then
+    echo "[frontend] curl failed to connect (code $code); retrying ($i/20)..." >&2
+  else
+    echo "[frontend] health check attempt $i failed (curl exit code $code); retrying ($i/20)..." >&2
+  fi
+
   sleep 1
 done
 

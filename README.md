@@ -22,7 +22,7 @@ npm install
 npm run build
 
 # Run Rust backend (from project root)
-cargo run --bin property_parser --release 2>&1 | tail -20
+cargo run --bin agent_zero_backend --release 2>&1 | tail -20
 ```
 
 The server will start on [http://127.0.0.1:8001](http://127.0.0.1:8001)

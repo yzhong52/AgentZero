@@ -464,7 +464,51 @@ async fn patch_details(
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    let mut updated = db::update_details(&state.db, id, &body)
+    // Merge incoming `UserDetails` into the stored property, then persist
+    let mut updated = db::get_by_id(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
+
+    if body.redfin_url.is_some() { updated.redfin_url = body.redfin_url.clone(); }
+    if body.realtor_url.is_some() { updated.realtor_url = body.realtor_url.clone(); }
+    if body.rew_url.is_some() { updated.rew_url = body.rew_url.clone(); }
+
+    updated.price = body.price.or(updated.price);
+    updated.price_currency = body.price_currency.clone().or(updated.price_currency.clone());
+    updated.street_address = body.street_address.clone().or(updated.street_address.clone());
+    updated.city = body.city.clone().or(updated.city.clone());
+    updated.region = body.region.clone().or(updated.region.clone());
+    updated.postal_code = body.postal_code.clone().or(updated.postal_code.clone());
+    updated.bedrooms = body.bedrooms.or(updated.bedrooms);
+    updated.bathrooms = body.bathrooms.or(updated.bathrooms);
+    updated.sqft = body.sqft.or(updated.sqft);
+    updated.year_built = body.year_built.or(updated.year_built);
+    updated.parking_garage = body.parking_garage.or(updated.parking_garage);
+    updated.parking_covered = body.parking_covered.or(updated.parking_covered);
+    updated.parking_open = body.parking_open.or(updated.parking_open);
+    updated.land_sqft = body.land_sqft.or(updated.land_sqft);
+    updated.property_tax = body.property_tax.or(updated.property_tax);
+    updated.skytrain_station = body.skytrain_station.clone().or(updated.skytrain_station.clone());
+    updated.skytrain_walk_min = body.skytrain_walk_min.or(updated.skytrain_walk_min);
+    updated.radiant_floor_heating = body.radiant_floor_heating.or(updated.radiant_floor_heating);
+    updated.ac = body.ac.or(updated.ac);
+    updated.down_payment_pct = body.down_payment_pct.or(updated.down_payment_pct);
+    updated.mortgage_interest_rate = body.mortgage_interest_rate.or(updated.mortgage_interest_rate);
+    updated.amortization_years = body.amortization_years.or(updated.amortization_years);
+    updated.mortgage_monthly = body.mortgage_monthly.or(updated.mortgage_monthly);
+    updated.hoa_monthly = body.hoa_monthly.or(updated.hoa_monthly);
+    updated.monthly_total = body.monthly_total.or(updated.monthly_total);
+    updated.has_rental_suite = body.has_rental_suite.or(updated.has_rental_suite);
+    updated.rental_income = body.rental_income.or(updated.rental_income);
+    updated.status = body.status.clone().or(updated.status.clone());
+    updated.school_elementary = body.school_elementary.clone().or(updated.school_elementary.clone());
+    updated.school_elementary_rating = body.school_elementary_rating.or(updated.school_elementary_rating);
+    updated.school_middle = body.school_middle.clone().or(updated.school_middle.clone());
+    updated.school_middle_rating = body.school_middle_rating.or(updated.school_middle_rating);
+    updated.school_secondary = body.school_secondary.clone().or(updated.school_secondary.clone());
+    updated.school_secondary_rating = body.school_secondary_rating.or(updated.school_secondary_rating);
+
+    let mut updated = db::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 

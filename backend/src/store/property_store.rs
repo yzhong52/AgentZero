@@ -1,6 +1,6 @@
 use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
-use crate::models::property::{Property, UserDetails};
+use crate::models::property::Property;
 use crate::store::image_store;
 
 // Common column list — keep in sync with row_to_property().
@@ -218,6 +218,9 @@ pub async fn save_listing(pool: &SqlitePool, p: &Property) -> Result<Property, s
 pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
+              redfin_url              = ?,
+              realtor_url             = ?,
+              rew_url                 = ?,
                title                    = ?,
                description              = ?,
                price                    = ?,
@@ -255,6 +258,9 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
+    .bind(&p.redfin_url)
+    .bind(&p.realtor_url)
+    .bind(&p.rew_url)
     .bind(&p.title)
     .bind(&p.description)
     .bind(p.price)
@@ -329,69 +335,7 @@ pub async fn update_nickname(pool: &SqlitePool, id: i64, nickname: Option<&str>)
 }
 
 /// Update all user-editable fields; returns the refreshed record.
-pub async fn update_details(pool: &SqlitePool, id: i64, d: &UserDetails) -> Result<Property, sqlx::Error> {
-    sqlx::query(
-        r#"UPDATE listings SET
-               redfin_url = ?, realtor_url = ?, rew_url = ?,
-               price = ?, price_currency = ?,
-               street_address = ?, city = ?, region = ?, postal_code = ?,
-               bedrooms = ?, bathrooms = ?, sqft = ?, year_built = ?,
-               parking_garage = ?, parking_covered = ?, parking_open = ?,
-               land_sqft = ?, property_tax = ?,
-               skytrain_station = ?, skytrain_walk_min = ?,
-               radiant_floor_heating = ?, ac = ?,
-               down_payment_pct = ?, mortgage_interest_rate = ?, amortization_years = ?,
-               mortgage_monthly = ?, hoa_monthly = ?, monthly_total = ?,
-               has_rental_suite = ?, rental_income = ?,
-               status = ?,
-               school_elementary = ?, school_elementary_rating = ?,
-               school_middle = ?, school_middle_rating = ?,
-               school_secondary = ?, school_secondary_rating = ?
-           WHERE id = ?"#,
-    )
-    .bind(&d.redfin_url)
-    .bind(&d.realtor_url)
-    .bind(&d.rew_url)
-    .bind(d.price)
-    .bind(&d.price_currency)
-    .bind(&d.street_address)
-    .bind(&d.city)
-    .bind(&d.region)
-    .bind(&d.postal_code)
-    .bind(d.bedrooms)
-    .bind(d.bathrooms)
-    .bind(d.sqft)
-    .bind(d.year_built)
-    .bind(d.parking_garage)
-    .bind(d.parking_covered)
-    .bind(d.parking_open)
-    .bind(d.land_sqft)
-    .bind(d.property_tax)
-    .bind(&d.skytrain_station)
-    .bind(d.skytrain_walk_min)
-    .bind(d.radiant_floor_heating)
-    .bind(d.ac)
-    .bind(d.down_payment_pct)
-    .bind(d.mortgage_interest_rate)
-    .bind(d.amortization_years)
-    .bind(d.mortgage_monthly)
-    .bind(d.hoa_monthly)
-    .bind(d.monthly_total)
-    .bind(d.has_rental_suite)
-    .bind(d.rental_income)
-    .bind(&d.status)
-    .bind(&d.school_elementary)
-    .bind(d.school_elementary_rating)
-    .bind(&d.school_middle)
-    .bind(d.school_middle_rating)
-    .bind(&d.school_secondary)
-    .bind(d.school_secondary_rating)
-    .bind(id)
-    .execute(pool)
-    .await?;
-
-    fetch_one_by_id(pool, id).await
-}
+// `update_details` removed — use `update_by_id` after merging `UserDetails` in the caller.
 
 /// Update the notes field for a property.
 pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {
@@ -497,5 +441,194 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         school_middle_rating: row.get("school_middle_rating"),
         school_secondary: row.get("school_secondary"),
         school_secondary_rating: row.get("school_secondary_rating"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::property::UserDetails;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[tokio::test]
+    async fn test_update_by_id_roundtrip() {
+        // Create a unique temporary database file in the system temp dir.
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let db_path = std::env::temp_dir().join(format!("agentzero_test_{}.db", now));
+        let database_url = format!("sqlite://{}", db_path.display());
+
+        let pool = init(&database_url).await;
+
+        // Construct a minimal property to save.
+        let p = Property {
+            id: 0,
+            redfin_url: Some("https://example.com/1".to_string()),
+            realtor_url: None,
+            rew_url: None,
+            title: "Original Title".to_string(),
+            description: "".to_string(),
+            price: Some(500_000),
+            price_currency: Some("CAD".to_string()),
+            street_address: None,
+            city: None,
+            region: None,
+            postal_code: None,
+            country: None,
+            bedrooms: None,
+            bathrooms: None,
+            sqft: None,
+            year_built: None,
+            lat: None,
+            lon: None,
+            images: vec![],
+            created_at: String::new(),
+            updated_at: None,
+            notes: None,
+            parking_garage: None,
+            parking_covered: None,
+            parking_open: None,
+            land_sqft: None,
+            property_tax: None,
+            skytrain_station: None,
+            skytrain_walk_min: None,
+            radiant_floor_heating: None,
+            ac: None,
+            down_payment_pct: None,
+            mortgage_interest_rate: None,
+            amortization_years: None,
+            mortgage_monthly: None,
+            hoa_monthly: None,
+            monthly_total: None,
+            has_rental_suite: None,
+            rental_income: None,
+            status: None,
+            nickname: None,
+            school_elementary: None,
+            school_elementary_rating: None,
+            school_middle: None,
+            school_middle_rating: None,
+            school_secondary: None,
+            school_secondary_rating: None,
+        };
+
+        // Insert initial listing directly (avoid save_listing upsert complexity in tests)
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+            .bind(&p.redfin_url)
+            .bind(&p.title)
+            .bind(&p.description)
+            .bind(p.price)
+            .bind(&p.price_currency)
+            .execute(&pool)
+            .await
+            .expect("insert failed");
+
+        let saved = fetch_one_by_redfin_url(&pool, p.redfin_url.as_ref().unwrap()).await.expect("fetch failed");
+        assert!(saved.id > 0, "expected saved id > 0");
+        assert_eq!(saved.title, "Original Title");
+        assert_eq!(saved.price, Some(500_000));
+
+        // Update some fields and call update_by_id
+        let mut updated = saved.clone();
+        updated.title = "Updated Title".to_string();
+        updated.price = Some(510_000);
+
+        let after = update_by_id(&pool, saved.id, &updated).await.expect("update_by_id failed");
+        assert_eq!(after.title, "Updated Title");
+        assert_eq!(after.price, Some(510_000));
+
+        // Cleanup the temporary DB file (best-effort)
+        let _ = std::fs::remove_file(db_path);
+    }
+
+    #[tokio::test]
+    async fn test_update_details_roundtrip() {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let db_path = std::env::temp_dir().join(format!("agentzero_test2_{}.db", now));
+        let database_url = format!("sqlite://{}", db_path.display());
+        let pool = init(&database_url).await;
+
+        // Insert initial listing
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+            .bind(&Some("https://example.com/2".to_string()))
+            .bind("Seed Title")
+            .bind("")
+            .bind(Some(100_000_i64))
+            .bind(&Some("CAD".to_string()))
+            .execute(&pool)
+            .await
+            .expect("insert failed");
+
+        let saved = fetch_one_by_redfin_url(&pool, "https://example.com/2").await.expect("fetch failed");
+
+        // Prepare user details to update many fields
+        let details = UserDetails {
+            redfin_url: Some("https://example.com/2-updated".to_string()),
+            realtor_url: Some("https://realtor.example/2".to_string()),
+            rew_url: Some("https://rew.example/2".to_string()),
+            price: Some(110_000),
+            price_currency: Some("CAD".to_string()),
+            street_address: Some("123 Test St".to_string()),
+            city: Some("Vancouver".to_string()),
+            region: Some("BC".to_string()),
+            postal_code: Some("V1V1V1".to_string()),
+            bedrooms: Some(3),
+            bathrooms: Some(2),
+            sqft: Some(1200),
+            year_built: Some(1990),
+            parking_garage: Some(1),
+            parking_covered: Some(1),
+            parking_open: Some(0),
+            land_sqft: Some(2000),
+            property_tax: Some(3000),
+            skytrain_station: Some("Test Station".to_string()),
+            skytrain_walk_min: Some(10),
+            radiant_floor_heating: Some(true),
+            ac: Some(false),
+            down_payment_pct: Some(0.2),
+            mortgage_interest_rate: Some(0.035),
+            amortization_years: Some(25),
+            mortgage_monthly: Some(1500),
+            hoa_monthly: Some(50),
+            monthly_total: Some(1750),
+            has_rental_suite: Some(false),
+            rental_income: Some(0),
+            status: Some("Interested".to_string()),
+            school_elementary: Some("Elem".to_string()),
+            school_elementary_rating: Some(7.5),
+            school_middle: Some("Middle".to_string()),
+            school_middle_rating: Some(8.0),
+            school_secondary: Some("Secondary".to_string()),
+            school_secondary_rating: Some(8.5),
+        };
+
+        // Merge details into the saved property and call update_by_id
+        let mut merged = saved.clone();
+        if details.redfin_url.is_some() { merged.redfin_url = details.redfin_url.clone(); }
+        if details.realtor_url.is_some() { merged.realtor_url = details.realtor_url.clone(); }
+        if details.rew_url.is_some() { merged.rew_url = details.rew_url.clone(); }
+        merged.price = details.price.or(merged.price);
+        merged.price_currency = details.price_currency.clone().or(merged.price_currency.clone());
+        merged.city = details.city.clone().or(merged.city.clone());
+        merged.bedrooms = details.bedrooms.or(merged.bedrooms);
+        merged.bathrooms = details.bathrooms.or(merged.bathrooms);
+        merged.sqft = details.sqft.or(merged.sqft);
+        merged.radiant_floor_heating = details.radiant_floor_heating.or(merged.radiant_floor_heating);
+        merged.mortgage_monthly = details.mortgage_monthly.or(merged.mortgage_monthly);
+
+        let updated = update_by_id(&pool, saved.id, &merged).await.expect("update_by_id failed");
+
+        assert_eq!(updated.redfin_url.as_deref(), Some("https://example.com/2-updated"));
+        assert_eq!(updated.realtor_url.as_deref(), Some("https://realtor.example/2"));
+        assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
+        assert_eq!(updated.price, Some(110_000));
+        assert_eq!(updated.price_currency.as_deref(), Some("CAD"));
+        assert_eq!(updated.city.as_deref(), Some("Vancouver"));
+        assert_eq!(updated.bedrooms, Some(3));
+        assert_eq!(updated.bathrooms, Some(2));
+        assert_eq!(updated.sqft, Some(1200));
+        assert_eq!(updated.radiant_floor_heating, Some(true));
+        assert_eq!(updated.mortgage_monthly, Some(1500));
+
+        let _ = std::fs::remove_file(db_path);
     }
 }

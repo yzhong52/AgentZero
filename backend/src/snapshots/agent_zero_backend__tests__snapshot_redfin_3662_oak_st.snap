@@ -1,6 +1,5 @@
 ---
 source: src/main.rs
-assertion_line: 429
 expression: property
 ---
 {

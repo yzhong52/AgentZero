@@ -560,14 +560,14 @@
   display: block;
   border-radius: 8px;
   object-fit: contain;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .lightbox-caption {
   position: absolute;
   bottom: 10px;
   right: 12px;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   color: #fff;
   font-size: 0.75rem;
   padding: 2px 8px;
@@ -579,7 +579,7 @@
   position: absolute;
   bottom: 10px;
   left: 12px;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   color: #fff;
   font-size: 0.75rem;
   padding: 2px 8px;
@@ -953,6 +953,140 @@
   height: 320px;
   border: none;
   display: block;
+}
+
+.offer-finance-card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e0dfd8;
+  border-radius: 12px;
+  background: #fafaf8;
+}
+
+.offer-finance-card h3 {
+  margin: 0 0 0.85rem 0;
+  font-size: 1.05rem;
+  color: #1c1c1e;
+}
+
+.offer-finance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.offer-finance-header h3 {
+  margin: 0;
+}
+
+.offer-finance-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.offer-price-btn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.35em 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.offer-price-value {
+  color: #16a34a;
+}
+
+.offer-price-original {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8b8b8b;
+  text-decoration: line-through;
+}
+
+.offer-price-btn:hover {
+  text-decoration: underline;
+}
+
+.offer-finance-spacer {
+  visibility: hidden;
+}
+
+.offer-finance-row {
+  display: grid;
+  gap: 0.6rem 1.25rem;
+  margin-bottom: 0.8rem;
+}
+
+.offer-finance-row:last-child {
+  margin-bottom: 0;
+}
+
+.offer-finance-row-1 {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.offer-finance-row-1 .tracked-field {
+  grid-column: 1;
+}
+
+.target-offer-input {
+  width: 100%;
+}
+
+.target-offer-edit-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.target-offer-edit-row .target-offer-input {
+  width: 100%;
+}
+
+.target-offer-edit-row .offer-price-original {
+  position: absolute;
+  left: calc(100% + 0.45rem);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.offer-finance-row-2 {
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+}
+
+.offer-finance-row-3 {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+@media (max-width: 900px) {
+
+  .offer-finance-row-1,
+  .offer-finance-row-3,
+  .offer-finance-row-2 {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+
+  .offer-finance-row-3,
+  .offer-finance-row-2,
+  .offer-finance-row-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .offer-finance-spacer {
+    display: none;
+  }
 }
 
 .loading,

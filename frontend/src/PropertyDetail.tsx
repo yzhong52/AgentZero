@@ -54,6 +54,23 @@ function calcMortgage(price: number | null, downPct: number, rate: number, years
     return Math.round(loan * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1))
 }
 
+function calcMonthlyTotal(mortgageMonthly: number | null, propertyTaxAnnual: number | null, hoaMonthly: number | null): number | null {
+    if (mortgageMonthly == null && propertyTaxAnnual == null && hoaMonthly == null) return null
+    const taxMonthly = propertyTaxAnnual != null ? Math.floor(propertyTaxAnnual / 12) : 0
+    return (mortgageMonthly ?? 0) + taxMonthly + (hoaMonthly ?? 0)
+}
+
+function calcInitialMonthlyInterest(price: number | null, downPct: number, annualRate: number): number | null {
+    if (!price) return null
+    const loan = price * (1 - downPct)
+    if (loan <= 0) return 0
+    return Math.round((loan * annualRate) / 12)
+}
+
+function moneyPart(v: number | null): string {
+    return `$${(v ?? 0).toLocaleString()}`
+}
+
 
 // ── Edit helpers ──────────────────────────────────────────────────────────────
 
@@ -168,22 +185,22 @@ function str(v: unknown): string {
 }
 
 const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
-    { key: 'price',              label: 'Price' },
-    { key: 'street_address',     label: 'Address' },
-    { key: 'city',               label: 'City' },
-    { key: 'region',             label: 'Region' },
-    { key: 'postal_code',        label: 'Postal code' },
-    { key: 'bedrooms',           label: 'Bedrooms' },
-    { key: 'bathrooms',          label: 'Bathrooms' },
-    { key: 'sqft',               label: 'Sqft' },
-    { key: 'year_built',         label: 'Year built' },
-    { key: 'land_sqft',          label: 'Land sqft' },
-    { key: 'parking_garage',     label: 'Garage' },
-    { key: 'ac',                 label: 'Air conditioning' },
+    { key: 'price', label: 'Price' },
+    { key: 'street_address', label: 'Address' },
+    { key: 'city', label: 'City' },
+    { key: 'region', label: 'Region' },
+    { key: 'postal_code', label: 'Postal code' },
+    { key: 'bedrooms', label: 'Bedrooms' },
+    { key: 'bathrooms', label: 'Bathrooms' },
+    { key: 'sqft', label: 'Sqft' },
+    { key: 'year_built', label: 'Year built' },
+    { key: 'land_sqft', label: 'Land sqft' },
+    { key: 'parking_garage', label: 'Garage' },
+    { key: 'ac', label: 'Air conditioning' },
     { key: 'radiant_floor_heating', label: 'Radiant heating' },
-    { key: 'school_elementary',  label: 'Elementary school' },
-    { key: 'school_middle',      label: 'Middle school' },
-    { key: 'school_secondary',   label: 'Secondary school' },
+    { key: 'school_elementary', label: 'Elementary school' },
+    { key: 'school_middle', label: 'Middle school' },
+    { key: 'school_secondary', label: 'Secondary school' },
 ]
 
 function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
@@ -196,43 +213,45 @@ function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
 
 function toUserDetails(p: Property) {
     return {
-        redfin_url:             p.redfin_url,
-        realtor_url:            p.realtor_url,
-        rew_url:                p.rew_url,
-        price:                  p.price,
-        price_currency:         p.price_currency,
-        offer_price:            p.offer_price,
-        street_address:         p.street_address,
-        city:                   p.city,
-        region:                 p.region,
-        postal_code:            p.postal_code,
-        bedrooms:               p.bedrooms,
-        bathrooms:              p.bathrooms,
-        sqft:                   p.sqft,
-        year_built:             p.year_built,
-        parking_garage:         p.parking_garage,
-        parking_covered:        p.parking_covered,
-        parking_open:           p.parking_open,
-        land_sqft:              p.land_sqft,
-        property_tax:           p.property_tax,
-        skytrain_station:       p.skytrain_station,
-        skytrain_walk_min:      p.skytrain_walk_min,
-        radiant_floor_heating:  p.radiant_floor_heating,
-        ac:                     p.ac,
-        down_payment_pct:       p.down_payment_pct,
+        redfin_url: p.redfin_url,
+        realtor_url: p.realtor_url,
+        rew_url: p.rew_url,
+        price: p.price,
+        price_currency: p.price_currency,
+        offer_price: p.offer_price,
+        street_address: p.street_address,
+        city: p.city,
+        region: p.region,
+        postal_code: p.postal_code,
+        bedrooms: p.bedrooms,
+        bathrooms: p.bathrooms,
+        sqft: p.sqft,
+        year_built: p.year_built,
+        parking_garage: p.parking_garage,
+        parking_covered: p.parking_covered,
+        parking_open: p.parking_open,
+        land_sqft: p.land_sqft,
+        property_tax: p.property_tax,
+        skytrain_station: p.skytrain_station,
+        skytrain_walk_min: p.skytrain_walk_min,
+        radiant_floor_heating: p.radiant_floor_heating,
+        ac: p.ac,
+        down_payment_pct: p.down_payment_pct,
         mortgage_interest_rate: p.mortgage_interest_rate,
-        amortization_years:     p.amortization_years,
-        mortgage_monthly:       p.mortgage_monthly,
-        hoa_monthly:            p.hoa_monthly,
-        has_rental_suite:       p.has_rental_suite,
-        rental_income:          p.rental_income,
-        status:                 p.status,
-        school_elementary:              p.school_elementary,
-        school_elementary_rating:       p.school_elementary_rating,
-        school_middle:                  p.school_middle,
-        school_middle_rating:           p.school_middle_rating,
-        school_secondary:               p.school_secondary,
-        school_secondary_rating:        p.school_secondary_rating,
+        amortization_years: p.amortization_years,
+        mortgage_monthly: p.mortgage_monthly,
+        hoa_monthly: p.hoa_monthly,
+        monthly_total: p.monthly_total,
+        monthly_cost: p.monthly_cost,
+        has_rental_suite: p.has_rental_suite,
+        rental_income: p.rental_income,
+        status: p.status,
+        school_elementary: p.school_elementary,
+        school_elementary_rating: p.school_elementary_rating,
+        school_middle: p.school_middle,
+        school_middle_rating: p.school_middle_rating,
+        school_secondary: p.school_secondary,
+        school_secondary_rating: p.school_secondary_rating,
     }
 }
 
@@ -258,6 +277,9 @@ export function PropertyDetail() {
     const [editMode, setEditMode] = useState(false)
     const [draft, setDraft] = useState<Property | null>(null)
     const [saving, setSaving] = useState(false)
+    const [financeEditMode, setFinanceEditMode] = useState(false)
+    const [financeSaving, setFinanceSaving] = useState(false)
+    const [financeDraft, setFinanceDraft] = useState<Property | null>(null)
 
     // Refresh preview
     const [previewing, setPreviewing] = useState(false)
@@ -309,6 +331,8 @@ export function PropertyDetail() {
     function cancelEdit() {
         setEditMode(false)
         setDraft(null)
+        setFinanceEditMode(false)
+        setFinanceDraft(null)
     }
 
     function setDraftField<K extends keyof Property>(key: K, val: Property[K]) {
@@ -317,13 +341,59 @@ export function PropertyDetail() {
 
     /** Recalculate mortgage_monthly in draft whenever offer price / price or params change. */
     function recalcMortgage(d: Property): Property {
+        const initialInterest = calcInitialMonthlyInterest(
+            d.offer_price ?? d.price,
+            d.down_payment_pct ?? 0.20,
+            d.mortgage_interest_rate ?? 0.05,
+        )
         const monthly = calcMortgage(
             d.offer_price ?? d.price,
             d.down_payment_pct ?? 0.20,
             d.mortgage_interest_rate ?? 0.05,
             d.amortization_years ?? 25,
         )
-        return { ...d, mortgage_monthly: monthly }
+        return {
+            ...d,
+            mortgage_monthly: monthly,
+            monthly_total: calcMonthlyTotal(monthly, d.property_tax, d.hoa_monthly),
+            monthly_cost: calcMonthlyTotal(initialInterest, d.property_tax, d.hoa_monthly),
+        }
+    }
+
+    function enterFinanceEdit() {
+        if (!property) return
+        setFinanceDraft(recalcMortgage({ ...property }))
+        setFinanceEditMode(true)
+    }
+
+    function cancelFinanceEdit() {
+        setFinanceEditMode(false)
+        setFinanceDraft(null)
+    }
+
+    async function saveFinanceEdits() {
+        if (!financeDraft || !property) return
+        setFinanceSaving(true)
+        setError(null)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/details`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(toUserDetails(financeDraft)),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+            const updated: Property = await resp.json()
+            setProperty({ ...updated, images: property.images })
+            if (editMode) {
+                setDraft(updated)
+            }
+            setFinanceEditMode(false)
+            setFinanceDraft(null)
+        } catch (err: any) {
+            setError(err?.message || String(err))
+        } finally {
+            setFinanceSaving(false)
+        }
     }
 
     async function handleSaveEdits() {
@@ -471,7 +541,7 @@ export function PropertyDetail() {
         }
     }
 
-// ── Render ────────────────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────────────────
 
     if (loading) return <div className="loading">Loading...</div>
     if (error && !property) return <div className="error-msg">{error}</div>
@@ -482,6 +552,21 @@ export function PropertyDetail() {
 
     // What to render: draft in edit mode, property otherwise
     const p = editMode && draft ? draft : property
+    const finance = financeEditMode && financeDraft ? financeDraft : property
+    const financeBasePrice = finance.offer_price ?? finance.price
+    const initialMonthlyInterest = calcInitialMonthlyInterest(
+        financeBasePrice,
+        finance.down_payment_pct ?? 0.20,
+        finance.mortgage_interest_rate ?? 0.05,
+    )
+    const monthlyTotalDerived = calcMonthlyTotal(finance.mortgage_monthly, finance.property_tax, finance.hoa_monthly)
+    const monthlyCost = calcMonthlyTotal(initialMonthlyInterest, finance.property_tax, finance.hoa_monthly)
+    const taxMonthly = finance.property_tax != null ? Math.floor(finance.property_tax / 12) : 0
+    const hoaMonthly = finance.hoa_monthly ?? 0
+    const effectiveOfferPrice = finance.offer_price ?? finance.price
+    const hasCustomOfferPrice = finance.offer_price != null && finance.price != null && finance.offer_price !== finance.price
+    const monthlyTotalBreakdown = `${moneyPart(finance.mortgage_monthly)} mortgage + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
+    const monthlyCostBreakdown = `${moneyPart(initialMonthlyInterest)} initial interest + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
 
     // Helper to wrap a field: in edit mode shows input, else shows static value
     function Field({ label, viewVal, editEl }: {
@@ -560,7 +645,7 @@ export function PropertyDetail() {
                                             setActiveIdx(i)
                                             scrollRef.current
                                                 ?.querySelectorAll<HTMLElement>('.lightbox-item')
-                                                [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                                            [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
                                         }}
                                     />
                                 ))}
@@ -789,109 +874,6 @@ export function PropertyDetail() {
                             </div>
                         </div>
 
-                        <div className="tracked-group">
-                            <h4>Offer &amp; Finance</h4>
-                            <div className="tracked-fields">
-                                <Field label="Listing price" viewVal={formatPrice(p.price, p.price_currency) ?? '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Listing price</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                value={draft?.price ?? ''}
-                                                onChange={e => {
-                                                    const updated = recalcMortgage({ ...draft!, price: e.target.value ? Number(e.target.value) : null })
-                                                    setDraft(updated)
-                                                }}
-                                                placeholder="Price"
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="My offer price" viewVal={p.offer_price != null ? formatPrice(p.offer_price, p.price_currency) ?? '—' : '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>My offer price <span className="info-icon">ⓘ<span className="info-tooltip">Used as the base for mortgage calculations. Leave blank to use the listing price.</span></span></label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                value={draft?.offer_price ?? ''}
-                                                onChange={e => {
-                                                    const updated = recalcMortgage({ ...draft!, offer_price: e.target.value ? Number(e.target.value) : null })
-                                                    setDraft(updated)
-                                                }}
-                                                placeholder="Defaults to listing price"
-                                            />
-                                        </div>
-                                    } />
-
-                                {/* Mortgage params */}
-                                <Field label="Down payment %" viewVal={p.down_payment_pct != null ? `${(p.down_payment_pct * 100).toFixed(0)}%` : '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Down payment %</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={0} max={100} step={1}
-                                                value={draft?.down_payment_pct != null ? (draft.down_payment_pct * 100).toFixed(0) : ''}
-                                                onChange={e => {
-                                                    const pct = e.target.value ? Number(e.target.value) / 100 : null
-                                                    const updated = recalcMortgage({ ...draft!, down_payment_pct: pct })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Mortgage rate %" viewVal={p.mortgage_interest_rate != null ? `${(p.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Mortgage rate %</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={0} max={30} step={0.01}
-                                                value={draft?.mortgage_interest_rate != null ? (draft.mortgage_interest_rate * 100).toFixed(2) : ''}
-                                                onChange={e => {
-                                                    const rate = e.target.value ? Number(e.target.value) / 100 : null
-                                                    const updated = recalcMortgage({ ...draft!, mortgage_interest_rate: rate })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Amortization (years)" viewVal={numLabel(p.amortization_years, ' yr')}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Amortization (years)</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={1} max={40} step={1}
-                                                value={draft?.amortization_years ?? ''}
-                                                onChange={e => {
-                                                    const yrs = e.target.value ? Number(e.target.value) : null
-                                                    const updated = recalcMortgage({ ...draft!, amortization_years: yrs })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Property tax (annual)" viewVal={moneyLabel(p.property_tax)}
-                                    editEl={<NumInput label="Property tax (annual)" value={draft?.property_tax ?? null} onChange={v => setDraftField('property_tax', v)} />} />
-                                <Field label="HOA / Strata (monthly)" viewVal={moneyLabel(p.hoa_monthly)}
-                                    editEl={<NumInput label="HOA / Strata (monthly)" value={draft?.hoa_monthly ?? null} onChange={v => setDraftField('hoa_monthly', v)} />} />
-
-                                <div className="tracked-field">
-                                    <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
-                                    <span className="tracked-value">{moneyLabel(p.mortgage_monthly)}</span>
-                                </div>
-                                <div className="tracked-field">
-                                    <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">Mortgage + property tax (monthly) + HOA / strata fee</span></span></label>
-                                    <span className="tracked-value">{moneyLabel(p.monthly_total)}</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="detail-metadata">
@@ -955,6 +937,168 @@ export function PropertyDetail() {
                             />
                         </div>
                     )}
+
+                    <div className="offer-finance-card">
+                        <div className="offer-finance-header">
+                            <h3>Offer &amp; Finance</h3>
+                            {financeEditMode && (
+                                <div className="offer-finance-actions">
+                                    <button className="cancel-btn" onClick={cancelFinanceEdit} disabled={financeSaving}>Cancel</button>
+                                    <button className="save-btn" onClick={saveFinanceEdits} disabled={financeSaving}>
+                                        {financeSaving ? 'Saving…' : 'Save'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="offer-finance-row offer-finance-row-1">
+                            <div className="tracked-field">
+                                <label>Target Offer Price <span className="info-icon">ⓘ<span className="info-tooltip">Used as the base for mortgage calculations. Leave blank to use the listing price.</span></span></label>
+                                {financeEditMode ? (
+                                    <div className="target-offer-edit-row">
+                                        <input
+                                            className="edit-input target-offer-input"
+                                            type="number"
+                                            value={financeDraft?.offer_price ?? ''}
+                                            onChange={e => {
+                                                const updated = recalcMortgage({ ...financeDraft!, offer_price: e.target.value ? Number(e.target.value) : null })
+                                                setFinanceDraft(updated)
+                                            }}
+                                            placeholder="Defaults to listing price"
+                                        />
+                                        {hasCustomOfferPrice && (
+                                            <span className="offer-price-original">
+                                                {formatPrice(finance.price, finance.price_currency)}
+                                            </span>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button className="offer-price-btn" onClick={enterFinanceEdit}>
+                                        <span className="offer-price-value">
+                                            {formatPrice(effectiveOfferPrice, finance.price_currency) ?? '—'}
+                                        </span>
+                                        {hasCustomOfferPrice && (
+                                            <span className="offer-price-original">
+                                                {formatPrice(finance.price, finance.price_currency)}
+                                            </span>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="offer-finance-row offer-finance-row-3">
+                            <div className="tracked-field">
+                                <label>Down payment %</label>
+                                {financeEditMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="number"
+                                        min={0} max={100} step={1}
+                                        value={financeDraft?.down_payment_pct != null ? (financeDraft.down_payment_pct * 100).toFixed(0) : ''}
+                                        onChange={e => {
+                                            const pct = e.target.value ? Number(e.target.value) / 100 : null
+                                            const updated = recalcMortgage({ ...financeDraft!, down_payment_pct: pct })
+                                            setFinanceDraft(updated)
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="tracked-value">{finance.down_payment_pct != null ? `${(finance.down_payment_pct * 100).toFixed(0)}%` : '—'}</span>
+                                )}
+                            </div>
+
+                            <div className="tracked-field">
+                                <label>Mortgage rate %</label>
+                                {financeEditMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="number"
+                                        min={0} max={30} step={0.01}
+                                        value={financeDraft?.mortgage_interest_rate != null ? (financeDraft.mortgage_interest_rate * 100).toFixed(2) : ''}
+                                        onChange={e => {
+                                            const rate = e.target.value ? Number(e.target.value) / 100 : null
+                                            const updated = recalcMortgage({ ...financeDraft!, mortgage_interest_rate: rate })
+                                            setFinanceDraft(updated)
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="tracked-value">{finance.mortgage_interest_rate != null ? `${(finance.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}</span>
+                                )}
+                            </div>
+
+                            <div className="tracked-field">
+                                <label>Amortization (years)</label>
+                                {financeEditMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="number"
+                                        min={1} max={40} step={1}
+                                        value={financeDraft?.amortization_years ?? ''}
+                                        onChange={e => {
+                                            const yrs = e.target.value ? Number(e.target.value) : null
+                                            const updated = recalcMortgage({ ...financeDraft!, amortization_years: yrs })
+                                            setFinanceDraft(updated)
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="tracked-value">{numLabel(finance.amortization_years, ' yr')}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="offer-finance-row offer-finance-row-3">
+                            <div className="tracked-field">
+                                <label>Property tax (annual)</label>
+                                {financeEditMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="number"
+                                        value={financeDraft?.property_tax ?? ''}
+                                        onChange={e => {
+                                            const updated = recalcMortgage({ ...financeDraft!, property_tax: e.target.value ? Number(e.target.value) : null })
+                                            setFinanceDraft(updated)
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="tracked-value">{moneyLabel(finance.property_tax)}</span>
+                                )}
+                            </div>
+
+                            <div className="tracked-field">
+                                <label>HOA / Strata (monthly)</label>
+                                {financeEditMode ? (
+                                    <input
+                                        className="edit-input"
+                                        type="number"
+                                        value={financeDraft?.hoa_monthly ?? ''}
+                                        onChange={e => {
+                                            const updated = recalcMortgage({ ...financeDraft!, hoa_monthly: e.target.value ? Number(e.target.value) : null })
+                                            setFinanceDraft(updated)
+                                        }}
+                                    />
+                                ) : (
+                                    <span className="tracked-value">{moneyLabel(finance.hoa_monthly)}</span>
+                                )}
+                            </div>
+
+                            <div className="tracked-field offer-finance-spacer" aria-hidden="true" />
+                        </div>
+
+                        <div className="offer-finance-row offer-finance-row-3">
+                            <div className="tracked-field">
+                                <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
+                                <span className="tracked-value">{moneyLabel(finance.mortgage_monthly)}</span>
+                            </div>
+                            <div className="tracked-field">
+                                <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyTotalBreakdown}</span></span></label>
+                                <span className="tracked-value">{moneyLabel(monthlyTotalDerived)}</span>
+                            </div>
+                            <div className="tracked-field">
+                                <label>Monthly cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
+                                <span className="tracked-value">{moneyLabel(monthlyCost)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="notes-panel">

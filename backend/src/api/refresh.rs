@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use crate::db;
 use crate::images;
 use crate::parsers;
-use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, AppState};
+use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost, AppState};
 
 /// PUT /api/listings/:id/refresh
 ///
@@ -75,6 +75,9 @@ pub async fn refresh_listing(
     // sometimes scraped but often absent — don't clobber a manually entered value).
     updated.hoa_monthly = updated.hoa_monthly.or(stored.hoa_monthly);
 
+    // Preserve the user's offer price — parser never sets this.
+    updated.offer_price = stored.offer_price;
+
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     // Carry forward the user's saved mortgage parameters and recompute the monthly
     // payment against the (potentially updated) price.
@@ -84,10 +87,15 @@ pub async fn refresh_listing(
     updated.down_payment_pct       = Some(down_pct);
     updated.mortgage_interest_rate = Some(rate);
     updated.amortization_years     = Some(years);
-    if let Some(price) = updated.price {
+    if let Some(price) = updated.offer_price.or(updated.price) {
         updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
     updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
+    updated.monthly_cost = compute_monthly_cost(
+        updated.offer_price.or(updated.price).map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
+        updated.property_tax,
+        updated.hoa_monthly,
+    );
 
     // ── 6. Record price-change history ────────────────────────────────────────
     if stored.price != updated.price {
@@ -197,6 +205,11 @@ pub async fn preview_refresh(
         preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
     preview.monthly_total = compute_monthly_total(preview.mortgage_monthly, preview.property_tax, preview.hoa_monthly);
+    preview.monthly_cost = compute_monthly_cost(
+        preview.offer_price.or(preview.price).map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
+        preview.property_tax,
+        preview.hoa_monthly,
+    );
 
     Ok(Json(preview))
 }

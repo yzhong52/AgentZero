@@ -219,6 +219,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         mortgage_monthly: None,
         hoa_monthly: None,
         monthly_total: None,
+        monthly_cost: None,
         has_rental_suite: None,
         rental_income: None,
         status: None,

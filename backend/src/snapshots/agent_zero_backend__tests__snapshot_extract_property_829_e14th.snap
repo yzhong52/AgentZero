@@ -243,6 +243,7 @@ expression: property
   "mortgage_monthly": null,
   "hoa_monthly": null,
   "monthly_total": null,
+  "monthly_cost": null,
   "has_rental_suite": null,
   "rental_income": null,
   "status": null,

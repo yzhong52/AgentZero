@@ -231,6 +231,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         mortgage_monthly: None,
         hoa_monthly,
         monthly_total: None,
+        monthly_cost: None,
         has_rental_suite: None,
         rental_income: None,
         status: None,

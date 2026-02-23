@@ -50,6 +50,7 @@ export type Property = {
   mortgage_monthly: number | null
   hoa_monthly: number | null
   monthly_total: number | null
+  monthly_cost: number | null
   has_rental_suite: boolean | null
   rental_income: number | null
   status: string | null

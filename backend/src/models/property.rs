@@ -63,6 +63,8 @@ pub struct Property {
     pub hoa_monthly: Option<i64>,
     // Derived field: sum of mortgage, monthly property tax, and HOA fee
     pub monthly_total: Option<i64>,
+    // Derived field: initial monthly mortgage interest + monthly property tax + HOA fee
+    pub monthly_cost: Option<i64>,
     // rental
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,
@@ -122,6 +124,7 @@ pub struct UserDetails {
     pub mortgage_monthly: Option<i64>,
     pub hoa_monthly: Option<i64>,
     pub monthly_total: Option<i64>,
+    pub monthly_cost: Option<i64>,
     // rental
     pub has_rental_suite: Option<bool>,
     pub rental_income: Option<i64>,

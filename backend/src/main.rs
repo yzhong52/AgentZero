@@ -56,6 +56,21 @@ pub(crate) fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<
     Some(mortgage + tax_monthly + hoa_monthly)
 }
 
+/// Initial monthly mortgage interest only (principal * annual_rate / 12).
+pub(crate) fn compute_initial_monthly_interest(price: i64, down_pct: f64, annual_rate: f64) -> i64 {
+    let loan = price as f64 * (1.0 - down_pct);
+    if loan <= 0.0 { return 0; }
+    ((loan * annual_rate) / 12.0).round() as i64
+}
+
+/// Sums initial monthly interest + monthly property tax + HOA.
+pub(crate) fn compute_monthly_cost(initial_interest: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
+    let initial_interest = initial_interest?;
+    let tax_monthly = property_tax.map(|t| t / 12).unwrap_or(0);
+    let hoa_monthly = hoa.unwrap_or(0);
+    Some(initial_interest + tax_monthly + hoa_monthly)
+}
+
 /// Standard amortisation formula: monthly payment on a fixed-rate mortgage.
 /// Returns 0 if price is 0 or rate is 0 (handled gracefully).
 pub(crate) fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
@@ -300,6 +315,7 @@ async fn patch_details(
     updated.mortgage_monthly = body.mortgage_monthly.or(updated.mortgage_monthly);
     updated.hoa_monthly = body.hoa_monthly.or(updated.hoa_monthly);
     updated.monthly_total = body.monthly_total.or(updated.monthly_total);
+    updated.monthly_cost = body.monthly_cost.or(updated.monthly_cost);
     updated.has_rental_suite = body.has_rental_suite.or(updated.has_rental_suite);
     updated.rental_income = body.rental_income.or(updated.rental_income);
     updated.status = body.status.clone().or(updated.status.clone());
@@ -314,10 +330,21 @@ async fn patch_details(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
-    // Recompute monthly_total from the freshly saved values.
+    // Recompute monthly_total/monthly_cost from the freshly saved values.
     updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
-    let _ = sqlx::query("UPDATE listings SET monthly_total = ? WHERE id = ?")
+    let base_price = updated.offer_price.or(updated.price);
+    let initial_interest = base_price.map(|price| {
+        compute_initial_monthly_interest(
+            price,
+            updated.down_payment_pct.unwrap_or(0.20),
+            updated.mortgage_interest_rate.unwrap_or(0.05),
+        )
+    });
+    updated.monthly_cost = compute_monthly_cost(initial_interest, updated.property_tax, updated.hoa_monthly);
+
+    let _ = sqlx::query("UPDATE listings SET monthly_total = ?, monthly_cost = ? WHERE id = ?")
         .bind(updated.monthly_total)
+        .bind(updated.monthly_cost)
         .bind(id)
         .execute(&state.db)
         .await;

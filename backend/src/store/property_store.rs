@@ -11,7 +11,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, title, description, pr
                     parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                     skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                     down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
-                    hoa_monthly, monthly_total, has_rental_suite, rental_income,
+                    hoa_monthly, monthly_total, monthly_cost, has_rental_suite, rental_income,
                     status, nickname,
                     school_elementary, school_elementary_rating,
                     school_middle, school_middle_rating,
@@ -78,6 +78,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                property_tax             = ?,
                hoa_monthly              = ?,
                monthly_total            = ?,
+               monthly_cost             = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -119,6 +120,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.property_tax)
     .bind(p.hoa_monthly)
     .bind(p.monthly_total)
+    .bind(p.monthly_cost)
     .bind(id)
     .execute(pool)
     .await?;
@@ -232,6 +234,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         mortgage_monthly: row.get("mortgage_monthly"),
         hoa_monthly: row.get("hoa_monthly"),
         monthly_total: row.get("monthly_total"),
+        monthly_cost: row.get("monthly_cost"),
         has_rental_suite: row.get("has_rental_suite"),
         rental_income: row.get("rental_income"),
         status: row.get("status"),
@@ -301,6 +304,7 @@ mod tests {
             mortgage_monthly: None,
             hoa_monthly: None,
             monthly_total: None,
+            monthly_cost: None,
             has_rental_suite: None,
             rental_income: None,
             status: None,
@@ -393,6 +397,7 @@ mod tests {
             mortgage_monthly: Some(1500),
             hoa_monthly: Some(50),
             monthly_total: Some(1750),
+            monthly_cost: Some(1370),
             has_rental_suite: Some(false),
             rental_income: Some(0),
             status: Some("Interested".to_string()),
@@ -431,6 +436,7 @@ mod tests {
         assert_eq!(updated.sqft, Some(1200));
         assert_eq!(updated.radiant_floor_heating, Some(true));
         assert_eq!(updated.mortgage_monthly, Some(1500));
+        assert_eq!(updated.monthly_cost, Some(1370));
 
         let _ = std::fs::remove_file(db_path);
     }

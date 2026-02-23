@@ -225,6 +225,7 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
 
         hoa_monthly:   merge_field!("hoa_monthly",   rp.hoa_monthly,   wp.hoa_monthly),
         monthly_total: rp.monthly_total,
+        monthly_cost: rp.monthly_cost,
 
         has_rental_suite: merge_field!("has_rental_suite", rp.has_rental_suite, wp.has_rental_suite),
         rental_income:    merge_field!("rental_income",    rp.rental_income,    wp.rental_income),

@@ -936,12 +936,6 @@ export function PropertyDetail() {
                                 <a href={property.zillow_url} target="_blank" rel="noreferrer">{property.zillow_url}</a>
                             ) : <span className="tracked-value">—</span>}
                         </div>
-                        <div className="meta-item">
-                            <strong>Watched since:</strong> {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </div>
-                        <div className="meta-item">
-                            <strong>Last refreshed:</strong> {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                        </div>
                     </div>
 
                     {property.lat != null && property.lon != null && (
@@ -1166,6 +1160,11 @@ export function PropertyDetail() {
                             </ul>
                         </div>
                     )}
+
+                    <div className="listing-timestamps">
+                        <span>Watched since: {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>Last refreshed: {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -940,6 +940,16 @@
   text-decoration: underline;
 }
 
+.listing-timestamps {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e8e8e8;
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
 /* ── map preview ── */
 .map-preview {
   margin-top: 1.5rem;

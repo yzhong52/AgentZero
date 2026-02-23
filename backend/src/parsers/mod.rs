@@ -14,6 +14,7 @@ use scraper::{Html, Selector};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 
 // ── Shared output types ───────────────────────────────────────────────────────
 
@@ -119,131 +120,395 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 
 // ── Parser dispatch ───────────────────────────────────────────────────────────
 
-/// Merges two `Option<T>` values where redfin is primary.
-/// - If both are `Some` and differ, logs a warning and keeps redfin's value.
-/// - If only one is `Some`, uses that.
-macro_rules! merge_field {
-    ($field:expr, $redfin:expr, $rew:expr) => {
-        match (&$redfin, &$rew) {
-            (Some(r), Some(w)) if r != w => {
-                tracing::warn!(
-                    "merge conflict on {}: redfin={:?} rew={:?} — keeping redfin",
-                    $field, r, w
-                );
-                $redfin
-            }
-            (None, w) => w.clone(),
-            (r, _) => r.clone(),
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SourceKind {
+    Redfin,
+    Rew,
+}
+
+impl SourceKind {
+    fn name(self) -> &'static str {
+        match self {
+            SourceKind::Redfin => "redfin",
+            SourceKind::Rew => "rew",
         }
-    };
+    }
+}
+
+fn source_rank(kind: SourceKind) -> u8 {
+    match kind {
+        SourceKind::Redfin => 0,
+        SourceKind::Rew => 1,
+    }
+}
+
+fn merge_opt<T>(
+    field: &str,
+    primary: Option<T>,
+    fallback: Option<T>,
+    primary_source: SourceKind,
+    fallback_source: SourceKind,
+) -> Option<T>
+where
+    T: PartialEq + Clone + Debug,
+{
+    match (primary, fallback) {
+        (Some(p), Some(f)) if p != f => {
+            tracing::warn!(
+                "merge conflict on {}: {}={:?} {}={:?} — keeping {}",
+                field,
+                primary_source.name(),
+                p,
+                fallback_source.name(),
+                f,
+                primary_source.name(),
+            );
+            Some(p)
+        }
+        (Some(p), _) => Some(p),
+        (None, fallback) => fallback,
+    }
+}
+
+fn merge_text(primary: String, fallback: String) -> String {
+    if primary.trim().is_empty() {
+        fallback
+    } else {
+        primary
+    }
+}
+
+fn merge_property(
+    primary: db::Property,
+    fallback: db::Property,
+    primary_source: SourceKind,
+    fallback_source: SourceKind,
+) -> db::Property {
+    db::Property {
+        id: primary.id,
+
+        redfin_url: primary.redfin_url.or(fallback.redfin_url),
+        realtor_url: primary.realtor_url.or(fallback.realtor_url),
+        rew_url: primary.rew_url.or(fallback.rew_url),
+
+        title: merge_text(primary.title, fallback.title),
+        description: merge_text(primary.description, fallback.description),
+
+        price: merge_opt("price", primary.price, fallback.price, primary_source, fallback_source),
+        price_currency: merge_opt(
+            "price_currency",
+            primary.price_currency,
+            fallback.price_currency,
+            primary_source,
+            fallback_source,
+        ),
+        offer_price: merge_opt(
+            "offer_price",
+            primary.offer_price,
+            fallback.offer_price,
+            primary_source,
+            fallback_source,
+        ),
+
+        street_address: merge_opt(
+            "street_address",
+            primary.street_address,
+            fallback.street_address,
+            primary_source,
+            fallback_source,
+        ),
+        city: merge_opt("city", primary.city, fallback.city, primary_source, fallback_source),
+        region: merge_opt("region", primary.region, fallback.region, primary_source, fallback_source),
+        postal_code: merge_opt(
+            "postal_code",
+            primary.postal_code,
+            fallback.postal_code,
+            primary_source,
+            fallback_source,
+        ),
+        country: merge_opt(
+            "country",
+            primary.country,
+            fallback.country,
+            primary_source,
+            fallback_source,
+        ),
+
+        bedrooms: merge_opt("bedrooms", primary.bedrooms, fallback.bedrooms, primary_source, fallback_source),
+        bathrooms: merge_opt("bathrooms", primary.bathrooms, fallback.bathrooms, primary_source, fallback_source),
+        sqft: merge_opt("sqft", primary.sqft, fallback.sqft, primary_source, fallback_source),
+        year_built: merge_opt(
+            "year_built",
+            primary.year_built,
+            fallback.year_built,
+            primary_source,
+            fallback_source,
+        ),
+
+        lat: merge_opt("lat", primary.lat, fallback.lat, primary_source, fallback_source),
+        lon: merge_opt("lon", primary.lon, fallback.lon, primary_source, fallback_source),
+
+        images: if primary.images.is_empty() {
+            fallback.images
+        } else {
+            primary.images
+        },
+
+        created_at: merge_text(primary.created_at, fallback.created_at),
+        updated_at: merge_opt(
+            "updated_at",
+            primary.updated_at,
+            fallback.updated_at,
+            primary_source,
+            fallback_source,
+        ),
+        notes: merge_opt("notes", primary.notes, fallback.notes, primary_source, fallback_source),
+
+        parking_garage: merge_opt(
+            "parking_garage",
+            primary.parking_garage,
+            fallback.parking_garage,
+            primary_source,
+            fallback_source,
+        ),
+        parking_covered: merge_opt(
+            "parking_covered",
+            primary.parking_covered,
+            fallback.parking_covered,
+            primary_source,
+            fallback_source,
+        ),
+        parking_open: merge_opt(
+            "parking_open",
+            primary.parking_open,
+            fallback.parking_open,
+            primary_source,
+            fallback_source,
+        ),
+        land_sqft: merge_opt(
+            "land_sqft",
+            primary.land_sqft,
+            fallback.land_sqft,
+            primary_source,
+            fallback_source,
+        ),
+        property_tax: merge_opt(
+            "property_tax",
+            primary.property_tax,
+            fallback.property_tax,
+            primary_source,
+            fallback_source,
+        ),
+
+        skytrain_station: merge_opt(
+            "skytrain_station",
+            primary.skytrain_station,
+            fallback.skytrain_station,
+            primary_source,
+            fallback_source,
+        ),
+        skytrain_walk_min: merge_opt(
+            "skytrain_walk_min",
+            primary.skytrain_walk_min,
+            fallback.skytrain_walk_min,
+            primary_source,
+            fallback_source,
+        ),
+
+        radiant_floor_heating: merge_opt(
+            "radiant_floor_heating",
+            primary.radiant_floor_heating,
+            fallback.radiant_floor_heating,
+            primary_source,
+            fallback_source,
+        ),
+        ac: merge_opt("ac", primary.ac, fallback.ac, primary_source, fallback_source),
+
+        down_payment_pct: merge_opt(
+            "down_payment_pct",
+            primary.down_payment_pct,
+            fallback.down_payment_pct,
+            primary_source,
+            fallback_source,
+        ),
+        mortgage_interest_rate: merge_opt(
+            "mortgage_interest_rate",
+            primary.mortgage_interest_rate,
+            fallback.mortgage_interest_rate,
+            primary_source,
+            fallback_source,
+        ),
+        amortization_years: merge_opt(
+            "amortization_years",
+            primary.amortization_years,
+            fallback.amortization_years,
+            primary_source,
+            fallback_source,
+        ),
+        mortgage_monthly: merge_opt(
+            "mortgage_monthly",
+            primary.mortgage_monthly,
+            fallback.mortgage_monthly,
+            primary_source,
+            fallback_source,
+        ),
+        hoa_monthly: merge_opt(
+            "hoa_monthly",
+            primary.hoa_monthly,
+            fallback.hoa_monthly,
+            primary_source,
+            fallback_source,
+        ),
+        monthly_total: merge_opt(
+            "monthly_total",
+            primary.monthly_total,
+            fallback.monthly_total,
+            primary_source,
+            fallback_source,
+        ),
+        monthly_cost: merge_opt(
+            "monthly_cost",
+            primary.monthly_cost,
+            fallback.monthly_cost,
+            primary_source,
+            fallback_source,
+        ),
+
+        has_rental_suite: merge_opt(
+            "has_rental_suite",
+            primary.has_rental_suite,
+            fallback.has_rental_suite,
+            primary_source,
+            fallback_source,
+        ),
+        rental_income: merge_opt(
+            "rental_income",
+            primary.rental_income,
+            fallback.rental_income,
+            primary_source,
+            fallback_source,
+        ),
+
+        status: merge_opt("status", primary.status, fallback.status, primary_source, fallback_source),
+        nickname: merge_opt(
+            "nickname",
+            primary.nickname,
+            fallback.nickname,
+            primary_source,
+            fallback_source,
+        ),
+
+        school_elementary: merge_opt(
+            "school_elementary",
+            primary.school_elementary,
+            fallback.school_elementary,
+            primary_source,
+            fallback_source,
+        ),
+        school_elementary_rating: merge_opt(
+            "school_elementary_rating",
+            primary.school_elementary_rating,
+            fallback.school_elementary_rating,
+            primary_source,
+            fallback_source,
+        ),
+        school_middle: merge_opt(
+            "school_middle",
+            primary.school_middle,
+            fallback.school_middle,
+            primary_source,
+            fallback_source,
+        ),
+        school_middle_rating: merge_opt(
+            "school_middle_rating",
+            primary.school_middle_rating,
+            fallback.school_middle_rating,
+            primary_source,
+            fallback_source,
+        ),
+        school_secondary: merge_opt(
+            "school_secondary",
+            primary.school_secondary,
+            fallback.school_secondary,
+            primary_source,
+            fallback_source,
+        ),
+        school_secondary_rating: merge_opt(
+            "school_secondary_rating",
+            primary.school_secondary_rating,
+            fallback.school_secondary_rating,
+            primary_source,
+            fallback_source,
+        ),
+    }
+}
+
+fn merge_listing(
+    primary: ParsedListing,
+    fallback: ParsedListing,
+    primary_source: SourceKind,
+    fallback_source: SourceKind,
+) -> ParsedListing {
+    let mut image_urls = primary.image_urls;
+    for image_url in fallback.image_urls {
+        if !image_urls.iter().any(|existing| existing == &image_url) {
+            image_urls.push(image_url);
+        }
+    }
+
+    ParsedListing {
+        property: merge_property(primary.property, fallback.property, primary_source, fallback_source),
+        image_urls,
+    }
+}
+
+fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
+    if url.contains("redfin") {
+        return redfin::parse(url, html).map(|parsed| (SourceKind::Redfin, parsed));
+    }
+    if url.contains("rew.ca") {
+        return rew::parse(url, html).map(|parsed| (SourceKind::Rew, parsed));
+    }
+    None
 }
 
 /// Parses and merges data from multiple listing pages for the same property.
 ///
 /// Strategy:
 /// - Redfin is the primary source for all fields.
-/// - rew.ca fills in any field that redfin left empty.
-/// - When both sources have a value and they differ, keeps redfin's and logs a warning.
+/// - Other successful parsers fill in missing fields by priority order.
+/// - When two sources disagree on the same populated field, keeps the higher-priority value.
 ///
 /// `sources` is a slice of `(url, html)` pairs. Unknown URLs are ignored.
 pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
-    let redfin = sources
+    let mut parsed: Vec<(SourceKind, ParsedListing)> = sources
         .iter()
-        .find(|(url, _)| url.contains("redfin"))
-        .and_then(|(url, html)| redfin::parse(url, html));
+        .filter_map(|(url, html)| parse_source(url, html))
+        .collect();
 
-    let rew = sources
-        .iter()
-        .find(|(url, _)| url.contains("rew.ca"))
-        .and_then(|(url, html)| rew::parse(url, html));
+    if parsed.is_empty() {
+        return None;
+    }
 
-    // At least one parser must succeed.
-    let (r, w) = match (redfin, rew) {
-        (None, None) => return None,
-        (Some(r), None) => return Some(r),
-        (None, Some(w)) => return Some(w),
-        (Some(r), Some(w)) => (r, w),
-    };
+    parsed.sort_by_key(|(source, _)| source_rank(*source));
 
-    let rp = r.property;
-    let wp = w.property;
+    let (mut primary_source, mut merged_listing) = parsed.remove(0);
+    for (fallback_source, fallback_listing) in parsed {
+        merged_listing = merge_listing(
+            merged_listing,
+            fallback_listing,
+            primary_source,
+            fallback_source,
+        );
+        if source_rank(fallback_source) < source_rank(primary_source) {
+            primary_source = fallback_source;
+        }
+    }
 
-    let merged = db::Property {
-        // Identity / URLs: redfin is canonical; carry rew_url from rew result.
-        id: rp.id,
-        redfin_url: rp.redfin_url.clone(),
-        realtor_url: rp.realtor_url.clone(),
-        rew_url: wp.rew_url.clone(),
-
-        // Scalar string fields — prefer non-empty redfin, fall back to rew.
-        title:       if rp.title.is_empty() { wp.title.clone() } else { rp.title.clone() },
-        description: if rp.description.is_empty() { wp.description.clone() } else { rp.description.clone() },
-
-        price:          merge_field!("price",          rp.price,          wp.price),
-        price_currency: merge_field!("price_currency", rp.price_currency, wp.price_currency),
-        offer_price:    None,
-
-        street_address: merge_field!("street_address", rp.street_address, wp.street_address),
-        city:           merge_field!("city",           rp.city,           wp.city),
-        region:         merge_field!("region",         rp.region,         wp.region),
-        postal_code:    merge_field!("postal_code",    rp.postal_code,    wp.postal_code),
-        country:        merge_field!("country",        rp.country,        wp.country),
-
-        bedrooms:  merge_field!("bedrooms",  rp.bedrooms,  wp.bedrooms),
-        bathrooms: merge_field!("bathrooms", rp.bathrooms, wp.bathrooms),
-        sqft:      merge_field!("sqft",      rp.sqft,      wp.sqft),
-
-        year_built: merge_field!("year_built", rp.year_built, wp.year_built),
-
-        lat: merge_field!("lat", rp.lat, wp.lat),
-        lon: merge_field!("lon", rp.lon, wp.lon),
-
-        // Images: prefer redfin's (higher quality); fall back to rew's.
-        images: rp.images.clone(),
-
-        created_at: rp.created_at.clone(),
-        updated_at: rp.updated_at.clone(),
-        notes:      rp.notes.clone(),
-
-        parking_garage:  merge_field!("parking_garage",  rp.parking_garage,  wp.parking_garage),
-        parking_covered: merge_field!("parking_covered", rp.parking_covered, wp.parking_covered),
-        parking_open:    merge_field!("parking_open",    rp.parking_open,    wp.parking_open),
-        land_sqft:       merge_field!("land_sqft",       rp.land_sqft,       wp.land_sqft),
-
-        property_tax: merge_field!("property_tax", rp.property_tax, wp.property_tax),
-
-        skytrain_station:  rp.skytrain_station.clone(),
-        skytrain_walk_min: rp.skytrain_walk_min,
-
-        radiant_floor_heating: merge_field!("radiant_floor_heating", rp.radiant_floor_heating, wp.radiant_floor_heating),
-        ac:                    merge_field!("ac",                    rp.ac,                    wp.ac),
-
-        down_payment_pct:       rp.down_payment_pct,
-        mortgage_interest_rate: rp.mortgage_interest_rate,
-        amortization_years:     rp.amortization_years,
-        mortgage_monthly:       rp.mortgage_monthly,
-
-        hoa_monthly:   merge_field!("hoa_monthly",   rp.hoa_monthly,   wp.hoa_monthly),
-        monthly_total: rp.monthly_total,
-        monthly_cost: rp.monthly_cost,
-
-        has_rental_suite: merge_field!("has_rental_suite", rp.has_rental_suite, wp.has_rental_suite),
-        rental_income:    merge_field!("rental_income",    rp.rental_income,    wp.rental_income),
-
-        status:   rp.status.clone(),
-        nickname: rp.nickname.clone(),
-
-        school_elementary:        rp.school_elementary.clone(),
-        school_elementary_rating: rp.school_elementary_rating,
-        school_middle:            rp.school_middle.clone(),
-        school_middle_rating:     rp.school_middle_rating,
-        school_secondary:         rp.school_secondary.clone(),
-        school_secondary_rating:  rp.school_secondary_rating,
-    };
-
-    // Image URLs: prefer redfin's; supplement with rew's if redfin had none.
-    let image_urls = if r.image_urls.is_empty() { w.image_urls } else { r.image_urls };
-
-    tracing::info!("parse_multi: merged property_tax={:?}", merged.property_tax);
-    Some(ParsedListing { property: merged, image_urls })
+    tracing::info!(
+        "parse_multi: merged using primary source={}, property_tax={:?}",
+        primary_source.name(),
+        merged_listing.property.property_tax
+    );
+    Some(merged_listing)
 }

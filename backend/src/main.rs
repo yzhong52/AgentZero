@@ -26,14 +26,13 @@ use tower_http::cors::{Any, CorsLayer};
 use url::Url;
 use parsers::{ParseResult, extract_description, extract_images, extract_json_ld, extract_title, meta_map};
 
+pub(crate) const IMAGES_URL_PREFIX: &str = "/images";
+
 #[derive(Clone)]
 pub(crate) struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
     store: Arc<dyn object_store::ObjectStore>,
-    /// TODO: Yuchen - remove this redundant config as we are not using S3 yet. 
-    /// Prefix for public image URLs. Local: "/images". S3: "https://bucket.s3…".
-    images_url_prefix: String,
     /// Root directory where image files are written (local filesystem only).
     images_dir: String,
 }
@@ -49,11 +48,15 @@ struct NicknameRequest {
 }
 
 /// Sums mortgage + monthly property tax + HOA into a total monthly cost.
-pub(crate) fn compute_monthly_total(mortgage: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
-    let mortgage = mortgage?; // require at least a mortgage payment
-    let tax_monthly = property_tax.map(|t| t / 12).unwrap_or(0);
-    let hoa_monthly = hoa.unwrap_or(0);
-    Some(mortgage + tax_monthly + hoa_monthly)
+pub(crate) fn compute_monthly_total(
+    mortgage_monthly: Option<i64>,
+    property_tax_annual: Option<i64>,
+    hoa_monthly: Option<i64>,
+) -> Option<i64> {
+    let mortgage_monthly = mortgage_monthly?; // require at least a mortgage payment
+    let property_tax_monthly = property_tax_annual.map(|t| t / 12).unwrap_or(0);
+    let hoa_monthly = hoa_monthly.unwrap_or(0);
+    Some(mortgage_monthly + property_tax_monthly + hoa_monthly)
 }
 
 /// Initial monthly mortgage interest only (principal * annual_rate / 12).
@@ -64,11 +67,15 @@ pub(crate) fn compute_initial_monthly_interest(price: i64, down_pct: f64, annual
 }
 
 /// Sums initial monthly interest + monthly property tax + HOA.
-pub(crate) fn compute_monthly_cost(initial_interest: Option<i64>, property_tax: Option<i64>, hoa: Option<i64>) -> Option<i64> {
-    let initial_interest = initial_interest?;
-    let tax_monthly = property_tax.map(|t| t / 12).unwrap_or(0);
-    let hoa_monthly = hoa.unwrap_or(0);
-    Some(initial_interest + tax_monthly + hoa_monthly)
+pub(crate) fn compute_monthly_cost(
+    initial_monthly_interest: Option<i64>,
+    property_tax_annual: Option<i64>,
+    hoa_monthly: Option<i64>,
+) -> Option<i64> {
+    let initial_monthly_interest = initial_monthly_interest?;
+    let property_tax_monthly = property_tax_annual.map(|t| t / 12).unwrap_or(0);
+    let hoa_monthly = hoa_monthly.unwrap_or(0);
+    Some(initial_monthly_interest + property_tax_monthly + hoa_monthly)
 }
 
 /// Standard amortisation formula: monthly payment on a fixed-rate mortgage.
@@ -171,7 +178,7 @@ async fn delete_image(
     if let Some(path) = local_path {
         // path looks like "/images/1/abc123.jpg"; strip prefix to get object key.
         let object_key = path
-            .strip_prefix(&format!("{}/", state.images_url_prefix))
+            .strip_prefix(&format!("{}/", IMAGES_URL_PREFIX))
             .unwrap_or(&path);
         if let Err(e) = state.store.delete(&ObjectPath::from(object_key)).await {
             tracing::warn!("Failed to delete image file {}: {}", object_key, e);
@@ -219,7 +226,7 @@ async fn delete_listing(
 
     for img in &cached {
         let object_key = img.local_path
-            .strip_prefix(&format!("{}/", state.images_url_prefix))
+            .strip_prefix(&format!("{}/", IMAGES_URL_PREFIX))
             .unwrap_or(&img.local_path);
         if let Err(e) = state.store.delete(&ObjectPath::from(object_key)).await {
             tracing::warn!("delete_listing: could not remove image file {}: {}", object_key, e);
@@ -436,13 +443,9 @@ async fn main() {
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
     let images_dir =
         std::env::var("IMAGES_DIR").unwrap_or_else(|_| "listings_images".to_string());
-    let images_url_prefix =
-        std::env::var("IMAGES_URL_PREFIX").unwrap_or_else(|_| "/images".to_string());
-
     let db = db::init(&database_url).await;
 
-    // Local filesystem store — swap for AmazonS3::new() / GoogleCloudStorage::new()
-    // when ready to move to cloud. Set IMAGES_URL_PREFIX to the bucket's public URL.
+    // Local filesystem store.
     images::ensure_images_dir(&images_dir).await;
     let store: Arc<dyn object_store::ObjectStore> = Arc::new(
         LocalFileSystem::new_with_prefix(std::path::Path::new(&images_dir))
@@ -458,7 +461,6 @@ async fn main() {
         db,
         client,
         store,
-        images_url_prefix,
         images_dir,
     };
 

@@ -39,13 +39,21 @@ pub async fn add_listing(
         .map(|raw| safe_url(raw.trim()).ok_or((StatusCode::BAD_REQUEST, format!("Invalid URL: {}", raw.trim()))))
         .collect::<Result<_, _>>()?;
 
-    // Fetch HTML for each URL.  On fetch failure return 502 immediately.
+    // Fetch HTML for each URL.
+    // Zillow blocks scraping (403 / PerimeterX), so on any fetch error for a
+    // known Zillow URL we fall through with empty HTML — the stub path below
+    // will save the listing so the user can fill in details manually.
     let mut sources: Vec<(String, String)> = Vec::new();
     for url in &parsed_urls {
-        let html = fetch_html(&state.client, url)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
-        sources.push((url.to_string(), html));
+        let is_zillow = url.host_str().map(|h| h.contains("zillow.com")).unwrap_or(false);
+        match fetch_html(&state.client, url).await {
+            Ok(html) => sources.push((url.to_string(), html)),
+            Err(e) if is_zillow => {
+                tracing::info!("add_listing: Zillow fetch error ({}), will save stub for {}", e, url);
+                sources.push((url.to_string(), String::new()));
+            }
+            Err(e) => return Err((StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e))),
+        }
     }
 
     let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();

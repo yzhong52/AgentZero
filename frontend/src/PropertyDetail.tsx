@@ -198,6 +198,8 @@ const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
     { key: 'parking_garage', label: 'Garage' },
     { key: 'ac', label: 'Air conditioning' },
     { key: 'radiant_floor_heating', label: 'Radiant heating' },
+    { key: 'property_tax', label: 'Property tax (annual)' },
+    { key: 'hoa_monthly', label: 'HOA / Strata (monthly)' },
     { key: 'school_elementary', label: 'Elementary school' },
     { key: 'school_middle', label: 'Middle school' },
     { key: 'school_secondary', label: 'Secondary school' },

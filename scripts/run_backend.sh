@@ -31,8 +31,7 @@ if ! kill -0 "$PID" 2>/dev/null; then
 fi
 
 for i in $(seq 1 20); do
-  curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/listings" 2>/dev/null
-  code=$?
+  curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/listings" 2>/dev/null && code=0 || code=$?
   if [ $code -eq 0 ]; then
     echo -e "\033[32m[backend] health check passed ✅ http://127.0.0.1:$PORT\033[0m"
     break

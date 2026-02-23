@@ -38,7 +38,7 @@ pub async fn init(database_url: &str) -> SqlitePool {
 
 /// Insert a new property and return it with the assigned id.
 /// The caller is responsible for computing mortgage/monthly fields before calling this.
-pub async fn save_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
+pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
     let row = sqlx::query(
         r#"INSERT INTO listings
                (redfin_url, realtor_url, rew_url, zillow_url,
@@ -398,7 +398,7 @@ mod tests {
             school_secondary_rating: None,
         };
 
-        // Insert initial listing directly (avoid save_listing upsert complexity in tests)
+        // Insert initial listing directly (avoid add_listing upsert complexity in tests)
         let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
             .bind(&p.redfin_url)
             .bind(&p.title)

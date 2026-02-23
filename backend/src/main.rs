@@ -38,10 +38,6 @@ pub(crate) struct AppState {
     images_dir: String,
 }
 
-// `SaveRequest` and the `save_listing` handler were removed; saving listings
-// is handled by the store layer or admin tools. The POST endpoint was removed
-// to simplify the public API surface.
-
 #[derive(Deserialize)]
 struct NotesRequest {
     notes: Option<String>,
@@ -106,6 +102,10 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, req
     resp.text().await
 }
 
+/// GET /api/parse?url=<url>
+///
+/// Fetches the given URL and runs all parsers, returning the raw parsed fields
+/// (title, description, images, JSON-LD, meta tags). Does not write to the DB.
 async fn parse(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
@@ -137,10 +137,11 @@ async fn parse(
     }))
 }
 
-// `save_listing` handler removed; creating listings via POST is disabled.
-
-// Refresh handler moved to `src/api/refresh.rs`.
-
+/// DELETE /api/listings/:id/images/:image_id
+///
+/// Removes a single cached image: deletes the file from the object store and
+/// the row from `images_cache`. Silently removes the per-listing directory if
+/// it becomes empty.
 async fn delete_image(
     State(state): State<AppState>,
     Path((listing_id, image_id)): Path<(i64, i64)>,
@@ -253,57 +254,6 @@ async fn get_listing(
     Ok(Json(p))
 }
 
-/// Fetches and parses a listing without saving — used for the refresh diff preview.
-async fn preview_refresh(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
-    let stored = db::get_by_id(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
-
-    let stored_urls: Vec<String> = [
-        stored.redfin_url.clone(),
-        stored.realtor_url.clone(),
-        stored.rew_url.clone(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-
-    if stored_urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
-    }
-
-    let mut sources: Vec<(String, String)> = Vec::new();
-    for url in &stored_urls {
-        let parsed_url = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL in listing".to_string()))?;
-        let html = fetch_html(&state.client, &parsed_url)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
-        sources.push((parsed_url.to_string(), html));
-    }
-
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing = parsers::parse_multi(&source_refs)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
-
-    // Return the parsed result without saving; mortgage params carried from stored.
-    let mut preview = listing.property;
-    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate     = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years    = stored.amortization_years.unwrap_or(25);
-    preview.down_payment_pct       = Some(down_pct);
-    preview.mortgage_interest_rate = Some(rate);
-    preview.amortization_years     = Some(years);
-    if let Some(price) = preview.price {
-        preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    preview.monthly_total = compute_monthly_total(preview.mortgage_monthly, preview.property_tax, preview.hoa_monthly);
-
-    Ok(Json(preview))
-}
-
 /// Updates user-tracked details for a listing. `id` is the property/listing ID.
 /// Records a history entry if the price changed. Returns the updated property.
 async fn patch_details(
@@ -311,15 +261,14 @@ async fn patch_details(
     Path(id): Path<i64>,
     Json(body): Json<db::UserDetails>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
-    // Fetch current price before overwriting (for history).
+    // Load the stored record once; used both as the merge base and for price-history comparison.
     let current = db::get_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
-    // Merge incoming `UserDetails` into the stored property, then persist
-    let mut updated = db::get_by_id(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
+    // Merge every provided field from the request body over the stored values.
+    // Fields absent from the body (None) are left unchanged.
+    let mut updated = current.clone();
 
     if body.redfin_url.is_some() { updated.redfin_url = body.redfin_url.clone(); }
     if body.realtor_url.is_some() { updated.realtor_url = body.realtor_url.clone(); }
@@ -397,6 +346,10 @@ async fn get_history(
     Ok(Json(entries))
 }
 
+/// GET /api/listings
+///
+/// Returns all saved properties, newest first. Each record includes cached
+/// image metadata (id, local_path, position).
 async fn list_listings(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
@@ -491,17 +444,21 @@ async fn main() {
         .allow_headers(Any);
 
     let app = Router::new()
-        .route("/api/parse", get(parse))
-            .route("/api/listings", get(list_listings))
-            .route("/api/listings/:id", get(get_listing))
-        .route("/api/listings/:id/delete", delete(delete_listing))
-        .route("/api/listings/:id/refresh", put(api::refresh::refresh_listing))
-        .route("/api/listings/:id/preview", get(preview_refresh))
-        .route("/api/listings/:id/notes", patch(patch_notes))
-        .route("/api/listings/:id/nickname", patch(patch_nickname))
-        .route("/api/listings/:id/details", patch(patch_details))
-        .route("/api/listings/:id/history", get(get_history))
-        .route("/api/listings/:id/images/:image_id", delete(delete_image))
+        // Utility
+        .route("/api/parse",                          get(parse))
+        // Listings collection
+        .route("/api/listings",                       get(list_listings))
+        // Single listing
+        .route("/api/listings/:id",                   get(get_listing))
+        .route("/api/listings/:id/delete",            delete(delete_listing))
+        .route("/api/listings/:id/refresh",           put(api::refresh::refresh_listing))
+        .route("/api/listings/:id/preview",           get(api::refresh::preview_refresh))
+        .route("/api/listings/:id/notes",             patch(patch_notes))
+        .route("/api/listings/:id/nickname",          patch(patch_nickname))
+        .route("/api/listings/:id/details",           patch(patch_details))
+        .route("/api/listings/:id/history",           get(get_history))
+        .route("/api/listings/:id/images/:image_id",  delete(delete_image))
+        // Static image files
         .nest_service("/images", ServeDir::new(&state.images_dir))
         .with_state(state)
         .layer(cors);

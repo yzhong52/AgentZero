@@ -134,8 +134,11 @@ pub fn extract_hoa_monthly(html: &str) -> Option<i64> {
             if v > 0 { return Some(v); }
         }
     }
-    // 2. Embedded JSON blob ("hoaFee":543 or "maintenanceFee":543)
-    let json_re = Regex::new(r#"(?:"hoaFee"|"maintenanceFee")\\?"?:\s*(\d+)"#).unwrap();
+    // 2. Embedded JSON blob — Redfin uses several key names.
+    //    The blob is an escaped JSON string, so quotes appear as \" and
+    //    the pattern looks like: \"monthlyHoaDues\":1137
+    //    Regex: optional-\ + " + key + optional-\ + " + :digits
+    let json_re = Regex::new(r#"\\?"(?:hoaFee|maintenanceFee|monthlyHoaDues)\\?":\s*(\d+)"#).unwrap();
     if let Some(caps) = json_re.captures(html) {
         if let Ok(v) = caps[1].parse::<i64>() {
             if v > 0 { return Some(v); }

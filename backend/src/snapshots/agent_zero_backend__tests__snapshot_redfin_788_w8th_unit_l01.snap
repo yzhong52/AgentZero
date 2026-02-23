@@ -1,0 +1,173 @@
+---
+source: src/main.rs
+expression: property
+---
+{
+  "id": 0,
+  "redfin_url": "https://www.redfin.ca/bc/vancouver/788-W-8th-Ave-V5Z-1E1/home/",
+  "realtor_url": null,
+  "rew_url": null,
+  "zillow_url": null,
+  "title": "788 W 8th Ave Unit L01, Vancouver - 3 beds/3.5 baths",
+  "description": "Spacious 3 bedroom reverse-layout townhome located in the heart of Fairview. The main living area showcases impressive city and mountain views and soaring ceilings. Enjoy cozy evenings by the gas fireplace, or relaxing on your private rooftop patio. Ideally located within walking distance to Broadway, Granville Island, &amp; rapid transit. 2 parking stalls &amp; 1 storage locker included. No dogs. ",
+  "price": 1249900,
+  "price_currency": "USD",
+  "offer_price": null,
+  "street_address": "788 W 8th Ave Unit L01",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V5Z 1E1",
+  "country": "CA",
+  "bedrooms": 3,
+  "bathrooms": null,
+  "sqft": 1560,
+  "year_built": 1991,
+  "lat": 49.2640045,
+  "lon": -123.1215335,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_1_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_2_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_3_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_4_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_5_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_6_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_7_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_8_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_9_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_10_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_11_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_12_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_13_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_14_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_15_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_16_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_17_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_18_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_19_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_20_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_21_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/230/R3086230_22_0.jpg",
+      "created_at": ""
+    }
+  ],
+  "created_at": "",
+  "updated_at": null,
+  "notes": null,
+  "parking_garage": null,
+  "parking_covered": null,
+  "parking_open": null,
+  "land_sqft": null,
+  "property_tax": 4761,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "hoa_monthly": 1137,
+  "monthly_total": null,
+  "monthly_cost": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "status": null,
+  "nickname": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null
+}

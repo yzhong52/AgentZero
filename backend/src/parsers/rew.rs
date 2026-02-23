@@ -184,8 +184,13 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let parking_garage = find_section_value(&document, "Parking Spaces")
         .and_then(|s| parse_int(&s));
 
-    // Strata / HOA fee — "Strata Fee" for condos, "Maintenance Fee" for some houses.
+    // Strata / HOA fee.
+    // Label variants seen in the wild:
+    //   "Strata Fee"              — standard condo
+    //   "Strata Maintenance Fees" — some rew.ca listings
+    //   "Maintenance Fee"         — non-strata properties
     let hoa_monthly = find_section_value(&document, "Strata Fee")
+        .or_else(|| find_section_value_contains(&document, "Strata Maintenance"))
         .or_else(|| find_section_value(&document, "Maintenance Fee"))
         .and_then(|s| parse_money_i64(&s));
 

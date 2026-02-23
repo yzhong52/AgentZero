@@ -18,6 +18,7 @@ static GARAGE_RE: OnceLock<Regex> = OnceLock::new();
 static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
 static TAX_ANNUAL_RE: OnceLock<Regex> = OnceLock::new();
+static HOA_FEE_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -36,6 +37,17 @@ fn nearby_schools_re() -> &'static Regex {
 fn tax_annual_re() -> &'static Regex {
     TAX_ANNUAL_RE.get_or_init(|| {
         Regex::new(r"Tax Annual Amount:\s*\$?([\d,]+)").unwrap()
+    })
+}
+
+/// Matches HOA / strata / maintenance fee text as it appears in Redfin's
+/// property-details section.  Handles all of:
+///   "HOA Dues: $543/month"
+///   "HOA Fee: $200 per month"
+///   "Maintenance Fee: $650"
+fn hoa_fee_re() -> &'static Regex {
+    HOA_FEE_RE.get_or_init(|| {
+        Regex::new(r"(?i)(?:hoa\s*dues|hoa\s*fee|maintenance\s*fee)[s]?\s*:?\s*\$?([\d,]+)").unwrap()
     })
 }
 
@@ -98,6 +110,38 @@ pub fn extract_property_tax(html: &str) -> Option<i64> {
     let caps = tax_annual_re().captures(html)?;
     let digits: String = caps.get(1)?.as_str().chars().filter(|c| c.is_ascii_digit()).collect();
     digits.parse().ok()
+}
+
+// ── HOA / strata fee ──────────────────────────────────────────────────────────
+
+/// Extracts monthly HOA / strata / maintenance fee from Redfin's property
+/// details section.
+///
+/// Redfin surfaces the fee as plain text in two ways:
+///
+/// 1. In the property-details text block, e.g.:
+///    `"HOA Dues: $543/month"` or `"Maintenance Fee: $650"`
+///
+/// 2. In the escaped JSON blob embedded in a `<script>` tag, e.g.:
+///    `"hoaFee":543` or `"maintenanceFee":543`
+///
+/// Both are tried; the text-block match takes precedence.
+pub fn extract_hoa_monthly(html: &str) -> Option<i64> {
+    // 1. Text-block match ("HOA Dues: $543/month", "Maintenance Fee: $650", …)
+    if let Some(caps) = hoa_fee_re().captures(html) {
+        let digits: String = caps.get(1)?.as_str().chars().filter(|c| c.is_ascii_digit()).collect();
+        if let Ok(v) = digits.parse::<i64>() {
+            if v > 0 { return Some(v); }
+        }
+    }
+    // 2. Embedded JSON blob ("hoaFee":543 or "maintenanceFee":543)
+    let json_re = Regex::new(r#"(?:"hoaFee"|"maintenanceFee")\\?"?:\s*(\d+)"#).unwrap();
+    if let Some(caps) = json_re.captures(html) {
+        if let Ok(v) = caps[1].parse::<i64>() {
+            if v > 0 { return Some(v); }
+        }
+    }
+    None
 }
 
 // ── Lot size ──────────────────────────────────────────────────────────────────
@@ -266,6 +310,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
     property.land_sqft = extract_lot_size(html);
     property.property_tax = extract_property_tax(html);
+    property.hoa_monthly = extract_hoa_monthly(html);
     if let Some(schools) = extract_schools(html) {
         if let Some((name, rating)) = schools.elementary {
             property.school_elementary = Some(name);

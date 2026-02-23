@@ -184,8 +184,9 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let parking_garage = find_section_value(&document, "Parking Spaces")
         .and_then(|s| parse_int(&s));
 
-    // Strata / HOA fee
+    // Strata / HOA fee — "Strata Fee" for condos, "Maintenance Fee" for some houses.
     let hoa_monthly = find_section_value(&document, "Strata Fee")
+        .or_else(|| find_section_value(&document, "Maintenance Fee"))
         .and_then(|s| parse_money_i64(&s));
 
     // ── Images ────────────────────────────────────────────────────────────────

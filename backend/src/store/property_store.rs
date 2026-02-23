@@ -272,6 +272,7 @@ mod tests {
             redfin_url: Some("https://example.com/1".to_string()),
             realtor_url: None,
             rew_url: None,
+            zillow_url: None,
             title: "Original Title".to_string(),
             description: "".to_string(),
             price: Some(500_000),
@@ -374,6 +375,7 @@ mod tests {
             redfin_url: Some("https://example.com/2-updated".to_string()),
             realtor_url: Some("https://realtor.example/2".to_string()),
             rew_url: Some("https://rew.example/2".to_string()),
+            zillow_url: None,
             price: Some(110_000),
             price_currency: Some("CAD".to_string()),
             offer_price: None,
@@ -425,6 +427,8 @@ mod tests {
         merged.sqft = details.sqft.or(merged.sqft);
         merged.radiant_floor_heating = details.radiant_floor_heating.or(merged.radiant_floor_heating);
         merged.mortgage_monthly = details.mortgage_monthly.or(merged.mortgage_monthly);
+        merged.monthly_total = details.monthly_total.or(merged.monthly_total);
+        merged.monthly_cost = details.monthly_cost.or(merged.monthly_cost);
 
         let updated = update_by_id(&pool, saved.id, &merged).await.expect("update_by_id failed");
 

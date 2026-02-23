@@ -26,6 +26,7 @@ pub async fn refresh_listing(
         stored.redfin_url.clone(),
         stored.realtor_url.clone(),
         stored.rew_url.clone(),
+        stored.zillow_url.clone(),
     ]
     .into_iter()
     .flatten()
@@ -61,6 +62,7 @@ pub async fn refresh_listing(
     updated.redfin_url  = stored.redfin_url.clone();
     updated.realtor_url = stored.realtor_url.clone();
     updated.rew_url     = stored.rew_url.clone();
+    updated.zillow_url  = stored.zillow_url.clone();
 
     // Parsers currently do not populate school fields — users enter them manually.
     // Fall back to whatever the user already stored.
@@ -154,6 +156,7 @@ pub async fn preview_refresh(
         stored.redfin_url.clone(),
         stored.realtor_url.clone(),
         stored.rew_url.clone(),
+        stored.zillow_url.clone(),
     ]
     .into_iter()
     .flatten()

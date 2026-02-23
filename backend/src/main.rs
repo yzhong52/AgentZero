@@ -295,6 +295,7 @@ async fn patch_details(
     if body.redfin_url.is_some() { updated.redfin_url = body.redfin_url.clone(); }
     if body.realtor_url.is_some() { updated.realtor_url = body.realtor_url.clone(); }
     if body.rew_url.is_some() { updated.rew_url = body.rew_url.clone(); }
+    if body.zillow_url.is_some() { updated.zillow_url = body.zillow_url.clone(); }
 
     updated.price = body.price.or(updated.price);
     updated.price_currency = body.price_currency.clone().or(updated.price_currency.clone());

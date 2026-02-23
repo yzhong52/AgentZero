@@ -201,6 +201,7 @@ function toUserDetails(p: Property) {
         rew_url:                p.rew_url,
         price:                  p.price,
         price_currency:         p.price_currency,
+        offer_price:            p.offer_price,
         street_address:         p.street_address,
         city:                   p.city,
         region:                 p.region,
@@ -314,10 +315,10 @@ export function PropertyDetail() {
         setDraft(d => d ? { ...d, [key]: val } : d)
     }
 
-    /** Recalculate mortgage_monthly in draft whenever price or params change. */
+    /** Recalculate mortgage_monthly in draft whenever offer price / price or params change. */
     function recalcMortgage(d: Property): Property {
         const monthly = calcMortgage(
-            d.price,
+            d.offer_price ?? d.price,
             d.down_payment_pct ?? 0.20,
             d.mortgage_interest_rate ?? 0.05,
             d.amortization_years ?? 25,
@@ -729,94 +730,6 @@ export function PropertyDetail() {
                         </div>
 
                         <div className="tracked-group">
-                            <h4>Financials</h4>
-                            <div className="tracked-fields">
-                                <Field label="Price" viewVal={formatPrice(p.price, p.price_currency) ?? '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Price</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                value={draft?.price ?? ''}
-                                                onChange={e => {
-                                                    const updated = recalcMortgage({ ...draft!, price: e.target.value ? Number(e.target.value) : null })
-                                                    setDraft(updated)
-                                                }}
-                                                placeholder="Price"
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Property tax (annual)" viewVal={moneyLabel(p.property_tax)}
-                                    editEl={<NumInput label="Property tax (annual)" value={draft?.property_tax ?? null} onChange={v => setDraftField('property_tax', v)} />} />
-                                <Field label="HOA / Strata (monthly)" viewVal={moneyLabel(p.hoa_monthly)}
-                                    editEl={<NumInput label="HOA / Strata (monthly)" value={draft?.hoa_monthly ?? null} onChange={v => setDraftField('hoa_monthly', v)} />} />
-
-                                {/* Mortgage params */}
-                                <Field label="Down payment %" viewVal={p.down_payment_pct != null ? `${(p.down_payment_pct * 100).toFixed(0)}%` : '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Down payment %</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={0} max={100} step={1}
-                                                value={draft?.down_payment_pct != null ? (draft.down_payment_pct * 100).toFixed(0) : ''}
-                                                onChange={e => {
-                                                    const pct = e.target.value ? Number(e.target.value) / 100 : null
-                                                    const updated = recalcMortgage({ ...draft!, down_payment_pct: pct })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Mortgage rate %" viewVal={p.mortgage_interest_rate != null ? `${(p.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Mortgage rate %</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={0} max={30} step={0.01}
-                                                value={draft?.mortgage_interest_rate != null ? (draft.mortgage_interest_rate * 100).toFixed(2) : ''}
-                                                onChange={e => {
-                                                    const rate = e.target.value ? Number(e.target.value) / 100 : null
-                                                    const updated = recalcMortgage({ ...draft!, mortgage_interest_rate: rate })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-                                <Field label="Amortization (years)" viewVal={numLabel(p.amortization_years, ' yr')}
-                                    editEl={
-                                        <div className="tracked-field">
-                                            <label>Amortization (years)</label>
-                                            <input
-                                                className="edit-input"
-                                                type="number"
-                                                min={1} max={40} step={1}
-                                                value={draft?.amortization_years ?? ''}
-                                                onChange={e => {
-                                                    const yrs = e.target.value ? Number(e.target.value) : null
-                                                    const updated = recalcMortgage({ ...draft!, amortization_years: yrs })
-                                                    setDraft(updated)
-                                                }}
-                                            />
-                                        </div>
-                                    } />
-
-                                <div className="tracked-field">
-                                    <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from price, down payment %, interest rate, and amortization years</span></span></label>
-                                    <span className="tracked-value">{moneyLabel(p.mortgage_monthly)}</span>
-                                </div>
-                                <div className="tracked-field">
-                                    <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">Mortgage + property tax (monthly) + HOA / strata fee</span></span></label>
-                                    <span className="tracked-value">{moneyLabel(p.monthly_total)}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="tracked-group">
                             <h4>Rental</h4>
                             <div className="tracked-fields">
                                 <Field label="Has rental suite" viewVal={boolLabel(p.has_rental_suite)}
@@ -872,6 +785,110 @@ export function PropertyDetail() {
                                             {p.school_secondary_rating != null && <span className="school-rating">{p.school_secondary_rating.toFixed(1)}</span>}
                                         </span>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="tracked-group">
+                            <h4>Offer &amp; Finance</h4>
+                            <div className="tracked-fields">
+                                <Field label="Listing price" viewVal={formatPrice(p.price, p.price_currency) ?? '—'}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>Listing price</label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                value={draft?.price ?? ''}
+                                                onChange={e => {
+                                                    const updated = recalcMortgage({ ...draft!, price: e.target.value ? Number(e.target.value) : null })
+                                                    setDraft(updated)
+                                                }}
+                                                placeholder="Price"
+                                            />
+                                        </div>
+                                    } />
+                                <Field label="My offer price" viewVal={p.offer_price != null ? formatPrice(p.offer_price, p.price_currency) ?? '—' : '—'}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>My offer price <span className="info-icon">ⓘ<span className="info-tooltip">Used as the base for mortgage calculations. Leave blank to use the listing price.</span></span></label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                value={draft?.offer_price ?? ''}
+                                                onChange={e => {
+                                                    const updated = recalcMortgage({ ...draft!, offer_price: e.target.value ? Number(e.target.value) : null })
+                                                    setDraft(updated)
+                                                }}
+                                                placeholder="Defaults to listing price"
+                                            />
+                                        </div>
+                                    } />
+
+                                {/* Mortgage params */}
+                                <Field label="Down payment %" viewVal={p.down_payment_pct != null ? `${(p.down_payment_pct * 100).toFixed(0)}%` : '—'}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>Down payment %</label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                min={0} max={100} step={1}
+                                                value={draft?.down_payment_pct != null ? (draft.down_payment_pct * 100).toFixed(0) : ''}
+                                                onChange={e => {
+                                                    const pct = e.target.value ? Number(e.target.value) / 100 : null
+                                                    const updated = recalcMortgage({ ...draft!, down_payment_pct: pct })
+                                                    setDraft(updated)
+                                                }}
+                                            />
+                                        </div>
+                                    } />
+                                <Field label="Mortgage rate %" viewVal={p.mortgage_interest_rate != null ? `${(p.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>Mortgage rate %</label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                min={0} max={30} step={0.01}
+                                                value={draft?.mortgage_interest_rate != null ? (draft.mortgage_interest_rate * 100).toFixed(2) : ''}
+                                                onChange={e => {
+                                                    const rate = e.target.value ? Number(e.target.value) / 100 : null
+                                                    const updated = recalcMortgage({ ...draft!, mortgage_interest_rate: rate })
+                                                    setDraft(updated)
+                                                }}
+                                            />
+                                        </div>
+                                    } />
+                                <Field label="Amortization (years)" viewVal={numLabel(p.amortization_years, ' yr')}
+                                    editEl={
+                                        <div className="tracked-field">
+                                            <label>Amortization (years)</label>
+                                            <input
+                                                className="edit-input"
+                                                type="number"
+                                                min={1} max={40} step={1}
+                                                value={draft?.amortization_years ?? ''}
+                                                onChange={e => {
+                                                    const yrs = e.target.value ? Number(e.target.value) : null
+                                                    const updated = recalcMortgage({ ...draft!, amortization_years: yrs })
+                                                    setDraft(updated)
+                                                }}
+                                            />
+                                        </div>
+                                    } />
+                                <Field label="Property tax (annual)" viewVal={moneyLabel(p.property_tax)}
+                                    editEl={<NumInput label="Property tax (annual)" value={draft?.property_tax ?? null} onChange={v => setDraftField('property_tax', v)} />} />
+                                <Field label="HOA / Strata (monthly)" viewVal={moneyLabel(p.hoa_monthly)}
+                                    editEl={<NumInput label="HOA / Strata (monthly)" value={draft?.hoa_monthly ?? null} onChange={v => setDraftField('hoa_monthly', v)} />} />
+
+                                <div className="tracked-field">
+                                    <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(p.mortgage_monthly)}</span>
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">Mortgage + property tax (monthly) + HOA / strata fee</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(p.monthly_total)}</span>
                                 </div>
                             </div>
                         </div>

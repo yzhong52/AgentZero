@@ -17,6 +17,9 @@ pub struct Property {
     // cost
     pub price: Option<i64>,
     pub price_currency: Option<String>,
+    /// User's intended offer price — drives all mortgage calculations.
+    /// When null the application falls back to `price` for calculations.
+    pub offer_price: Option<i64>,
     // location
     pub street_address: Option<String>,
     pub city: Option<String>,
@@ -89,6 +92,8 @@ pub struct UserDetails {
     // core parsed fields (user can correct parser errors)
     pub price: Option<i64>,
     pub price_currency: Option<String>,
+    /// User's intended offer price — drives mortgage calculations. Null means "use listing price".
+    pub offer_price: Option<i64>,
     pub street_address: Option<String>,
     pub city: Option<String>,
     pub region: Option<String>,

@@ -187,6 +187,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         description,
         price,
         price_currency,
+        offer_price: None,
         street_address,
         city,
         region,

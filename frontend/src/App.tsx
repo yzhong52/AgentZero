@@ -19,6 +19,7 @@ export type Property = {
   description: string
   price: number | null
   price_currency: string | null
+  offer_price: number | null
   street_address: string | null
   city: string | null
   region: string | null

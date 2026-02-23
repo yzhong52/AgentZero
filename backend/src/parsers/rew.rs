@@ -200,6 +200,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         description,
         price,
         price_currency: Some("CAD".to_string()),
+        offer_price: None,
         street_address,
         city,
         region,

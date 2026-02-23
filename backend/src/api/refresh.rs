@@ -42,6 +42,7 @@ pub async fn refresh_listing(
         let html = fetch_html(&state.client, &parsed_url)
             .await
             .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {url}: {e}")))?;
+        tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
         sources.push((parsed_url.to_string(), html));
     }
 
@@ -51,6 +52,7 @@ pub async fn refresh_listing(
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     let image_urls = listing.image_urls;
+    tracing::info!("refresh_listing: parse result property_tax={:?}, price={:?}", updated.property_tax, updated.price);
 
     // ── 4. Merge identity and user-preserved fields ────────────────────────────
     // Keep the DB id and the stored source URLs — users may link additional
@@ -100,6 +102,8 @@ pub async fn refresh_listing(
     let saved = db::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+
+    tracing::info!("refresh_listing: saved listing id={} property_tax={:?} price={:?}", saved.id, saved.property_tax, saved.price);
 
     // ── 8. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
@@ -179,6 +183,9 @@ pub async fn preview_refresh(
     // Keep a manually-entered HOA fee when the parser has nothing to say.
     preview.hoa_monthly = preview.hoa_monthly.or(stored.hoa_monthly);
 
+    // Preserve the user's offer price — the parser never sets this.
+    preview.offer_price = stored.offer_price;
+
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     let down_pct = stored.down_payment_pct.unwrap_or(0.20);
     let rate     = stored.mortgage_interest_rate.unwrap_or(0.04);
@@ -186,7 +193,7 @@ pub async fn preview_refresh(
     preview.down_payment_pct       = Some(down_pct);
     preview.mortgage_interest_rate = Some(rate);
     preview.amortization_years     = Some(years);
-    if let Some(price) = preview.price {
+    if let Some(price) = preview.offer_price.or(preview.price) {
         preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
     preview.monthly_total = compute_monthly_total(preview.mortgage_monthly, preview.property_tax, preview.hoa_monthly);

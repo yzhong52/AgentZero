@@ -181,6 +181,7 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
 
         price:          merge_field!("price",          rp.price,          wp.price),
         price_currency: merge_field!("price_currency", rp.price_currency, wp.price_currency),
+        offer_price:    None,
 
         street_address: merge_field!("street_address", rp.street_address, wp.street_address),
         city:           merge_field!("city",           rp.city,           wp.city),

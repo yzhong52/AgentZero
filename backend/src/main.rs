@@ -276,6 +276,7 @@ async fn patch_details(
 
     updated.price = body.price.or(updated.price);
     updated.price_currency = body.price_currency.clone().or(updated.price_currency.clone());
+    updated.offer_price = body.offer_price.or(updated.offer_price);
     updated.street_address = body.street_address.clone().or(updated.street_address.clone());
     updated.city = body.city.clone().or(updated.city.clone());
     updated.region = body.region.clone().or(updated.region.clone());

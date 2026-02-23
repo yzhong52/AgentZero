@@ -4,7 +4,7 @@ use crate::models::property::Property;
 use crate::store::image_store;
 
 // Common column list — keep in sync with row_to_property().
-const COLS: &str = "id, redfin_url, realtor_url, rew_url, title, description, price, price_currency,
+const COLS: &str = "id, redfin_url, realtor_url, rew_url, title, description, price, price_currency, offer_price,
                     street_address, city, region, postal_code, country,
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
@@ -47,6 +47,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                description              = ?,
                price                    = ?,
                price_currency           = ?,
+               offer_price              = ?,
                street_address           = ?,
                city                     = ?,
                region                   = ?,
@@ -87,6 +88,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(&p.description)
     .bind(p.price)
     .bind(&p.price_currency)
+    .bind(p.offer_price)
     .bind(&p.street_address)
     .bind(&p.city)
     .bind(&p.region)
@@ -199,6 +201,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         description: row.get("description"),
         price: row.get("price"),
         price_currency: row.get("price_currency"),
+        offer_price: row.get("offer_price"),
         street_address: row.get("street_address"),
         city: row.get("city"),
         region: row.get("region"),
@@ -267,6 +270,7 @@ mod tests {
             description: "".to_string(),
             price: Some(500_000),
             price_currency: Some("CAD".to_string()),
+            offer_price: None,
             street_address: None,
             city: None,
             region: None,
@@ -365,6 +369,7 @@ mod tests {
             rew_url: Some("https://rew.example/2".to_string()),
             price: Some(110_000),
             price_currency: Some("CAD".to_string()),
+            offer_price: None,
             street_address: Some("123 Test St".to_string()),
             city: Some("Vancouver".to_string()),
             region: Some("BC".to_string()),

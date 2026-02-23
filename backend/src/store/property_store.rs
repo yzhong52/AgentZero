@@ -12,7 +12,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                     down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                     hoa_monthly, monthly_total, monthly_cost, has_rental_suite, rental_income,
-                    status, nickname,
+                    status,
                     school_elementary, school_elementary_rating,
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating";
@@ -50,14 +50,14 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                 hoa_monthly, monthly_total, monthly_cost,
-                has_rental_suite, rental_income, status, nickname,
+                has_rental_suite, rental_income, status,
                 school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                   ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                   ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
            RETURNING id"#,
     )
     .bind(&p.redfin_url)
@@ -99,7 +99,6 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(p.has_rental_suite)
     .bind(p.rental_income)
     .bind(&p.status)
-    .bind(&p.nickname)
     .bind(&p.school_elementary)
     .bind(p.school_elementary_rating)
     .bind(&p.school_middle)
@@ -157,6 +156,11 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                hoa_monthly              = ?,
                monthly_total            = ?,
                monthly_cost             = ?,
+               skytrain_station         = ?,
+               skytrain_walk_min        = ?,
+               has_rental_suite         = ?,
+               rental_income            = ?,
+               status                   = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -200,6 +204,11 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.hoa_monthly)
     .bind(p.monthly_total)
     .bind(p.monthly_cost)
+    .bind(&p.skytrain_station)
+    .bind(p.skytrain_walk_min)
+    .bind(p.has_rental_suite)
+    .bind(p.rental_income)
+    .bind(&p.status)
     .bind(id)
     .execute(pool)
     .await?;
@@ -307,7 +316,6 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         has_rental_suite: row.get("has_rental_suite"),
         rental_income: row.get("rental_income"),
         status: row.get("status"),
-        nickname: row.get("nickname"),
         school_elementary: row.get("school_elementary"),
         school_elementary_rating: row.get("school_elementary_rating"),
         school_middle: row.get("school_middle"),
@@ -378,7 +386,6 @@ mod tests {
             has_rental_suite: None,
             rental_income: None,
             status: None,
-            nickname: None,
             school_elementary: None,
             school_elementary_rating: None,
             school_middle: None,
@@ -423,7 +430,7 @@ mod tests {
         let database_url = format!("sqlite://{}", db_path.display());
         let pool = init(&database_url).await;
 
-        // Insert initial listing
+        // Insert initial listing with a title and known price
         let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
             .bind(&Some("https://example.com/2".to_string()))
             .bind("Seed Title")
@@ -436,81 +443,162 @@ mod tests {
 
         let saved = list(&pool).await.expect("list failed").into_iter().next().expect("no listing");
 
-        // Prepare user details to update many fields
+        // Build UserDetails with every editable field set to a non-null value.
         let details = UserDetails {
-            title: None,
-            redfin_url: Some("https://example.com/2-updated".to_string()),
-            realtor_url: Some("https://realtor.example/2".to_string()),
-            rew_url: Some("https://rew.example/2".to_string()),
-            zillow_url: None,
+            // Header
+            title: Some("Updated Title".to_string()),
+            // Price
             price: Some(110_000),
             price_currency: Some("CAD".to_string()),
-            offer_price: None,
+            offer_price: Some(105_000),
+            // Location
             street_address: Some("123 Test St".to_string()),
             city: Some("Vancouver".to_string()),
             region: Some("BC".to_string()),
             postal_code: Some("V1V1V1".to_string()),
+            // Property facts
             bedrooms: Some(3),
             bathrooms: Some(2),
             sqft: Some(1200),
             year_built: Some(1990),
+            // Parking / land
             parking_garage: Some(1),
             parking_covered: Some(1),
             parking_open: Some(0),
             land_sqft: Some(2000),
-            property_tax: Some(3000),
-            skytrain_station: Some("Test Station".to_string()),
-            skytrain_walk_min: Some(10),
+            // Features
             radiant_floor_heating: Some(true),
             ac: Some(false),
+            // Transit
+            skytrain_station: Some("Test Station".to_string()),
+            skytrain_walk_min: Some(10),
+            // Finance
+            property_tax: Some(3000),
+            hoa_monthly: Some(50),
             down_payment_pct: Some(0.2),
             mortgage_interest_rate: Some(0.035),
             amortization_years: Some(25),
             mortgage_monthly: Some(1500),
-            hoa_monthly: Some(50),
             monthly_total: Some(1750),
             monthly_cost: Some(1370),
-            has_rental_suite: Some(false),
-            rental_income: Some(0),
-            status: Some("Interested".to_string()),
-            school_elementary: Some("Elem".to_string()),
+            // Rental
+            has_rental_suite: Some(true),
+            rental_income: Some(800),
+            // Schools
+            school_elementary: Some("Elm Elementary".to_string()),
             school_elementary_rating: Some(7.5),
-            school_middle: Some("Middle".to_string()),
+            school_middle: Some("Oak Middle".to_string()),
             school_middle_rating: Some(8.0),
-            school_secondary: Some("Secondary".to_string()),
+            school_secondary: Some("Pine Secondary".to_string()),
             school_secondary_rating: Some(8.5),
+            // Source URLs
+            redfin_url: Some("https://redfin.example/2-updated".to_string()),
+            realtor_url: Some("https://realtor.example/2".to_string()),
+            rew_url: Some("https://rew.example/2".to_string()),
+            zillow_url: Some("https://zillow.example/2".to_string()),
+            // Status
+            status: Some("Interested".to_string()),
         };
 
-        // Merge details into the saved property and call update_by_id
+        // Mirror the exact merge logic from patch_details in main.rs
         let mut merged = saved.clone();
+        merged.title = details.title.clone().unwrap_or(merged.title.clone());
         if details.redfin_url.is_some() { merged.redfin_url = details.redfin_url.clone(); }
         if details.realtor_url.is_some() { merged.realtor_url = details.realtor_url.clone(); }
         if details.rew_url.is_some() { merged.rew_url = details.rew_url.clone(); }
+        if details.zillow_url.is_some() { merged.zillow_url = details.zillow_url.clone(); }
         merged.price = details.price.or(merged.price);
         merged.price_currency = details.price_currency.clone().or(merged.price_currency.clone());
+        merged.offer_price = details.offer_price.or(merged.offer_price);
+        merged.street_address = details.street_address.clone().or(merged.street_address.clone());
         merged.city = details.city.clone().or(merged.city.clone());
+        merged.region = details.region.clone().or(merged.region.clone());
+        merged.postal_code = details.postal_code.clone().or(merged.postal_code.clone());
         merged.bedrooms = details.bedrooms.or(merged.bedrooms);
         merged.bathrooms = details.bathrooms.or(merged.bathrooms);
         merged.sqft = details.sqft.or(merged.sqft);
+        merged.year_built = details.year_built.or(merged.year_built);
+        merged.parking_garage = details.parking_garage.or(merged.parking_garage);
+        merged.parking_covered = details.parking_covered.or(merged.parking_covered);
+        merged.parking_open = details.parking_open.or(merged.parking_open);
+        merged.land_sqft = details.land_sqft.or(merged.land_sqft);
         merged.radiant_floor_heating = details.radiant_floor_heating.or(merged.radiant_floor_heating);
+        merged.ac = details.ac.or(merged.ac);
+        merged.skytrain_station = details.skytrain_station.clone().or(merged.skytrain_station.clone());
+        merged.skytrain_walk_min = details.skytrain_walk_min.or(merged.skytrain_walk_min);
+        merged.property_tax = details.property_tax.or(merged.property_tax);
+        merged.hoa_monthly = details.hoa_monthly.or(merged.hoa_monthly);
+        merged.down_payment_pct = details.down_payment_pct.or(merged.down_payment_pct);
+        merged.mortgage_interest_rate = details.mortgage_interest_rate.or(merged.mortgage_interest_rate);
+        merged.amortization_years = details.amortization_years.or(merged.amortization_years);
         merged.mortgage_monthly = details.mortgage_monthly.or(merged.mortgage_monthly);
         merged.monthly_total = details.monthly_total.or(merged.monthly_total);
         merged.monthly_cost = details.monthly_cost.or(merged.monthly_cost);
+        merged.has_rental_suite = details.has_rental_suite.or(merged.has_rental_suite);
+        merged.rental_income = details.rental_income.or(merged.rental_income);
+        merged.school_elementary = details.school_elementary.clone().or(merged.school_elementary.clone());
+        merged.school_elementary_rating = details.school_elementary_rating.or(merged.school_elementary_rating);
+        merged.school_middle = details.school_middle.clone().or(merged.school_middle.clone());
+        merged.school_middle_rating = details.school_middle_rating.or(merged.school_middle_rating);
+        merged.school_secondary = details.school_secondary.clone().or(merged.school_secondary.clone());
+        merged.school_secondary_rating = details.school_secondary_rating.or(merged.school_secondary_rating);
+        merged.status = details.status.clone().or(merged.status.clone());
 
         let updated = update_by_id(&pool, saved.id, &merged).await.expect("update_by_id failed");
 
-        assert_eq!(updated.redfin_url.as_deref(), Some("https://example.com/2-updated"));
-        assert_eq!(updated.realtor_url.as_deref(), Some("https://realtor.example/2"));
-        assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
+        // Assert every field was persisted and round-tripped correctly.
+        assert_eq!(updated.title, "Updated Title");
+        // Price
         assert_eq!(updated.price, Some(110_000));
         assert_eq!(updated.price_currency.as_deref(), Some("CAD"));
+        assert_eq!(updated.offer_price, Some(105_000));
+        // Location
+        assert_eq!(updated.street_address.as_deref(), Some("123 Test St"));
         assert_eq!(updated.city.as_deref(), Some("Vancouver"));
+        assert_eq!(updated.region.as_deref(), Some("BC"));
+        assert_eq!(updated.postal_code.as_deref(), Some("V1V1V1"));
+        // Property facts
         assert_eq!(updated.bedrooms, Some(3));
         assert_eq!(updated.bathrooms, Some(2));
         assert_eq!(updated.sqft, Some(1200));
+        assert_eq!(updated.year_built, Some(1990));
+        // Parking / land
+        assert_eq!(updated.parking_garage, Some(1));
+        assert_eq!(updated.parking_covered, Some(1));
+        assert_eq!(updated.parking_open, Some(0));
+        assert_eq!(updated.land_sqft, Some(2000));
+        // Features
         assert_eq!(updated.radiant_floor_heating, Some(true));
+        assert_eq!(updated.ac, Some(false));
+        // Transit
+        assert_eq!(updated.skytrain_station.as_deref(), Some("Test Station"));
+        assert_eq!(updated.skytrain_walk_min, Some(10));
+        // Finance
+        assert_eq!(updated.property_tax, Some(3000));
+        assert_eq!(updated.hoa_monthly, Some(50));
+        assert!((updated.down_payment_pct.unwrap() - 0.2).abs() < 1e-9);
+        assert!((updated.mortgage_interest_rate.unwrap() - 0.035).abs() < 1e-9);
+        assert_eq!(updated.amortization_years, Some(25));
         assert_eq!(updated.mortgage_monthly, Some(1500));
+        assert_eq!(updated.monthly_total, Some(1750));
         assert_eq!(updated.monthly_cost, Some(1370));
+        // Rental
+        assert_eq!(updated.has_rental_suite, Some(true));
+        assert_eq!(updated.rental_income, Some(800));
+        // Schools
+        assert_eq!(updated.school_elementary.as_deref(), Some("Elm Elementary"));
+        assert!((updated.school_elementary_rating.unwrap() - 7.5).abs() < 1e-9);
+        assert_eq!(updated.school_middle.as_deref(), Some("Oak Middle"));
+        assert!((updated.school_middle_rating.unwrap() - 8.0).abs() < 1e-9);
+        assert_eq!(updated.school_secondary.as_deref(), Some("Pine Secondary"));
+        assert!((updated.school_secondary_rating.unwrap() - 8.5).abs() < 1e-9);
+        // Source URLs
+        assert_eq!(updated.redfin_url.as_deref(), Some("https://redfin.example/2-updated"));
+        assert_eq!(updated.realtor_url.as_deref(), Some("https://realtor.example/2"));
+        assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
+        assert_eq!(updated.zillow_url.as_deref(), Some("https://zillow.example/2"));
+        // Status
+        assert_eq!(updated.status.as_deref(), Some("Interested"));
 
         let _ = std::fs::remove_file(db_path);
     }

@@ -201,7 +201,6 @@ fn blank_stub() -> db::Property {
         has_rental_suite: None,
         rental_income: None,
         status: None,
-        nickname: None,
         school_elementary: None,
         school_elementary_rating: None,
         school_middle: None,

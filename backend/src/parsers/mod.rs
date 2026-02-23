@@ -398,13 +398,6 @@ fn merge_property(
         ),
 
         status: merge_opt("status", primary.status, fallback.status, primary_source, fallback_source),
-        nickname: merge_opt(
-            "nickname",
-            primary.nickname,
-            fallback.nickname,
-            primary_source,
-            fallback_source,
-        ),
 
         school_elementary: merge_opt(
             "school_elementary",

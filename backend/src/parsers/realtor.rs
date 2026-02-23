@@ -40,7 +40,6 @@
 use super::ParsedListing;
 
 /// Always returns `None` — see module-level documentation for details.
-#[allow(dead_code)]
 pub fn parse(_url: &str, _html: &str) -> Option<ParsedListing> {
     None
 }

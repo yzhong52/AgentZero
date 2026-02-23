@@ -126,23 +126,26 @@ enum SourceKind {
     Redfin,
     Rew,
     Zillow,
+    Realtor,
 }
 
 impl SourceKind {
     fn name(self) -> &'static str {
         match self {
-            SourceKind::Redfin => "redfin",
-            SourceKind::Rew => "rew",
-            SourceKind::Zillow => "zillow",
+            SourceKind::Redfin  => "redfin",
+            SourceKind::Rew     => "rew",
+            SourceKind::Zillow  => "zillow",
+            SourceKind::Realtor => "realtor",
         }
     }
 }
 
 fn source_rank(kind: SourceKind) -> u8 {
     match kind {
-        SourceKind::Redfin => 0,
-        SourceKind::Rew => 1,
-        SourceKind::Zillow => 2,
+        SourceKind::Redfin  => 0,
+        SourceKind::Rew     => 1,
+        SourceKind::Zillow  => 2,
+        SourceKind::Realtor => 3,
     }
 }
 
@@ -478,10 +481,7 @@ fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
         return zillow::parse(url, html).map(|parsed| (SourceKind::Zillow, parsed));
     }
     if url.contains("realtor.ca") {
-        // Realtor.ca is blocked by Imperva Incapsula; parser always returns None.
-        // Branch is present so the URL is explicitly recognised rather than falling
-        // through to the unknown-URL None below.
-        return None;
+        return realtor::parse(url, html).map(|parsed| (SourceKind::Realtor, parsed));
     }
     None
 }

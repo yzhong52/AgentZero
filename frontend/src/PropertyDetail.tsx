@@ -216,6 +216,7 @@ function toUserDetails(p: Property) {
         redfin_url: p.redfin_url,
         realtor_url: p.realtor_url,
         rew_url: p.rew_url,
+        zillow_url: p.zillow_url,
         price: p.price,
         price_currency: p.price_currency,
         offer_price: p.offer_price,
@@ -917,6 +918,20 @@ export function PropertyDetail() {
                                 />
                             ) : property.rew_url ? (
                                 <a href={property.rew_url} target="_blank" rel="noreferrer">{property.rew_url}</a>
+                            ) : <span className="tracked-value">—</span>}
+                        </div>
+                        <div className="meta-item">
+                            <strong>Zillow:</strong>
+                            {editMode ? (
+                                <input
+                                    className="edit-input"
+                                    type="url"
+                                    value={draft?.zillow_url ?? ''}
+                                    onChange={e => setDraftField('zillow_url', e.target.value || null)}
+                                    placeholder="https://www.zillow.com/homedetails/…"
+                                />
+                            ) : property.zillow_url ? (
+                                <a href={property.zillow_url} target="_blank" rel="noreferrer">{property.zillow_url}</a>
                             ) : <span className="tracked-value">—</span>}
                         </div>
                         <div className="meta-item">

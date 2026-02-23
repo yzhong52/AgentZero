@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
     extract::{Query, State, Path},
     http::StatusCode,
-    routing::{delete, get, patch, put},
+    routing::{delete, get, patch, post, put},
 };
 use object_store::{ObjectStoreExt, local::LocalFileSystem, path::Path as ObjectPath};
 use std::sync::Arc;
@@ -35,6 +35,12 @@ pub(crate) struct AppState {
     store: Arc<dyn object_store::ObjectStore>,
     /// Root directory where image files are written (local filesystem only).
     images_dir: String,
+}
+
+#[derive(Deserialize)]
+struct SaveRequest {
+    /// One or more listing URLs for the same property (e.g. redfin + rew).
+    urls: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -122,6 +128,154 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, req
     let resp = client.get(url.as_str()).headers(headers).send().await?;
     resp.error_for_status_ref()?;
     resp.text().await
+}
+
+/// POST /api/listings
+///
+/// Fetches and parses one or more listing URLs for the same property, saves
+/// the merged result to the DB, downloads images, and returns the saved record.
+///
+/// If Zillow is the only source and it returns a bot-protection page (Zillow
+/// blocks direct curl requests), a stub listing is saved with just the URL so
+/// the user can fill in details manually.
+async fn save_listing(
+    State(state): State<AppState>,
+    Json(body): Json<SaveRequest>,
+) -> Result<Json<db::Property>, (StatusCode, String)> {
+    if body.urls.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "At least one URL is required".to_string()));
+    }
+
+    // Validate all URLs upfront.
+    let parsed_urls: Vec<Url> = body
+        .urls
+        .iter()
+        .map(|raw| safe_url(raw.trim()).ok_or((StatusCode::BAD_REQUEST, format!("Invalid URL: {}", raw.trim()))))
+        .collect::<Result<_, _>>()?;
+
+    // Fetch HTML for each URL.  On fetch failure return 502 immediately.
+    let mut sources: Vec<(String, String)> = Vec::new();
+    for url in &parsed_urls {
+        let html = fetch_html(&state.client, url)
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e)))?;
+        sources.push((url.to_string(), html));
+    }
+
+    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
+    let listing_opt = parsers::parse_multi(&source_refs);
+
+    let (mut property, image_urls) = match listing_opt {
+        Some(listing) => (listing.property, listing.image_urls),
+        None => {
+            // Parsing failed — only proceed as a stub if ALL URLs are from known-
+            // but-unscrapeable sources (Zillow behind bot protection).  For truly
+            // unrecognised URLs return 422 as before.
+            let all_known_unscrapeable = parsed_urls.iter().all(|u| {
+                u.host_str().map(|h| h.contains("zillow.com")).unwrap_or(false)
+            });
+            if !all_known_unscrapeable {
+                return Err((StatusCode::UNPROCESSABLE_ENTITY,
+                    "No recognized listing format found in page".to_string()));
+            }
+            // Build a minimal stub so the user can fill in details manually.
+            let first_url = parsed_urls[0].to_string();
+            tracing::info!("save_listing: Zillow bot-protection detected, saving stub for {}", first_url);
+            let stub = db::Property {
+                id: 0,
+                redfin_url: None,
+                realtor_url: None,
+                rew_url: None,
+                zillow_url: Some(first_url.clone()),
+                title: format!("Zillow listing (fill in details)"),
+                description: String::new(),
+                price: None,
+                price_currency: Some("USD".to_string()),
+                offer_price: None,
+                street_address: None,
+                city: None,
+                region: None,
+                postal_code: None,
+                country: None,
+                bedrooms: None,
+                bathrooms: None,
+                sqft: None,
+                year_built: None,
+                lat: None,
+                lon: None,
+                images: vec![],
+                created_at: String::new(),
+                updated_at: None,
+                notes: None,
+                parking_garage: None,
+                parking_covered: None,
+                parking_open: None,
+                land_sqft: None,
+                property_tax: None,
+                skytrain_station: None,
+                skytrain_walk_min: None,
+                radiant_floor_heating: None,
+                ac: None,
+                down_payment_pct: Some(0.20),
+                mortgage_interest_rate: Some(0.04),
+                amortization_years: Some(25),
+                mortgage_monthly: None,
+                hoa_monthly: None,
+                monthly_total: None,
+                monthly_cost: None,
+                has_rental_suite: None,
+                rental_income: None,
+                status: None,
+                nickname: None,
+                school_elementary: None,
+                school_elementary_rating: None,
+                school_middle: None,
+                school_middle_rating: None,
+                school_secondary: None,
+                school_secondary_rating: None,
+            };
+            (stub, vec![])
+        }
+    };
+
+    // Auto-calculate mortgage with defaults on first save.
+    let down_pct = property.down_payment_pct.unwrap_or(0.20);
+    let rate     = property.mortgage_interest_rate.unwrap_or(0.04);
+    let years    = property.amortization_years.unwrap_or(25);
+    property.down_payment_pct       = Some(down_pct);
+    property.mortgage_interest_rate = Some(rate);
+    property.amortization_years     = Some(years);
+    let base_price = property.offer_price.or(property.price);
+    if let Some(price) = base_price {
+        property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
+    property.monthly_total = compute_monthly_total(property.mortgage_monthly, property.property_tax, property.hoa_monthly);
+    let initial_interest = base_price.map(|p| compute_initial_monthly_interest(p, down_pct, rate));
+    property.monthly_cost = compute_monthly_cost(initial_interest, property.property_tax, property.hoa_monthly);
+
+    let saved = db::save_listing(&state.db, &property)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+
+    // Register image URLs in images_cache, preserving parser ordering.
+    for (position, url) in image_urls.iter().enumerate() {
+        let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
+    }
+
+    // Download any pending images.
+    images::cache_images(
+        &state.db,
+        &state.client,
+        state.store.as_ref(),
+        saved.id,
+        IMAGES_URL_PREFIX,
+    )
+    .await;
+
+    let images = db::list_images_with_meta(&state.db, saved.id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    Ok(Json(db::Property { images, ..saved }))
 }
 
 /// GET /api/parse?url=<url>
@@ -478,7 +632,7 @@ async fn main() {
         // Utility
         .route("/api/parse",                          get(parse))
         // Listings collection
-        .route("/api/listings",                       get(list_listings))
+        .route("/api/listings",                       post(save_listing).get(list_listings))
         // Single listing
         .route("/api/listings/:id",                   get(get_listing))
         .route("/api/listings/:id/delete",            delete(delete_listing))

@@ -36,6 +36,83 @@ pub async fn init(database_url: &str) -> SqlitePool {
     pool
 }
 
+/// Insert a new property and return it with the assigned id.
+/// The caller is responsible for computing mortgage/monthly fields before calling this.
+pub async fn save_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
+    let row = sqlx::query(
+        r#"INSERT INTO listings
+               (redfin_url, realtor_url, rew_url, zillow_url,
+                title, description, price, price_currency, offer_price,
+                street_address, city, region, postal_code, country,
+                bedrooms, bathrooms, sqft, year_built, lat, lon,
+                parking_garage, parking_covered, parking_open, land_sqft,
+                property_tax, skytrain_station, skytrain_walk_min,
+                ac, radiant_floor_heating,
+                down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
+                hoa_monthly, monthly_total, monthly_cost,
+                has_rental_suite, rental_income, status, nickname,
+                school_elementary, school_elementary_rating,
+                school_middle, school_middle_rating,
+                school_secondary, school_secondary_rating,
+                created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                   ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                   ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+           RETURNING id"#,
+    )
+    .bind(&p.redfin_url)
+    .bind(&p.realtor_url)
+    .bind(&p.rew_url)
+    .bind(&p.zillow_url)
+    .bind(&p.title)
+    .bind(&p.description)
+    .bind(p.price)
+    .bind(&p.price_currency)
+    .bind(p.offer_price)
+    .bind(&p.street_address)
+    .bind(&p.city)
+    .bind(&p.region)
+    .bind(&p.postal_code)
+    .bind(&p.country)
+    .bind(p.bedrooms)
+    .bind(p.bathrooms)
+    .bind(p.sqft)
+    .bind(p.year_built)
+    .bind(p.lat)
+    .bind(p.lon)
+    .bind(p.parking_garage)
+    .bind(p.parking_covered)
+    .bind(p.parking_open)
+    .bind(p.land_sqft)
+    .bind(p.property_tax)
+    .bind(&p.skytrain_station)
+    .bind(p.skytrain_walk_min)
+    .bind(p.ac)
+    .bind(p.radiant_floor_heating)
+    .bind(p.down_payment_pct)
+    .bind(p.mortgage_interest_rate)
+    .bind(p.amortization_years)
+    .bind(p.mortgage_monthly)
+    .bind(p.hoa_monthly)
+    .bind(p.monthly_total)
+    .bind(p.monthly_cost)
+    .bind(p.has_rental_suite)
+    .bind(p.rental_income)
+    .bind(&p.status)
+    .bind(&p.nickname)
+    .bind(&p.school_elementary)
+    .bind(p.school_elementary_rating)
+    .bind(&p.school_middle)
+    .bind(p.school_middle_rating)
+    .bind(&p.school_secondary)
+    .bind(p.school_secondary_rating)
+    .fetch_one(pool)
+    .await?;
+
+    let new_id: i64 = row.get("id");
+    fetch_one_by_id(pool, new_id).await
+}
+
 /// Update an existing property by ID (called on refresh — overwrites parsed fields).
 pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
     sqlx::query(

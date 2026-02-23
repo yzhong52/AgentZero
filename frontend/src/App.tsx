@@ -15,6 +15,7 @@ export type Property = {
   redfin_url: string | null
   realtor_url: string | null
   rew_url: string | null
+  zillow_url: string | null
   title: string
   description: string
   price: number | null
@@ -109,7 +110,7 @@ function App() {
       })
       if (!resp.ok) throw new Error(await resp.text())
       const saved: Property = await resp.json()
-      setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url}`)
+      setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url}`)
       setUrl('')
       fetchListings()
     } catch (err: any) {
@@ -127,7 +128,7 @@ function App() {
         <div className="input-row">
           <input
             type="url"
-            placeholder="Redfin or rew.ca URL"
+            placeholder="Redfin, rew.ca, or Zillow URL"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />

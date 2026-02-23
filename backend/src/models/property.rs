@@ -11,6 +11,7 @@ pub struct Property {
     pub redfin_url: Option<String>,
     pub realtor_url: Option<String>,
     pub rew_url: Option<String>,
+    pub zillow_url: Option<String>,
 
     pub title: String,
     pub description: String,
@@ -91,6 +92,7 @@ pub struct UserDetails {
     pub redfin_url: Option<String>,
     pub realtor_url: Option<String>,
     pub rew_url: Option<String>,
+    pub zillow_url: Option<String>,
     // core parsed fields (user can correct parser errors)
     pub price: Option<i64>,
     pub price_currency: Option<String>,

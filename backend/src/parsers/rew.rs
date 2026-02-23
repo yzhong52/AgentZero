@@ -196,6 +196,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         redfin_url: None,
         realtor_url: None,
         rew_url: Some(url.to_string()),
+        zillow_url: None,
         title,
         description,
         price,

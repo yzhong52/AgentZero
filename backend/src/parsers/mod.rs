@@ -8,6 +8,7 @@
 pub mod redfin;
 pub mod realtor;
 pub mod rew;
+pub mod zillow;
 
 use crate::db;
 use scraper::{Html, Selector};
@@ -124,6 +125,7 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 enum SourceKind {
     Redfin,
     Rew,
+    Zillow,
 }
 
 impl SourceKind {
@@ -131,6 +133,7 @@ impl SourceKind {
         match self {
             SourceKind::Redfin => "redfin",
             SourceKind::Rew => "rew",
+            SourceKind::Zillow => "zillow",
         }
     }
 }
@@ -139,6 +142,7 @@ fn source_rank(kind: SourceKind) -> u8 {
     match kind {
         SourceKind::Redfin => 0,
         SourceKind::Rew => 1,
+        SourceKind::Zillow => 2,
     }
 }
 
@@ -190,6 +194,7 @@ fn merge_property(
         redfin_url: primary.redfin_url.or(fallback.redfin_url),
         realtor_url: primary.realtor_url.or(fallback.realtor_url),
         rew_url: primary.rew_url.or(fallback.rew_url),
+        zillow_url: primary.zillow_url.or(fallback.zillow_url),
 
         title: merge_text(primary.title, fallback.title),
         description: merge_text(primary.description, fallback.description),
@@ -468,6 +473,9 @@ fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
     }
     if url.contains("rew.ca") {
         return rew::parse(url, html).map(|parsed| (SourceKind::Rew, parsed));
+    }
+    if url.contains("zillow.com") {
+        return zillow::parse(url, html).map(|parsed| (SourceKind::Zillow, parsed));
     }
     None
 }

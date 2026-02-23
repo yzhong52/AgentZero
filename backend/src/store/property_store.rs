@@ -4,7 +4,7 @@ use crate::models::property::Property;
 use crate::store::image_store;
 
 // Common column list — keep in sync with row_to_property().
-const COLS: &str = "id, redfin_url, realtor_url, rew_url, title, description, price, price_currency, offer_price,
+const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, description, price, price_currency, offer_price,
                     street_address, city, region, postal_code, country,
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
@@ -43,6 +43,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
               redfin_url              = ?,
               realtor_url             = ?,
               rew_url                 = ?,
+              zillow_url              = ?,
                title                    = ?,
                description              = ?,
                price                    = ?,
@@ -85,6 +86,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(&p.redfin_url)
     .bind(&p.realtor_url)
     .bind(&p.rew_url)
+    .bind(&p.zillow_url)
     .bind(&p.title)
     .bind(&p.description)
     .bind(p.price)
@@ -199,6 +201,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         redfin_url: row.get("redfin_url"),
         realtor_url: row.get("realtor_url"),
         rew_url: row.get("rew_url"),
+        zillow_url: row.get("zillow_url"),
         title: row.get("title"),
         description: row.get("description"),
         price: row.get("price"),

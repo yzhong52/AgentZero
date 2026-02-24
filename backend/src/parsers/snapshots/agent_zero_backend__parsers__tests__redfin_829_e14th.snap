@@ -1,6 +1,6 @@
 ---
 source: src/parsers/tests.rs
-expression: property
+expression: listing_to_property(listing)
 ---
 {
   "id": 0,

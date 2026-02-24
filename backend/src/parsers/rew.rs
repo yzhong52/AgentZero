@@ -268,10 +268,9 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore = "requires a locally fetched page: curl -s -A 'Mozilla/5.0' https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc > /tmp/rew_page.html"]
     fn test_parse_909_w18th() {
-        let html = std::fs::read_to_string("/tmp/rew_page.html")
-            .expect("Run: curl -s -A 'Mozilla/5.0' https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc > /tmp/rew_page.html");
-
+        let html = std::fs::read_to_string("/tmp/rew_page.html").expect("file not found");
         let result = parse("https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc", &html)
             .expect("Parser returned None");
 

@@ -52,7 +52,7 @@ expression: property
   "zillow_url": null,
   "mls_number": null,
   "listed_date": "2026-02-03",
-  "status": null,
+  "status": "Interested",
   "notes": null,
   "images": [
     {

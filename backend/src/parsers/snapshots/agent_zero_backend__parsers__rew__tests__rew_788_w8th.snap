@@ -18,7 +18,7 @@ expression: property
   "property_type": "Townhouse",
   "bedrooms": 3,
   "bathrooms": 3,
-  "sqft": null,
+  "sqft": 1560,
   "land_sqft": null,
   "year_built": 1991,
   "parking_garage": 2,
@@ -52,7 +52,7 @@ expression: property
   "zillow_url": null,
   "mls_number": "R3086230",
   "listed_date": null,
-  "status": null,
+  "status": "Interested",
   "notes": null,
   "images": [
     {

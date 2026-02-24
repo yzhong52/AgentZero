@@ -125,6 +125,32 @@ fn extract_property_type(document: &Html) -> Option<String> {
     re.captures(content).and_then(|c| c.get(1)).map(|m| m.as_str().trim().to_string())
 }
 
+// ── Floor area (sqft) extraction ─────────────────────────────────────────────
+
+/// Extracts interior floor area from the `data-listing-sqft` attribute on the
+/// summary list item, falling back to the meta description "is N Sqft" pattern.
+fn extract_sqft(document: &Html) -> Option<i64> {
+    // Primary: <li data-listing-sqft="1560">…</li>
+    let sel = Selector::parse("li[data-listing-sqft]").unwrap();
+    if let Some(el) = document.select(&sel).next() {
+        if let Some(v) = el.value().attr("data-listing-sqft") {
+            if let Ok(n) = v.trim().parse::<i64>() {
+                if n > 0 {
+                    return Some(n);
+                }
+            }
+        }
+    }
+    // Fallback: "This property features N beds, M baths and is N Sqft."
+    let desc_sel = Selector::parse("meta[name='description']").unwrap();
+    let content = document.select(&desc_sel).next()
+        .and_then(|el| el.value().attr("content"))?;
+    let re = regex::Regex::new(r"(?i)is ([\d,]+)\s*sqft").ok()?;
+    re.captures(content)
+        .and_then(|c| c.get(1))
+        .and_then(|m| parse_int(m.as_str()))
+}
+
 // ── Price extraction ──────────────────────────────────────────────────────────
 
 /// rew.ca renders price as: <div class='mr-3 5'>$2,488,800</div>
@@ -245,6 +271,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
     let mls_number = extract_mls_number(&document);
     let property_type = extract_property_type(&document);
+    let sqft = extract_sqft(&document);
 
     let property = db::Property {
         id: 0,
@@ -265,7 +292,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         property_type,
         bedrooms,
         bathrooms,
-        sqft: None, // rew.ca often omits interior sqft
+        sqft, // from data-listing-sqft attribute
         year_built,
         lat: addr.lat,
         lon: addr.lon,

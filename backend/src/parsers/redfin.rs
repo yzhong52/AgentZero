@@ -331,3 +331,60 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let image_urls = extract_image_urls(&json_ld);
     Some(ParsedListing { property, image_urls })
 }
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db;
+
+    fn fixture(name: &str) -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("parsers")
+            .join("fixtures")
+            .join(name)
+    }
+
+    fn listing_to_property(listing: ParsedListing) -> db::Property {
+        let images = listing
+            .image_urls
+            .into_iter()
+            .enumerate()
+            .map(|(i, url)| db::ImageEntry {
+                id: i as i64,
+                url,
+                created_at: String::new(),
+            })
+            .collect();
+        db::Property {
+            images,
+            ..listing.property
+        }
+    }
+
+    #[test]
+    fn redfin_829_e14th() {
+        let html = std::fs::read_to_string(fixture("redfin_829_e14th.html")).expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/829-E-14th-Ave-V5T-2N5/home/155809679",
+            &html,
+        )
+        .expect("parse failed");
+        insta::assert_json_snapshot!("redfin_829_e14th", listing_to_property(listing));
+    }
+
+    #[test]
+    fn redfin_788_w8th() {
+        let html = std::fs::read_to_string(fixture("redfin_788_w8th.html")).expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/788-W-8th-Ave-V5Z-1E1/home/",
+            &html,
+        )
+        .expect("parse failed");
+        let property = listing_to_property(listing);
+        assert_eq!(property.hoa_monthly, Some(1137), "hoa_monthly");
+        insta::assert_json_snapshot!("redfin_788_w8th", property);
+    }
+}

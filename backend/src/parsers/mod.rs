@@ -8,9 +8,6 @@
 pub mod redfin;
 pub mod realtor;
 pub mod rew;
-
-#[cfg(test)]
-mod tests;
 pub mod zillow;
 
 use crate::db;

@@ -265,7 +265,46 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
 #[cfg(test)]
 mod tests {
+    use crate::db;
     use super::*;
+
+    fn fixture(name: &str) -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src")
+            .join("parsers")
+            .join("fixtures")
+            .join(name)
+    }
+
+    fn listing_to_property(listing: ParsedListing) -> db::Property {
+        let images = listing
+            .image_urls
+            .into_iter()
+            .enumerate()
+            .map(|(i, url)| db::ImageEntry {
+                id: i as i64,
+                url,
+                created_at: String::new(),
+            })
+            .collect();
+        db::Property {
+            images,
+            ..listing.property
+        }
+    }
+
+    #[test]
+    fn rew_788_w8th() {
+        let html = std::fs::read_to_string(fixture("rew_788_w8th.html")).expect("fixture not found");
+        let listing = parse(
+            "https://www.rew.ca/properties/l01-788-w-8th-avenue-vancouver-bc",
+            &html,
+        )
+        .expect("parse failed");
+        let property = listing_to_property(listing);
+        assert_eq!(property.hoa_monthly, Some(1137), "hoa_monthly");
+        insta::assert_json_snapshot!("rew_788_w8th", property);
+    }
 
     #[test]
     #[ignore = "requires a locally fetched page: curl -s -A 'Mozilla/5.0' https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc > /tmp/rew_page.html"]

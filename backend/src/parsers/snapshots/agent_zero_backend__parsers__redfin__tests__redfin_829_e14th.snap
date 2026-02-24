@@ -1,5 +1,5 @@
 ---
-source: src/parsers/tests.rs
+source: src/parsers/redfin.rs
 expression: listing_to_property(listing)
 ---
 {

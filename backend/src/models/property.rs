@@ -22,9 +22,6 @@ pub struct Property {
     // ── Price ────────────────────────────────────────────────────────────────
     pub price: Option<i64>,               // parsed; editable
     pub price_currency: Option<String>,   // parsed; editable
-    /// User's intended offer price — drives all mortgage calculations.
-    /// When null the application falls back to `price` for calculations.
-    pub offer_price: Option<i64>,         // editable (Offer & Finance panel)
 
     // ── Location ─────────────────────────────────────────────────────────────
     pub street_address: Option<String>,   // parsed; editable
@@ -40,13 +37,13 @@ pub struct Property {
     pub bedrooms: Option<i64>,            // parsed; editable
     pub bathrooms: Option<i64>,           // parsed; editable
     pub sqft: Option<i64>,                // parsed; editable
+    pub land_sqft: Option<i64>,           // parsed; editable
     pub year_built: Option<i64>,          // parsed; editable
 
-    // ── Parking / land ───────────────────────────────────────────────────────
+    // ── Parking ──────────────────────────────────────────────────────────────
     pub parking_garage: Option<i64>,      // parsed; editable
     pub parking_covered: Option<i64>,     // parsed; editable
     pub parking_open: Option<i64>,        // parsed; editable
-    pub land_sqft: Option<i64>,           // parsed; editable
 
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>, // parsed; editable
@@ -58,6 +55,9 @@ pub struct Property {
     pub skytrain_walk_min: Option<i64>,   // editable
 
     // ── Finance ──────────────────────────────────────────────────────────────
+    /// User's intended offer price — drives all mortgage calculations.
+    /// When null the application falls back to `price` for calculations.
+    pub offer_price: Option<i64>,           // editable (Finance panel)
     pub property_tax: Option<i64>,          // parsed; editable (Finance panel)
     pub hoa_monthly: Option<i64>,           // parsed; editable (Finance panel)
     pub down_payment_pct: Option<f64>,      // editable (Finance panel)
@@ -113,8 +113,6 @@ pub struct UserDetails {
     // ── Price ────────────────────────────────────────────────────────────────
     pub price: Option<i64>,
     pub price_currency: Option<String>,
-    /// User's intended offer price — drives mortgage calculations. Null means "use listing price".
-    pub offer_price: Option<i64>,
 
     // ── Location ─────────────────────────────────────────────────────────────
     pub street_address: Option<String>,
@@ -127,13 +125,13 @@ pub struct UserDetails {
     pub bedrooms: Option<i64>,
     pub bathrooms: Option<i64>,
     pub sqft: Option<i64>,
+    pub land_sqft: Option<i64>,
     pub year_built: Option<i64>,
 
-    // ── Parking / land ───────────────────────────────────────────────────────
+    // ── Parking ──────────────────────────────────────────────────────────────
     pub parking_garage: Option<i64>,
     pub parking_covered: Option<i64>,
     pub parking_open: Option<i64>,
-    pub land_sqft: Option<i64>,
 
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>,
@@ -145,6 +143,8 @@ pub struct UserDetails {
     pub skytrain_walk_min: Option<i64>,
 
     // ── Finance ──────────────────────────────────────────────────────────────
+    /// User's intended offer price — drives mortgage calculations. Null means "use listing price".
+    pub offer_price: Option<i64>,
     pub property_tax: Option<i64>,
     pub hoa_monthly: Option<i64>,
     pub down_payment_pct: Option<f64>,

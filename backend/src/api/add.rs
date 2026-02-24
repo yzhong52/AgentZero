@@ -24,7 +24,7 @@ use serde::Deserialize;
 use url::Url;
 
 use crate::{
-    AppState, IMAGES_URL_PREFIX,
+    AppState,
     db, images, parsers,
     safe_url, fetch_html,
     compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost,
@@ -127,7 +127,6 @@ pub async fn add_listing(
         &state.client,
         state.store.as_ref(),
         saved.id,
-        IMAGES_URL_PREFIX,
     )
     .await;
 

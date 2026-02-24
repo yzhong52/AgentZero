@@ -10,9 +10,10 @@ pub struct ImageEntry {
 }
 
 /// An image that has been successfully downloaded and cached locally.
-/// Only rows with non-null local_path are returned here (used for dedup).
+/// Only rows with non-null ext are returned here (used for dedup).
 pub struct CachedImage {
     pub sha256: String,
     pub phash: i64,
-    pub local_path: String,
+    /// File extension (e.g. `"jpg"`), used to reconstruct the object key and serve URL.
+    pub ext: String,
 }

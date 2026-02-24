@@ -2,6 +2,7 @@ mod models;
 mod store;
 mod db;
 mod images;
+mod image_paths;
 mod parsers;
 mod api;
 
@@ -15,15 +16,13 @@ use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 use url::Url;
 
-pub(crate) const IMAGES_URL_PREFIX: &str = "/images";
+use agent_zero_backend::{IMAGES_URL_PREFIX, IMAGES_LOCAL_DIR};
 
 #[derive(Clone)]
 pub(crate) struct AppState {
     db: sqlx::SqlitePool,
     client: Client,
     store: Arc<dyn object_store::ObjectStore>,
-    /// Root directory where image files are written (local filesystem only).
-    images_dir: String,
 }
 
 /// Sums mortgage + monthly property tax + HOA into a total monthly cost.
@@ -111,14 +110,12 @@ async fn main() {
 
     let database_url =
         std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
-    let images_dir =
-        std::env::var("IMAGES_DIR").unwrap_or_else(|_| "listings_images".to_string());
     let db = db::init(&database_url).await;
 
     // Local filesystem store.
-    images::ensure_images_dir(&images_dir).await;
+    images::ensure_images_dir(IMAGES_LOCAL_DIR).await;
     let store: Arc<dyn object_store::ObjectStore> = Arc::new(
-        LocalFileSystem::new_with_prefix(std::path::Path::new(&images_dir))
+        LocalFileSystem::new_with_prefix(std::path::Path::new(IMAGES_LOCAL_DIR))
             .expect("Failed to initialize local image store"),
     );
 
@@ -131,7 +128,6 @@ async fn main() {
         db,
         client,
         store,
-        images_dir,
     };
 
     let cors = CorsLayer::new()
@@ -158,7 +154,7 @@ async fn main() {
         .route("/api/listings/:id/history",           get(api::details::get_history))
         .route("/api/listings/:id/images/:image_id",  delete(api::images::delete_image))
         // Static image files
-        .nest_service("/images", ServeDir::new(&state.images_dir))
+        .nest_service(IMAGES_URL_PREFIX, ServeDir::new(IMAGES_LOCAL_DIR))
         .with_state(state)
         .layer(cors);
 

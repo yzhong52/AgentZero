@@ -8,7 +8,8 @@ use axum::{Json, extract::{State, Path}, http::StatusCode};
 use object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use tokio::fs;
 
-use crate::{AppState, IMAGES_URL_PREFIX, db};
+use crate::{AppState, db};
+use agent_zero_backend::image_paths;
 
 /// GET /api/listings
 ///
@@ -50,17 +51,15 @@ pub async fn delete_listing(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     for img in &cached {
-        let object_key = img.local_path
-            .strip_prefix(&format!("{}/", IMAGES_URL_PREFIX))
-            .unwrap_or(&img.local_path);
-        if let Err(e) = state.store.delete(&ObjectPath::from(object_key)).await {
+        let object_key = image_paths::object_key(id, &img.sha256, &img.ext);
+        if let Err(e) = state.store.delete(&ObjectPath::from(object_key.as_str())).await {
             tracing::warn!("delete_listing: could not remove image file {}: {}", object_key, e);
             // Continue — file may already be gone; don't block the delete.
         }
     }
 
     // 2. Remove the per-listing image directory (now empty after step 1).
-    let dir = format!("{}/{}", state.images_dir, id);
+    let dir = format!("{}/{}", crate::IMAGES_LOCAL_DIR, id);
     if let Err(e) = fs::remove_dir(&dir).await {
         tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
     }

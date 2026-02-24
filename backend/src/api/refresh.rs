@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use crate::db;
 use crate::images;
 use crate::parsers;
-use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost, AppState, IMAGES_URL_PREFIX};
+use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost, AppState};
 
 /// PUT /api/listings/:id/refresh
 ///
@@ -124,7 +124,6 @@ pub async fn refresh_listing(
         &state.client,
         state.store.as_ref(),
         id,
-        IMAGES_URL_PREFIX,
     )
     .await;
 

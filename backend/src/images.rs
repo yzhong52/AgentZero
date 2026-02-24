@@ -1,4 +1,5 @@
 use crate::db;
+use crate::image_paths;
 use image::imageops::FilterType;
 use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
 use reqwest::Client;
@@ -43,8 +44,8 @@ fn image_ext(bytes: &[u8]) -> &'static str {
 
 /// Download and cache all pending images for a listing.
 ///
-/// "Pending" means rows in images_cache where local_path IS NULL.
-/// On success, sha256 / phash / local_path are written back to the row.
+/// "Pending" means rows in images_cache where ext IS NULL.
+/// On success, sha256 / phash / ext are written back to the row.
 /// On failure (404, network error, decode error), the row is left with
 /// NULL fields so the API falls back to source_url.
 ///
@@ -54,7 +55,6 @@ pub async fn cache_images(
     client: &Client,
     store: &dyn ObjectStore,
     listing_id: i64,
-    url_prefix: &str,
 ) -> usize {
     // Already-cached images for this listing (for SHA-256 / dHash dedup).
     let mut cached = db::list_cached_images(pool, listing_id)
@@ -97,7 +97,7 @@ pub async fn cache_images(
         // SHA-256 — exact duplicate within this listing.
         let sha256 = hex::encode(Sha256::digest(&bytes));
         if let Some(c) = cached.iter().find(|c| c.sha256 == sha256) {
-            let _ = db::update_cached_image(pool, listing_id, url, &sha256, c.phash, &c.local_path).await;
+            let _ = db::update_cached_image(pool, listing_id, url, &sha256, c.phash, &c.ext).await;
             continue;
         }
 
@@ -119,28 +119,27 @@ pub async fn cache_images(
                     url,
                     hamming(existing.phash, ph)
                 );
-                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.local_path).await;
+                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.ext).await;
                 continue;
             }
         }
 
         // Write to object store.
         let ext = image_ext(&bytes);
-        let object_key = ObjectPath::from(format!("{}/{}.{}", listing_id, sha256, ext));
-        let serve_url = format!("{}/{}", url_prefix, object_key);
+        let object_key = ObjectPath::from(image_paths::object_key(listing_id, &sha256, ext));
 
         if let Err(e) = store.put(&object_key, bytes.clone().into()).await {
             tracing::warn!("Failed to write image to store {}: {}", object_key, e);
             continue;
         }
 
-        let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &serve_url).await;
+        let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, ext).await;
 
         // Update in-memory list for subsequent dedup checks.
         cached.push(db::CachedImage {
             sha256,
             phash: ph,
-            local_path: serve_url,
+            ext: ext.to_string(),
         });
 
         newly_cached += 1;

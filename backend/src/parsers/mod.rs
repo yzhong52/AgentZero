@@ -513,7 +513,7 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
     parsed.sort_by_key(|ps| source_rank(ps.kind));
 
     let first = parsed.remove(0);
-    let (mut primary_source, mut merged_listing) = (first.kind, first.listing);
+    let (primary_source, mut merged_listing) = (first.kind, first.listing);
     for ps in parsed {
         merged_listing = merge_listing(
             merged_listing,
@@ -521,9 +521,6 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
             primary_source,
             ps.kind,
         );
-        if source_rank(ps.kind) < source_rank(primary_source) {
-            primary_source = ps.kind;
-        }
     }
 
     tracing::info!(

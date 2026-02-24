@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
+import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
@@ -70,6 +71,91 @@ function calcInitialMonthlyInterest(price: number | null, downPct: number, annua
 
 function moneyPart(v: number | null): string {
     return `$${(v ?? 0).toLocaleString()}`
+}
+
+type EmojiSuggestion = {
+    name: string
+    emoji: string
+}
+
+const EMOJI_ALIAS_TO_CANONICAL: Record<string, string> = {
+    warn: 'warning',
+    ok: 'white_check_mark',
+    check: 'white_check_mark',
+    xmark: 'x',
+    nope: 'x',
+}
+
+const POPULAR_EMOJI_NAMES = [
+    'warning',
+    'white_check_mark',
+    'x',
+    'fire',
+    'rocket',
+    'hourglass',
+    'eyes',
+    'bulb',
+    'star',
+    'moneybag',
+    'house',
+    'key',
+]
+
+const POPULAR_EMOJI_SUGGESTIONS: EmojiSuggestion[] = POPULAR_EMOJI_NAMES
+    .map(name => ({ name, emoji: getEmoji(name) }))
+    .filter((item): item is EmojiSuggestion => typeof item.emoji === 'string')
+
+function normalizeEmojiAliases(input: string): string {
+    return input.replace(/:([a-z0-9_+-]+):/gi, (match, shortcode: string) => {
+        const canonical = EMOJI_ALIAS_TO_CANONICAL[shortcode.toLowerCase()]
+        return canonical ? `:${canonical}:` : match
+    })
+}
+
+function replaceEmojiShortcodes(input: string): string {
+    return emojify(normalizeEmojiAliases(input))
+}
+
+function detectEmojiQuery(input: string, caretPos: number): { start: number; end: number; query: string } | null {
+    if (caretPos < 0 || caretPos > input.length) return null
+
+    const beforeCaret = input.slice(0, caretPos)
+    const start = beforeCaret.lastIndexOf(':')
+    if (start < 0) return null
+
+    if (start > 0) {
+        const prevChar = input[start - 1]
+        if (!/[\s([{"']/.test(prevChar)) return null
+    }
+
+    const query = input.slice(start + 1, caretPos)
+    if (!/^[a-z0-9_+-]*$/i.test(query)) return null
+    if (query.includes(':')) return null
+
+    return { start, end: caretPos, query: query.toLowerCase() }
+}
+
+function buildEmojiSuggestions(query: string): EmojiSuggestion[] {
+    if (!query) return POPULAR_EMOJI_SUGGESTIONS
+
+    const canonical = EMOJI_ALIAS_TO_CANONICAL[query]
+    const aliasSuggestion = canonical
+        ? getEmoji(canonical)
+            ? [{ name: query, emoji: getEmoji(canonical)! }]
+            : []
+        : []
+
+    const results = searchEmoji(query)
+        .slice(0, 20)
+        .map(r => ({ name: r.name, emoji: r.emoji }))
+
+    const deduped = new Map<string, EmojiSuggestion>()
+    for (const item of [...aliasSuggestion, ...results]) {
+        const key = `${item.name}:${item.emoji}`
+        if (!deduped.has(key)) deduped.set(key, item)
+        if (deduped.size >= 8) break
+    }
+    return Array.from(deduped.values())
 }
 
 
@@ -272,6 +358,10 @@ export function PropertyDetail() {
     const [notes, setNotes] = useState<string>('')
     const [notesSaving, setNotesSaving] = useState(false)
     const [notesEditing, setNotesEditing] = useState(false)
+    const notesInputRef = useRef<HTMLTextAreaElement>(null)
+    const [emojiSuggestions, setEmojiSuggestions] = useState<EmojiSuggestion[]>([])
+    const [emojiSuggestActiveIdx, setEmojiSuggestActiveIdx] = useState(0)
+    const [emojiSuggestRange, setEmojiSuggestRange] = useState<{ start: number; end: number } | null>(null)
 
     // Title (inline header)
     const [titleDraft, setTitleDraft] = useState<string>('')
@@ -518,11 +608,15 @@ export function PropertyDetail() {
     async function handleNotesSave() {
         if (!property) return
         setNotesSaving(true)
+        const normalizedNotes = replaceEmojiShortcodes(notes)
+        setNotes(normalizedNotes)
+        setEmojiSuggestions([])
+        setEmojiSuggestRange(null)
         try {
             const resp = await fetch(`/api/listings/${property.id}/notes`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ notes: notes || null }),
+                body: JSON.stringify({ notes: normalizedNotes || null }),
             })
             if (!resp.ok) throw new Error(await resp.text())
         } catch (err: any) {
@@ -530,6 +624,36 @@ export function PropertyDetail() {
         } finally {
             setNotesSaving(false)
         }
+    }
+
+    function refreshEmojiSuggestions(inputValue: string, caretPos: number) {
+        const trigger = detectEmojiQuery(inputValue, caretPos)
+        if (!trigger) {
+            setEmojiSuggestions([])
+            setEmojiSuggestRange(null)
+            setEmojiSuggestActiveIdx(0)
+            return
+        }
+
+        const suggestions = buildEmojiSuggestions(trigger.query)
+        setEmojiSuggestions(suggestions)
+        setEmojiSuggestRange({ start: trigger.start, end: trigger.end })
+        setEmojiSuggestActiveIdx(0)
+    }
+
+    function insertEmojiSuggestion(suggestion: EmojiSuggestion) {
+        if (!emojiSuggestRange) return
+        const next = `${notes.slice(0, emojiSuggestRange.start)}${suggestion.emoji}${notes.slice(emojiSuggestRange.end)}`
+        const nextCaret = emojiSuggestRange.start + suggestion.emoji.length
+        setNotes(next)
+        setEmojiSuggestions([])
+        setEmojiSuggestRange(null)
+        requestAnimationFrame(() => {
+            const textarea = notesInputRef.current
+            if (!textarea) return
+            textarea.focus()
+            textarea.setSelectionRange(nextCaret, nextCaret)
+        })
     }
 
     // ── Title (inline) ─────────────────────────────────────────────────────────
@@ -1127,15 +1251,77 @@ export function PropertyDetail() {
                     <div className="right-panel-section">
                         <h3 className="notes-heading">My Notes</h3>
                         {notesEditing ? (
-                            <textarea
-                                className="notes-textarea"
-                                value={notes}
-                                onChange={e => setNotes(e.target.value)}
-                                onBlur={() => { setNotesEditing(false); handleNotesSave() }}
-                                placeholder="Add personal notes… (supports markdown)"
-                                disabled={notesSaving}
-                                autoFocus
-                            />
+                            <div className="notes-edit-wrap">
+                                <textarea
+                                    ref={notesInputRef}
+                                    className="notes-textarea"
+                                    value={notes}
+                                    onChange={e => {
+                                        const next = replaceEmojiShortcodes(e.target.value)
+                                        setNotes(next)
+                                        refreshEmojiSuggestions(next, e.target.selectionStart ?? next.length)
+                                    }}
+                                    onClick={e => refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)}
+                                    onKeyUp={e => {
+                                        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') {
+                                            return
+                                        }
+                                        refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)
+                                    }}
+                                    onKeyDown={e => {
+                                        if (emojiSuggestions.length === 0) return
+                                        if (e.key === 'ArrowDown') {
+                                            e.preventDefault()
+                                            setEmojiSuggestActiveIdx(i => (i + 1) % emojiSuggestions.length)
+                                            return
+                                        }
+                                        if (e.key === 'ArrowUp') {
+                                            e.preventDefault()
+                                            setEmojiSuggestActiveIdx(i => (i - 1 + emojiSuggestions.length) % emojiSuggestions.length)
+                                            return
+                                        }
+                                        if (e.key === 'Enter' || e.key === 'Tab') {
+                                            e.preventDefault()
+                                            const picked = emojiSuggestions[emojiSuggestActiveIdx] ?? emojiSuggestions[0]
+                                            if (picked) insertEmojiSuggestion(picked)
+                                            return
+                                        }
+                                        if (e.key === 'Escape') {
+                                            e.preventDefault()
+                                            setEmojiSuggestions([])
+                                            setEmojiSuggestRange(null)
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        setEmojiSuggestions([])
+                                        setEmojiSuggestRange(null)
+                                        setNotesEditing(false)
+                                        handleNotesSave()
+                                    }}
+                                    placeholder="Add personal notes… (supports markdown, emoji shortcodes like :warning:)"
+                                    disabled={notesSaving}
+                                    autoFocus
+                                />
+                                {emojiSuggestions.length > 0 && (
+                                    <div className="emoji-suggest" role="listbox" aria-label="Emoji suggestions">
+                                        {emojiSuggestions.map((item, idx) => (
+                                            <button
+                                                key={`${item.name}-${item.emoji}`}
+                                                type="button"
+                                                className={`emoji-suggest-item${idx === emojiSuggestActiveIdx ? ' active' : ''}`}
+                                                onMouseDown={e => {
+                                                    e.preventDefault()
+                                                    insertEmojiSuggestion(item)
+                                                }}
+                                                title={`:${item.name}:`}
+                                            >
+                                                <span className="emoji-suggest-glyph">{item.emoji}</span>
+                                                <span className="emoji-suggest-name">:{item.name}:</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <div
                                 className={`notes-display${notes ? '' : ' notes-display-empty'}`}

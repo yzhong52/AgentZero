@@ -183,13 +183,6 @@
   margin-bottom: 1.25rem;
 }
 
-.status-picker-label {
-  display: block;
-  font-size: 0.78rem;
-  color: #888;
-  margin-bottom: 0.4rem;
-}
-
 .status-picker-buttons {
   display: flex;
   gap: 0.35rem;
@@ -344,16 +337,29 @@
 .refresh-btn {
   background: none;
   border: none;
-  color: #4f46e5;
-  font-size: 1rem;
   cursor: pointer;
-  padding: 0.5rem 0.75rem;
   transition: color 0.2s;
   border-radius: 4px;
 }
 
+.back-btn {
+  color: #4f46e5;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.refresh-btn {
+  color: #6b7280;
+  font-size: 0.82rem;
+  padding: 0.2rem 0.4rem;
+}
+
 .back-btn:hover,
 .refresh-btn:hover {
+  color: #4b5563;
+}
+
+.back-btn:hover {
   color: #6366f1;
 }
 
@@ -647,9 +653,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e5ea;
-  margin-bottom: 0.5rem;
 }
 
 .source-urls-header {
@@ -664,6 +667,65 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+}
+
+.source-url-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.source-url-link {
+  font-size: 0.8rem;
+  color: #2563eb;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-url-link:hover {
+  text-decoration: underline;
+}
+
+.source-url-empty {
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.source-url-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.source-url-edit-row .edit-input {
+  flex: 1;
+}
+
+.source-url-edit-btn {
+  border: none;
+  background: transparent;
+  color: #374151;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 1;
+}
+
+.source-url-edit-btn:hover {
+  color: #111827;
+  opacity: 1;
+}
+
+.source-url-edit-icon {
+  width: 0.78rem;
+  height: 0.78rem;
+  display: block;
 }
 
 .source-url-field label {
@@ -718,6 +780,22 @@
 /* ── change history ── */
 .history-panel {
   margin-top: 1.25rem;
+}
+
+.right-panel-section {
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid #e5e5ea;
+}
+
+.right-panel-section:first-child {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+
+.right-panel-section>.notes-heading {
+  margin-bottom: 0.25rem;
 }
 
 .history-list {

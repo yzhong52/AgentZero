@@ -297,6 +297,7 @@ export function PropertyDetail() {
         rew_url: string | null
         zillow_url: string | null
     }>({ redfin_url: null, realtor_url: null, rew_url: null, zillow_url: null })
+    const [editingUrlKey, setEditingUrlKey] = useState<'redfin_url' | 'realtor_url' | 'rew_url' | 'zillow_url' | null>(null)
     const [urlsSaving, setUrlsSaving] = useState(false)
 
     // Lightbox
@@ -445,6 +446,7 @@ export function PropertyDetail() {
             const updated: Property = await resp.json()
             setProperty({ ...updated, images: property.images })
             setUrlDraft({ redfin_url: updated.redfin_url, realtor_url: updated.realtor_url, rew_url: updated.rew_url, zillow_url: updated.zillow_url })
+            setEditingUrlKey(null)
             return true
         } catch (err: any) {
             setError(err?.message || String(err))
@@ -617,6 +619,12 @@ export function PropertyDetail() {
         urlDraft.realtor_url !== property.realtor_url ||
         urlDraft.rew_url !== property.rew_url ||
         urlDraft.zillow_url !== property.zillow_url
+    const externalUrlRows: Array<{ key: 'redfin_url' | 'realtor_url' | 'rew_url' | 'zillow_url'; label: string; placeholder: string }> = [
+        { key: 'redfin_url', label: 'Redfin', placeholder: 'https://www.redfin.ca/…' },
+        { key: 'realtor_url', label: 'Realtor.ca', placeholder: 'https://www.realtor.ca/…' },
+        { key: 'rew_url', label: 'rew.ca', placeholder: 'https://www.rew.ca/properties/…' },
+        { key: 'zillow_url', label: 'Zillow', placeholder: 'https://www.zillow.com/homedetails/…' },
+    ]
     const monthlyTotalBreakdown = `${moneyPart(finance.mortgage_monthly)} mortgage + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
     const monthlyCostBreakdown = `${moneyPart(initialMonthlyInterest)} initial interest + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
 
@@ -1094,43 +1102,8 @@ export function PropertyDetail() {
                 </div>
 
                 <div className="notes-panel">
-                    <div className="source-urls-panel">
-                        <div className="source-urls-header">
-                            <h3 className="notes-heading">Source URLs</h3>
-                            <button
-                                className="refresh-btn"
-                                onClick={handleRefreshPreview}
-                                disabled={previewing || editMode || urlsSaving}
-                                title="Preview changes from source (saves URL edits first)"
-                            >
-                                {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
-                            </button>
-                        </div>
-                        <div className="source-url-field">
-                            <label>Redfin</label>
-                            <input className="edit-input" type="url" value={urlDraft.redfin_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, redfin_url: e.target.value || null }))} placeholder="https://www.redfin.ca/…" />
-                        </div>
-                        <div className="source-url-field">
-                            <label>Realtor.ca</label>
-                            <input className="edit-input" type="url" value={urlDraft.realtor_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, realtor_url: e.target.value || null }))} placeholder="https://www.realtor.ca/…" />
-                        </div>
-                        <div className="source-url-field">
-                            <label>rew.ca</label>
-                            <input className="edit-input" type="url" value={urlDraft.rew_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, rew_url: e.target.value || null }))} placeholder="https://www.rew.ca/properties/…" />
-                        </div>
-                        <div className="source-url-field">
-                            <label>Zillow</label>
-                            <input className="edit-input" type="url" value={urlDraft.zillow_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, zillow_url: e.target.value || null }))} placeholder="https://www.zillow.com/homedetails/…" />
-                        </div>
-                        {hasUrlChanges && (
-                            <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
-                                {urlsSaving ? 'Saving…' : 'Save URLs'}
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="status-picker">
-                        <label className="status-picker-label">Status</label>
+                    <div className="status-picker right-panel-section">
+                        <h3 className="notes-heading">Status</h3>
                         <div className="status-picker-buttons">
                             {STATUS_OPTIONS.map(s => (
                                 <button
@@ -1145,19 +1118,100 @@ export function PropertyDetail() {
                         </div>
                     </div>
 
-                    <h3 className="notes-heading">My Notes</h3>
-                    <textarea
-                        className="notes-textarea"
-                        value={notes}
-                        onChange={e => setNotes(e.target.value)}
-                        onBlur={handleNotesSave}
-                        placeholder="Add personal notes about this property…"
-                        disabled={notesSaving}
-                    />
-                    {notesSaving && <div className="notes-saving">Saving…</div>}
+                    <div className="right-panel-section">
+                        <h3 className="notes-heading">My Notes</h3>
+                        <textarea
+                            className="notes-textarea"
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            onBlur={handleNotesSave}
+                            placeholder="Add personal notes about this property…"
+                            disabled={notesSaving}
+                        />
+                        {notesSaving && <div className="notes-saving">Saving…</div>}
+                    </div>
+
+                    <div className="source-urls-panel right-panel-section">
+                        <div className="source-urls-header">
+                            <h3 className="notes-heading">External URLs</h3>
+                            <button
+                                className="refresh-btn"
+                                onClick={handleRefreshPreview}
+                                disabled={previewing || editMode || urlsSaving}
+                                title="Preview changes from source (saves URL edits first)"
+                            >
+                                {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
+                            </button>
+                        </div>
+                        {externalUrlRows.map(({ key, label, placeholder }) => {
+                            const currentValue = urlDraft[key]
+                            const isEditing = editingUrlKey === key
+                            return (
+                                <div className="source-url-field" key={key}>
+                                    <label>{label}</label>
+                                    {isEditing ? (
+                                        <div className="source-url-edit-row">
+                                            <input
+                                                className="edit-input"
+                                                type="url"
+                                                value={currentValue ?? ''}
+                                                onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
+                                                placeholder={placeholder}
+                                            />
+                                            <button
+                                                className="source-url-edit-btn"
+                                                onClick={() => setEditingUrlKey(null)}
+                                                title="Done editing"
+                                                type="button"
+                                            >
+                                                ✓
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="source-url-line">
+                                            {currentValue ? (
+                                                <a className="source-url-link" href={currentValue} target="_blank" rel="noreferrer">
+                                                    {currentValue}
+                                                </a>
+                                            ) : (
+                                                <span className="source-url-empty">—</span>
+                                            )}
+                                            <button
+                                                className="source-url-edit-btn"
+                                                onClick={() => setEditingUrlKey(key)}
+                                                title={`Edit ${label} URL`}
+                                                type="button"
+                                            >
+                                                <svg className="source-url-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                    <path
+                                                        d="M4 20l4.7-1 9.3-9.3a1.4 1.4 0 0 0 0-2l-1.7-1.7a1.4 1.4 0 0 0-2 0L5 15.3 4 20z"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    />
+                                                    <path
+                                                        d="M13.2 6.8l4 4"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.8"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                        {hasUrlChanges && (
+                            <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
+                                {urlsSaving ? 'Saving…' : 'Save URLs'}
+                            </button>
+                        )}
+                    </div>
 
                     {history.length > 0 && (
-                        <div className="history-panel">
+                        <div className="history-panel right-panel-section">
                             <h3 className="notes-heading">Change History</h3>
                             <ul className="history-list">
                                 {history.map(entry => (
@@ -1177,7 +1231,7 @@ export function PropertyDetail() {
                         </div>
                     )}
 
-                    <div className="listing-timestamps">
+                    <div className="listing-timestamps right-panel-section">
                         <span>Watched since: {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         <span>Last refreshed: {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                     </div>

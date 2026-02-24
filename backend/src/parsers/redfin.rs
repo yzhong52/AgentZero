@@ -58,10 +58,16 @@ fn hoa_fee_re() -> &'static Regex {
 
 // ── School extraction ─────────────────────────────────────────────────────────
 
+/// A single school with its name and optional GreatSchools rating.
+pub struct SchoolEntry {
+    pub name: String,
+    pub rating: Option<f64>,
+}
+
 pub struct SchoolInfo {
-    pub elementary: Option<(String, Option<f64>)>,
-    pub middle: Option<(String, Option<f64>)>,
-    pub secondary: Option<(String, Option<f64>)>,
+    pub elementary: Option<SchoolEntry>,
+    pub middle: Option<SchoolEntry>,
+    pub secondary: Option<SchoolEntry>,
 }
 
 /// Extracts nearby school names and GreatSchools ratings from Redfin's embedded JSON.
@@ -73,9 +79,9 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
     let schools: JsonValue = serde_json::from_str(json_str).ok()?;
     let arr = schools.as_array()?;
 
-    let mut elementary: Option<(String, Option<f64>)> = None;
-    let mut middle: Option<(String, Option<f64>)> = None;
-    let mut secondary: Option<(String, Option<f64>)> = None;
+    let mut elementary: Option<SchoolEntry> = None;
+    let mut middle: Option<SchoolEntry> = None;
+    let mut secondary: Option<SchoolEntry> = None;
 
     for s in arr {
         let name = match s["name"].as_str().or_else(|| s["schoolName"].as_str()) {
@@ -92,11 +98,11 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
 
         let lower = level.to_lowercase();
         if (lower.contains('e') || lower.starts_with('k') || lower.contains("elementary") || lower.contains("primary")) && elementary.is_none() {
-            elementary = Some((name, rating));
+            elementary = Some(SchoolEntry { name, rating });
         } else if (lower.contains('m') || lower.contains("middle") || lower.contains("junior")) && middle.is_none() {
-            middle = Some((name, rating));
+            middle = Some(SchoolEntry { name, rating });
         } else if (lower.contains('h') || lower.contains("high") || lower.contains("secondary")) && secondary.is_none() {
-            secondary = Some((name, rating));
+            secondary = Some(SchoolEntry { name, rating });
         }
     }
 
@@ -165,12 +171,20 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 
 // ── Amenity features ──────────────────────────────────────────────────────────
 
+/// Parsed results from a property's `amenityFeature` array.
+struct AmenityFeatures {
+    parking_garage: Option<i64>,
+    ac: Option<bool>,
+    radiant_floor_heating: Option<bool>,
+    laundry_in_unit: Option<bool>,
+}
+
 /// Parses `amenityFeature` array entries for parking count, AC, radiant floor heating,
 /// and in-unit laundry.
-fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>, Option<bool>) {
+fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
     let mut parking_garage: Option<i64> = None;
     let mut ac: Option<bool> = None;
-    let mut radiant: Option<bool> = None;
+    let mut radiant_floor_heating: Option<bool> = None;
     let mut laundry_in_unit: Option<bool> = None;
 
     for f in features {
@@ -193,11 +207,11 @@ fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>,
         } else if active && (lower.contains("air conditioning") || lower.contains(" a/c")) {
             ac = Some(true);
         } else if active && lower.contains("radiant") {
-            radiant = Some(true);
+            radiant_floor_heating = Some(true);
         }
     }
 
-    (parking_garage, ac, radiant, laundry_in_unit)
+    AmenityFeatures { parking_garage, ac, radiant_floor_heating, laundry_in_unit }
 }
 
 // ── JSON-LD extraction ────────────────────────────────────────────────────────
@@ -233,7 +247,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
     let lon = entity["geo"]["longitude"].as_f64();
 
     let amenities = entity["amenityFeature"].as_array().map(Vec::as_slice).unwrap_or(&[]);
-    let (parking_garage, ac, radiant_floor_heating, laundry_in_unit) = parse_amenity_features(amenities);
+    let af = parse_amenity_features(amenities);
 
     let property_type = entity["accommodationCategory"].as_str().map(str::to_string);
     let listed_date = listing["datePosted"].as_str().map(|s| s[..s.len().min(10)].to_string());
@@ -264,16 +278,16 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         created_at: String::new(),
         updated_at: None,
         notes: None,
-        parking_garage,
+        parking_garage: af.parking_garage,
         parking_covered: None,
         parking_open: None,
         land_sqft: None,
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,
-        radiant_floor_heating,
-        ac,
-        laundry_in_unit,
+        radiant_floor_heating: af.radiant_floor_heating,
+        ac: af.ac,
+        laundry_in_unit: af.laundry_in_unit,
         // Mortgage params are set by main.rs after parsing (save/refresh handlers).
         down_payment_pct: None,
         mortgage_interest_rate: None,
@@ -331,17 +345,17 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     property.property_tax = extract_property_tax(html);
     property.hoa_monthly = extract_hoa_monthly(html);
     if let Some(schools) = extract_schools(html) {
-        if let Some((name, rating)) = schools.elementary {
-            property.school_elementary = Some(name);
-            property.school_elementary_rating = rating;
+        if let Some(e) = schools.elementary {
+            property.school_elementary = Some(e.name);
+            property.school_elementary_rating = e.rating;
         }
-        if let Some((name, rating)) = schools.middle {
-            property.school_middle = Some(name);
-            property.school_middle_rating = rating;
+        if let Some(e) = schools.middle {
+            property.school_middle = Some(e.name);
+            property.school_middle_rating = e.rating;
         }
-        if let Some((name, rating)) = schools.secondary {
-            property.school_secondary = Some(name);
-            property.school_secondary_rating = rating;
+        if let Some(e) = schools.secondary {
+            property.school_secondary = Some(e.name);
+            property.school_secondary_rating = e.rating;
         }
     }
 

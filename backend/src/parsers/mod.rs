@@ -152,6 +152,12 @@ fn source_rank(kind: SourceKind) -> u8 {
     }
 }
 
+/// A successfully parsed listing tagged with the source that produced it.
+struct ParsedSource {
+    kind: SourceKind,
+    listing: ParsedListing,
+}
+
 fn merge_opt<T>(
     field: &str,
     primary: Option<T>,
@@ -470,18 +476,18 @@ fn merge_listing(
     }
 }
 
-fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
+fn parse_source(url: &str, html: &str) -> Option<ParsedSource> {
     if url.contains("redfin") {
-        return redfin::parse(url, html).map(|parsed| (SourceKind::Redfin, parsed));
+        return redfin::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Redfin, listing });
     }
     if url.contains("rew.ca") {
-        return rew::parse(url, html).map(|parsed| (SourceKind::Rew, parsed));
+        return rew::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Rew, listing });
     }
     if url.contains("zillow.com") {
-        return zillow::parse(url, html).map(|parsed| (SourceKind::Zillow, parsed));
+        return zillow::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Zillow, listing });
     }
     if url.contains("realtor.ca") {
-        return realtor::parse(url, html).map(|parsed| (SourceKind::Realtor, parsed));
+        return realtor::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Realtor, listing });
     }
     None
 }
@@ -495,7 +501,7 @@ fn parse_source(url: &str, html: &str) -> Option<(SourceKind, ParsedListing)> {
 ///
 /// `sources` is a slice of `(url, html)` pairs. Unknown URLs are ignored.
 pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
-    let mut parsed: Vec<(SourceKind, ParsedListing)> = sources
+    let mut parsed: Vec<ParsedSource> = sources
         .iter()
         .filter_map(|(url, html)| parse_source(url, html))
         .collect();
@@ -504,18 +510,19 @@ pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
         return None;
     }
 
-    parsed.sort_by_key(|(source, _)| source_rank(*source));
+    parsed.sort_by_key(|ps| source_rank(ps.kind));
 
-    let (mut primary_source, mut merged_listing) = parsed.remove(0);
-    for (fallback_source, fallback_listing) in parsed {
+    let first = parsed.remove(0);
+    let (mut primary_source, mut merged_listing) = (first.kind, first.listing);
+    for ps in parsed {
         merged_listing = merge_listing(
             merged_listing,
-            fallback_listing,
+            ps.listing,
             primary_source,
-            fallback_source,
+            ps.kind,
         );
-        if source_rank(fallback_source) < source_rank(primary_source) {
-            primary_source = fallback_source;
+        if source_rank(ps.kind) < source_rank(primary_source) {
+            primary_source = ps.kind;
         }
     }
 

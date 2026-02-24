@@ -151,7 +151,33 @@ fn extract_price(document: &Html) -> Option<i64> {
     }
     None
 }
+// ── Address extraction ────────────────────────────────────────────────────────
 
+/// Parsed address and geo fields from a JSON-LD Residence node.
+#[derive(Default)]
+struct AddressInfo {
+    street_address: Option<String>,
+    city: Option<String>,
+    region: Option<String>,
+    postal_code: Option<String>,
+    lat: Option<f64>,
+    lon: Option<f64>,
+}
+
+fn extract_address(residence: Option<&JsonValue>) -> AddressInfo {
+    let Some(r) = residence else {
+        return AddressInfo::default();
+    };
+    let addr = &r["address"];
+    AddressInfo {
+        street_address: addr["streetAddress"].as_str().map(str::to_string),
+        city: addr["addressLocality"].as_str().map(str::to_string),
+        region: addr["addressRegion"].as_str().map(str::to_string),
+        postal_code: addr["postalCode"].as_str().map(str::to_string),
+        lat: r["geo"]["latitude"].as_f64(),
+        lon: r["geo"]["longitude"].as_f64(),
+    }
+}
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /// Parses a rew.ca listing page into a full `ParsedListing`.
@@ -169,19 +195,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let residence = find_residence(&json_ld);
 
     // ── Address (from JSON-LD SingleFamilyResidence) ──────────────────────────
-    let (street_address, city, region, postal_code, lat, lon) = if let Some(r) = residence {
-        let addr = &r["address"];
-        (
-            addr["streetAddress"].as_str().map(str::to_string),
-            addr["addressLocality"].as_str().map(str::to_string),
-            addr["addressRegion"].as_str().map(str::to_string),
-            addr["postalCode"].as_str().map(str::to_string),
-            r["geo"]["latitude"].as_f64(),
-            r["geo"]["longitude"].as_f64(),
-        )
-    } else {
-        (None, None, None, None, None, None)
-    };
+    let addr = extract_address(residence);
 
     // ── Price ─────────────────────────────────────────────────────────────────
     let price = extract_price(&document);
@@ -243,18 +257,18 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         price,
         price_currency: Some("CAD".to_string()),
         offer_price: None,
-        street_address,
-        city,
-        region,
-        postal_code,
+        street_address: addr.street_address,
+        city: addr.city,
+        region: addr.region,
+        postal_code: addr.postal_code,
         country: Some("Canada".to_string()),
         property_type,
         bedrooms,
         bathrooms,
         sqft: None, // rew.ca often omits interior sqft
         year_built,
-        lat,
-        lon,
+        lat: addr.lat,
+        lon: addr.lon,
         images: Vec::new(),
         created_at: String::new(),
         updated_at: None,

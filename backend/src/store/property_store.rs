@@ -234,22 +234,13 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
 /// List properties, optionally filtered by status values.
 ///
 /// - `statuses`: if empty, returns all properties.
-/// - `statuses`: if non-empty, returns only rows whose `status` matches one of the given values.
-///   Pass `None` as one of the values to include rows with a NULL status.
-pub async fn list(pool: &SqlitePool, statuses: &[Option<&str>]) -> Result<Vec<Property>, sqlx::Error> {
+/// - `statuses`: if non-empty, returns only rows whose `status` is in the given list.
+pub async fn list(pool: &SqlitePool, statuses: &[&str]) -> Result<Vec<Property>, sqlx::Error> {
     let sql = if statuses.is_empty() {
         format!("SELECT {COLS} FROM listings ORDER BY created_at DESC")
     } else {
-        // Build: WHERE (status IN ('A','B') OR status IS NULL)
-        let named: Vec<String> = statuses.iter().filter_map(|s| s.map(|v| format!("'{}'", v.replace('\'', "''")))).collect();
-        let mut clauses: Vec<String> = Vec::new();
-        if !named.is_empty() {
-            clauses.push(format!("status IN ({})", named.join(",")));
-        }
-        if statuses.iter().any(|s| s.is_none()) {
-            clauses.push("status IS NULL".to_string());
-        }
-        format!("SELECT {COLS} FROM listings WHERE {} ORDER BY created_at DESC", clauses.join(" OR "))
+        let placeholders: Vec<String> = statuses.iter().map(|v| format!("'{}'", v.replace('\'', "''"))).collect();
+        format!("SELECT {COLS} FROM listings WHERE status IN ({}) ORDER BY created_at DESC", placeholders.join(","))
     };
 
     let rows = sqlx::query(&sql).fetch_all(pool).await?;
@@ -419,7 +410,7 @@ mod tests {
             monthly_cost: None,
             has_rental_suite: None,
             rental_income: None,
-            status: None,
+            status: "Interested".to_string(),
             school_elementary: None,
             school_elementary_rating: None,
             school_middle: None,
@@ -443,7 +434,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing");
+        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing"); // &[] = all
         assert!(saved.id > 0, "expected saved id > 0");
         assert_eq!(saved.title, "Original Title");
         assert_eq!(saved.price, Some(500_000));
@@ -479,7 +470,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing");
+        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing"); // &[] = all
 
         // Build UserDetails with every editable field set to a non-null value.
         let details = UserDetails {
@@ -585,7 +576,7 @@ mod tests {
         merged.school_middle_rating = details.school_middle_rating.or(merged.school_middle_rating);
         merged.school_secondary = details.school_secondary.clone().or(merged.school_secondary.clone());
         merged.school_secondary_rating = details.school_secondary_rating.or(merged.school_secondary_rating);
-        merged.status = details.status.clone().or(merged.status.clone());
+        if let Some(s) = details.status.clone() { merged.status = s; }
         merged.property_type = details.property_type.clone().or(merged.property_type.clone());
         merged.laundry_in_unit = details.laundry_in_unit.or(merged.laundry_in_unit);
         merged.mls_number = details.mls_number.clone().or(merged.mls_number.clone());
@@ -644,7 +635,7 @@ mod tests {
         assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
         assert_eq!(updated.zillow_url.as_deref(), Some("https://zillow.example/2"));
         // Status
-        assert_eq!(updated.status.as_deref(), Some("Interested"));
+        assert_eq!(updated.status, "Interested");
         // Property type and new features
         assert_eq!(updated.property_type.as_deref(), Some("Townhouse"));
         assert_eq!(updated.laundry_in_unit, Some(true));

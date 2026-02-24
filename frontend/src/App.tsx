@@ -54,7 +54,7 @@ export type Property = {
   monthly_cost: number | null
   has_rental_suite: boolean | null
   rental_income: number | null
-  status: string | null
+  status: string
   school_elementary: string | null
   school_elementary_rating: number | null
   school_middle: string | null

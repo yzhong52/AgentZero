@@ -15,8 +15,7 @@ use crate::image_paths;
 #[derive(Deserialize)]
 pub struct ListingsQuery {
     /// Comma-separated status values to include, e.g. `status=Interested,Buyable`.
-    /// Omit to return all listings. Use the literal value `null` to include
-    /// listings with no status set.
+    /// Omit to return all listings.
     pub status: Option<String>,
 }
 
@@ -28,17 +27,12 @@ pub async fn list_listings(
     State(state): State<AppState>,
     Query(params): Query<ListingsQuery>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
-    // Parse "Interested,Buyable" → [Some("Interested"), Some("Buyable")]
-    // The special token "null" maps to None (SQL NULL).
-    let statuses: Vec<Option<String>> = match &params.status {
+    // Parse "Interested,Buyable" → ["Interested", "Buyable"]; empty = all.
+    let statuses: Vec<String> = match &params.status {
         None => vec![],
-        Some(s) => s.split(',')
-            .map(|v| if v == "null" { None } else { Some(v.to_string()) })
-            .collect(),
+        Some(s) => s.split(',').map(str::to_string).collect(),
     };
-    let status_refs: Vec<Option<&str>> = statuses.iter()
-        .map(|o| o.as_deref())
-        .collect();
+    let status_refs: Vec<&str> = statuses.iter().map(String::as_str).collect();
 
     let listings = db::list(&state.db, &status_refs)
         .await

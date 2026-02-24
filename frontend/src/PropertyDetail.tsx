@@ -505,7 +505,7 @@ export function PropertyDetail() {
 
     async function handleStatusChange(newStatus: string) {
         if (!property) return
-        const updated = { ...property, status: newStatus || null }
+        const updated = { ...property, status: newStatus }
         setProperty(updated)
         try {
             const resp = await fetch(`/api/listings/${property.id}/details`, {

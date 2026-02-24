@@ -412,7 +412,7 @@ fn merge_property(
             fallback_source,
         ),
 
-        status: merge_opt("status", primary.status, fallback.status, primary_source, fallback_source),
+        status: primary.status,
 
         school_elementary: merge_opt(
             "school_elementary",

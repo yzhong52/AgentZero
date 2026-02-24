@@ -90,8 +90,8 @@ pub struct Property {
     pub listed_date: Option<String>,  // parsed; display only (ISO date, e.g. "2026-02-17")
 
     // ── User notes / status ──────────────────────────────────────────────────
-    /// User-set status: "Interested" | "Pass" | "Buyable"
-    pub status: Option<String>,  // editable (status widget)
+    /// User-set status: "Interested" | "Pass" | "Buyable". Never null — defaults to "Interested".
+    pub status: String,  // editable (status widget)
     pub notes: Option<String>,   // editable (via PATCH /notes)
 
     // ── System metadata ──────────────────────────────────────────────────────

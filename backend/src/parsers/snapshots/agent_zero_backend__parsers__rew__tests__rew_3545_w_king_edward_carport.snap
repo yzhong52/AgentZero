@@ -1,0 +1,262 @@
+---
+source: src/parsers/rew.rs
+expression: property
+---
+{
+  "id": 0,
+  "title": "For Sale: 3545 W King Edward Avenue, Vancouver, BC",
+  "description": "Browse 40 photos of this House in Dunbar, Vancouver listed for $2,098,000. This property features 5 beds, 3 baths and is 2424 Sqft. MLS® # R3092688",
+  "price": 2098000,
+  "price_currency": "CAD",
+  "street_address": "3545 W King Edward Avenue",
+  "city": "Dunbar",
+  "region": "BC",
+  "postal_code": "V6S 1M4",
+  "country": "Canada",
+  "lat": 49.250138071,
+  "lon": -123.1833352908,
+  "property_type": "House",
+  "bedrooms": 5,
+  "bathrooms": 2,
+  "sqft": 2424,
+  "land_sqft": 4026,
+  "year_built": 1930,
+  "parking_total": 1,
+  "parking_garage": null,
+  "parking_carport": 1,
+  "parking_pad": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "laundry_in_unit": null,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "offer_price": null,
+  "property_tax": 9584,
+  "hoa_monthly": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "monthly_total": null,
+  "monthly_cost": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null,
+  "redfin_url": null,
+  "realtor_url": null,
+  "rew_url": "https://www.rew.ca/properties/3545-w-king-edward-avenue-vancouver-bc",
+  "zillow_url": null,
+  "mls_number": "R3092688",
+  "listed_date": null,
+  "status": "Interested",
+  "notes": null,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_a52a34713a6b5aa6f5a9c67c45badd21.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_8c6c435da3a4db10446202377d1d4a92.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_d8fd3a81e7579259858770312947f0a8.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_8e3794642ae10dc4166e9daa00f50509.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_c40879dea1c6588904ce20204ae8d410.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_0c9aee0b4f7fc56ffc442545c442faa2.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_1965756ab0a16b844c97be414e95a6bd.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_8efd85451408c47071ed3de2e2e6663d.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_3c2bf186f6c5a134f9ab428d813b0427.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_fd3d9f6fd9f982dead0c05f4e643b4ac.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_ab2ed7ad1e98829eed5dd2a51ba58d8a.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_05fa4df248231387aaa522aa4a04f45f.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_1a1697532a51f9c06e747d46609365f4.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_8aa508e6708e3250995f9fe602aa6295.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_bb20a6b3c45a32666baeee9b05ff2839.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_288482b1d7ea11e857d96832377f8663.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_73cad4f1106fbeccc325b054c5432193.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_344e879ce1a23e007c48b32d52bf2997.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_1dc9627670abcd717a1a09b77612087b.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_f1ef7f285316a5815e47116ff8312906.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_c9f0b63900d8a5e6d3acfb26b6ea5752.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_336d63e34cf363e5ee69e6e2311e5af3.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_1a70a2d28931e4630a0fe008da887f81.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_842b26b4a26910cd72dc770ffb755734.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_317a571cee92c62f35ecd6a76d48fc62.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_d42ff628f55dc3dafdb3de0b8e234e73.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_310086d2a9f71cb3de8e167ac70a9b29.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_5375ed4fcd48f10a52020668b43f1e27.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_3c7309574a9b0218caebb1c8b28559cd.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_27f838f6ac821656e4cf78e9c3a954ae.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_b3855e36593311204ed5dd748fc011b0.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_81d23cc3794f1ab51ee34a23e7e782a8.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_0ac41458f1a886ce1ac4c843b52802e1.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_703f4ef8037ee81b497672249f918e5e.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_2e27b2e8e4a7f11135e3e3314fbf86e6.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_0c826458fbc396f193090d0dda8d8037.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_eee916000132c91ec598d31f77d9d116.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 37,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_7a52f049288f96cae0ca5dc96f4b40b9.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 38,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_c211e6f35d0e6fa74dd0745695660e0d.jpeg",
+      "created_at": ""
+    },
+    {
+      "id": 39,
+      "url": "https://assets-listings.rew.ca/listing/brc_idx_rew/263114315/00_d82f2a2c7e57a7b1bdc7e732fa2d9638.jpeg",
+      "created_at": ""
+    }
+  ],
+  "created_at": "",
+  "updated_at": null
+}

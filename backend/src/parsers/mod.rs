@@ -341,10 +341,10 @@ fn merge_property(
             fallback_source,
         ),
 
-        total_parking_space: merge_opt(
-            "total_parking_space",
-            primary.total_parking_space,
-            fallback.total_parking_space,
+        parking_total: merge_opt(
+            "parking_total",
+            primary.parking_total,
+            fallback.parking_total,
             primary_source,
             fallback_source,
         ),
@@ -356,17 +356,17 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
-        parking_covered: merge_opt(
-            "parking_covered",
-            primary.parking_covered,
-            fallback.parking_covered,
+        parking_carport: merge_opt(
+            "parking_carport",
+            primary.parking_carport,
+            fallback.parking_carport,
             primary_source,
             fallback_source,
         ),
-        parking_open: merge_opt(
-            "parking_open",
-            primary.parking_open,
-            fallback.parking_open,
+        parking_pad: merge_opt(
+            "parking_pad",
+            primary.parking_pad,
+            fallback.parking_pad,
             primary_source,
             fallback_source,
         ),

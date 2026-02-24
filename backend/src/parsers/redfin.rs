@@ -20,6 +20,7 @@ static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
 static TAX_ANNUAL_RE: OnceLock<Regex> = OnceLock::new();
 static HOA_FEE_RE: OnceLock<Regex> = OnceLock::new();
 static PARKING_COUNT_RE: OnceLock<Regex> = OnceLock::new();
+static CARPORT_SPACES_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -27,6 +28,10 @@ fn garage_re() -> &'static Regex {
 
 fn parking_count_re() -> &'static Regex {
     PARKING_COUNT_RE.get_or_init(|| Regex::new(r"(\d+)").unwrap())
+}
+
+fn carport_spaces_re() -> &'static Regex {
+    CARPORT_SPACES_RE.get_or_init(|| Regex::new(r"(?i)Carport\s+Spaces\s*:?\s*(\d+)").unwrap())
 }
 
 fn lot_size_re() -> &'static Regex {
@@ -185,6 +190,15 @@ pub fn extract_hoa_monthly(html: &str) -> Option<i64> {
     None
 }
 
+/// Extracts carport spaces from Redfin property details text.
+/// Example: "Carport Spaces: 1"
+pub fn extract_carport_spaces(html: &str) -> Option<i64> {
+    carport_spaces_re()
+        .captures(html)
+        .and_then(|c| c.get(1))
+        .and_then(|m| m.as_str().parse::<i64>().ok())
+}
+
 // ── Lot size ──────────────────────────────────────────────────────────────────
 
 /// Extracts lot size (sqft) from the raw HTML source.
@@ -200,10 +214,10 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 
 /// Parsed results from a property's `amenityFeature` array.
 struct AmenityFeatures {
-    total_parking_space: Option<i64>,
+    parking_total: Option<i64>,
     parking_garage: Option<i64>,
-    parking_covered: Option<i64>,
-    parking_open: Option<i64>,
+    parking_carport: Option<i64>,
+    parking_pad: Option<i64>,
     ac: Option<bool>,
     radiant_floor_heating: Option<bool>,
     laundry_in_unit: Option<bool>,
@@ -212,10 +226,10 @@ struct AmenityFeatures {
 /// Parses `amenityFeature` array entries for parking count, AC, radiant floor heating,
 /// and in-unit laundry.
 fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
-    let mut total_parking_space: Option<i64> = None;
+    let mut parking_total: Option<i64> = None;
     let mut parking_garage: Option<i64> = None;
-    let mut parking_covered: Option<i64> = None;
-    let mut parking_open: Option<i64> = None;
+    let mut parking_carport: Option<i64> = None;
+    let mut parking_pad: Option<i64> = None;
     let mut ac: Option<bool> = None;
     let mut radiant_floor_heating: Option<bool> = None;
     let mut laundry_in_unit: Option<bool> = None;
@@ -239,18 +253,18 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
             {
                 if lower.contains("garage") {
                     parking_garage = Some(n);
-                    total_parking_space = Some(n);
+                    parking_total = Some(n);
                 } else if lower.contains("carport") || lower.contains("covered") {
-                    parking_covered = Some(n);
-                    total_parking_space = Some(n);
+                    parking_carport = Some(n);
+                    parking_total = Some(n);
                 } else if lower.contains("open")
                     || lower.contains("pad")
                     || lower.contains("driveway")
                 {
-                    parking_open = Some(n);
-                    total_parking_space = Some(n);
+                    parking_pad = Some(n);
+                    parking_total = Some(n);
                 } else {
-                    total_parking_space = Some(n);
+                    parking_total = Some(n);
                 }
             }
         } else if active && lower.contains("laundry") {
@@ -263,10 +277,10 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
     }
 
     AmenityFeatures {
-        total_parking_space,
+        parking_total,
         parking_garage,
-        parking_covered,
-        parking_open,
+        parking_carport,
+        parking_pad,
         ac,
         radiant_floor_heating,
         laundry_in_unit,
@@ -344,10 +358,10 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         created_at: String::new(),
         updated_at: None,
         notes: None,
-        total_parking_space: af.total_parking_space,
+        parking_total: af.parking_total,
         parking_garage: af.parking_garage,
-        parking_covered: af.parking_covered,
-        parking_open: af.parking_open,
+        parking_carport: af.parking_carport,
+        parking_pad: af.parking_pad,
         land_sqft: None,
         property_tax: None,
         skytrain_station: None,
@@ -411,6 +425,12 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     property.land_sqft = extract_lot_size(html);
     property.property_tax = extract_property_tax(html);
     property.hoa_monthly = extract_hoa_monthly(html);
+    if let Some(carport_spaces) = extract_carport_spaces(html) {
+        property.parking_carport = Some(carport_spaces);
+        if property.parking_total.is_none() {
+            property.parking_total = Some(carport_spaces);
+        }
+    }
     if let Some(schools) = extract_schools(html) {
         if let Some(e) = schools.elementary {
             property.school_elementary = Some(e.name);
@@ -464,5 +484,23 @@ mod tests {
         let property = listing_to_property(listing);
         assert_eq!(property.hoa_monthly, Some(1137), "hoa_monthly");
         insta::assert_json_snapshot!("redfin_788_w8th", property);
+    }
+
+    #[test]
+    fn redfin_3545_w_king_edward_carport() {
+        let html = std::fs::read_to_string(fixture(
+            "3545 W King Edward Ave, Vancouver, BC V6S 1M4 _ MLS# R3092688 _ Redfin.html",
+        ))
+        .expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/3545-W-King-Edward-Ave-V6S-1M4/home/155797202",
+            &html,
+        )
+        .expect("parse failed");
+        let property = listing_to_property(listing);
+        assert_eq!(property.parking_carport, Some(1), "parking_carport");
+        assert_eq!(property.parking_total, Some(1), "parking_total");
+        assert_eq!(property.parking_garage, None, "parking_garage");
+        insta::assert_json_snapshot!("redfin_3545_w_king_edward_carport", property);
     }
 }

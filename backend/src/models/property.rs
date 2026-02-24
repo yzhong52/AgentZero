@@ -107,10 +107,10 @@ pub struct Property {
     pub year_built: Option<i64>,       // parsed; editable
 
     // ── Parking ──────────────────────────────────────────────────────────────
-    pub total_parking_space: Option<i64>, // parsed; editable
-    pub parking_garage: Option<i64>,      // parsed; editable
-    pub parking_covered: Option<i64>,     // parsed; editable
-    pub parking_open: Option<i64>,        // parsed; editable
+    pub parking_total: Option<i64>,   // parsed; editable
+    pub parking_garage: Option<i64>,  // parsed; editable
+    pub parking_carport: Option<i64>, // parsed; editable
+    pub parking_pad: Option<i64>,     // parsed; editable
 
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>, // parsed; editable
@@ -195,10 +195,10 @@ pub struct UserDetails {
     pub year_built: Option<i64>,
 
     // ── Parking ──────────────────────────────────────────────────────────────
-    pub total_parking_space: Option<i64>,
+    pub parking_total: Option<i64>,
     pub parking_garage: Option<i64>,
-    pub parking_covered: Option<i64>,
-    pub parking_open: Option<i64>,
+    pub parking_carport: Option<i64>,
+    pub parking_pad: Option<i64>,
 
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>,

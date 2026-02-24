@@ -225,10 +225,10 @@ fn extract_address(residence: Option<&JsonValue>) -> AddressInfo {
 }
 
 struct ParkingInfo {
-    total_parking_space: Option<i64>,
+    parking_total: Option<i64>,
     parking_garage: Option<i64>,
-    parking_covered: Option<i64>,
-    parking_open: Option<i64>,
+    parking_carport: Option<i64>,
+    parking_pad: Option<i64>,
 }
 
 fn parse_parking_info(document: &Html) -> ParkingInfo {
@@ -247,29 +247,29 @@ fn parse_parking_info(document: &Html) -> ParkingInfo {
     if let Some(total_spaces) = total {
         if category_count == 1 {
             return ParkingInfo {
-                total_parking_space: Some(total_spaces),
+                parking_total: Some(total_spaces),
                 parking_garage: if has_garage { Some(total_spaces) } else { None },
-                parking_covered: if has_carport {
+                parking_carport: if has_carport {
                     Some(total_spaces)
                 } else {
                     None
                 },
-                parking_open: if has_open { Some(total_spaces) } else { None },
+                parking_pad: if has_open { Some(total_spaces) } else { None },
             };
         }
         return ParkingInfo {
-            total_parking_space: Some(total_spaces),
+            parking_total: Some(total_spaces),
             parking_garage: None,
-            parking_covered: None,
-            parking_open: None,
+            parking_carport: None,
+            parking_pad: None,
         };
     }
 
     ParkingInfo {
-        total_parking_space: None,
+        parking_total: None,
         parking_garage: None,
-        parking_covered: None,
-        parking_open: None,
+        parking_carport: None,
+        parking_pad: None,
     }
 }
 // ── Entry point ───────────────────────────────────────────────────────────────
@@ -362,10 +362,10 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         created_at: String::new(),
         updated_at: None,
         notes: None,
-        total_parking_space: parking.total_parking_space,
+        parking_total: parking.parking_total,
         parking_garage: parking.parking_garage,
-        parking_covered: parking.parking_covered,
-        parking_open: parking.parking_open,
+        parking_carport: parking.parking_carport,
+        parking_pad: parking.parking_pad,
         land_sqft,
         property_tax,
         skytrain_station: None,
@@ -418,6 +418,24 @@ mod tests {
         let property = listing_to_property(listing);
         assert_eq!(property.hoa_monthly, Some(1137), "hoa_monthly");
         insta::assert_json_snapshot!("rew_788_w8th", property);
+    }
+
+    #[test]
+    fn rew_3545_w_king_edward_carport() {
+        let html = std::fs::read_to_string(fixture(
+            "For Sale_ 3545 W King Edward Avenue, Vancouver, BC - REW.html",
+        ))
+        .expect("fixture not found");
+        let listing = parse(
+            "https://www.rew.ca/properties/3545-w-king-edward-avenue-vancouver-bc",
+            &html,
+        )
+        .expect("parse failed");
+        let property = listing_to_property(listing);
+        assert_eq!(property.parking_carport, Some(1), "parking_carport");
+        assert_eq!(property.parking_total, Some(1), "parking_total");
+        assert_eq!(property.parking_garage, None, "parking_garage");
+        insta::assert_json_snapshot!("rew_3545_w_king_edward_carport", property);
     }
 
     #[test]

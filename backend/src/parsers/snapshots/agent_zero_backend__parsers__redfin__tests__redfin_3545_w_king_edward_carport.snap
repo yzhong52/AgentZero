@@ -1,0 +1,262 @@
+---
+source: src/parsers/redfin.rs
+expression: property
+---
+{
+  "id": 0,
+  "title": "3545 W King Edward Ave, Vancouver - 5 beds/2.5 baths",
+  "description": "Charming 5 bed 2.5 bath located in the heart of Dunbar. Lord Byng &amp; Lord Kitchner School catchment. Spanning 2,424 sqft, this partially renovated solid residence offers a blank canvas for your design ideas. The bright and spacious main floor features large living and dining areas with a 1 bed and powder room. Surrounded by windows the updated kitchen features newer appliances, centre island, plenty of cabinet space, and access to the back deck. Upstairs find access to balcony overlooking backyard, and 2 bedrooms including spacious principal. Basement features 2 additional bedrooms, laundry facilities and access to lower back deck. Home features newer paint, hardwood floors, updated bathrooms and light fixtures. Close to Dunbar shops, parks, and top schools.  Open house Sat. Feb 28th 12-2. ",
+  "price": 2098000,
+  "price_currency": "USD",
+  "street_address": "3545 W King Edward Ave",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V6S 1M4",
+  "country": "CA",
+  "lat": 49.250363,
+  "lon": -123.1833318,
+  "property_type": "Single Family Residential",
+  "bedrooms": 5,
+  "bathrooms": null,
+  "sqft": 2424,
+  "land_sqft": 4026,
+  "year_built": 1930,
+  "parking_total": 1,
+  "parking_garage": null,
+  "parking_carport": 1,
+  "parking_pad": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "laundry_in_unit": true,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "offer_price": null,
+  "property_tax": 9584,
+  "hoa_monthly": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "monthly_total": null,
+  "monthly_cost": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null,
+  "redfin_url": "https://www.redfin.ca/bc/vancouver/3545-W-King-Edward-Ave-V6S-1M4/home/155797202",
+  "realtor_url": null,
+  "rew_url": null,
+  "zillow_url": null,
+  "mls_number": null,
+  "listed_date": "2026-02-23",
+  "status": "Interested",
+  "notes": null,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_1_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_2_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_3_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_4_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_5_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_6_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_7_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_8_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_9_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_10_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_11_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_12_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_13_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_14_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_15_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_16_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_17_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_18_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_19_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_20_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_21_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_22_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_23_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_24_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_25_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_26_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_27_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_28_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_29_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_30_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_31_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_32_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_33_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_34_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_35_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_36_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 37,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_37_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 38,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_38_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 39,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/688/R3092688_39_0.jpg",
+      "created_at": ""
+    }
+  ],
+  "created_at": "",
+  "updated_at": null
+}

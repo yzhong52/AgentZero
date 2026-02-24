@@ -89,18 +89,16 @@ pub async fn patch_details(
     updated.bathrooms = body.bathrooms.or(updated.bathrooms);
     updated.sqft = body.sqft.or(updated.sqft);
     updated.year_built = body.year_built.or(updated.year_built);
-    updated.total_parking_space = body.total_parking_space.or(updated.total_parking_space);
+    updated.parking_total = body.parking_total.or(updated.parking_total);
     updated.parking_garage = body.parking_garage.or(updated.parking_garage);
-    updated.parking_covered = body.parking_covered.or(updated.parking_covered);
-    updated.parking_open = body.parking_open.or(updated.parking_open);
-    if body.parking_garage.is_some()
-        || body.parking_covered.is_some()
-        || body.parking_open.is_some()
+    updated.parking_carport = body.parking_carport.or(updated.parking_carport);
+    updated.parking_pad = body.parking_pad.or(updated.parking_pad);
+    if body.parking_garage.is_some() || body.parking_carport.is_some() || body.parking_pad.is_some()
     {
-        updated.total_parking_space = Some(
+        updated.parking_total = Some(
             updated.parking_garage.unwrap_or(0)
-                + updated.parking_covered.unwrap_or(0)
-                + updated.parking_open.unwrap_or(0),
+                + updated.parking_carport.unwrap_or(0)
+                + updated.parking_pad.unwrap_or(0),
         );
     }
     updated.land_sqft = body.land_sqft.or(updated.land_sqft);

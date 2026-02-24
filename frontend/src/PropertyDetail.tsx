@@ -229,10 +229,10 @@ function toUserDetails(p: Property) {
         bathrooms: p.bathrooms,
         sqft: p.sqft,
         year_built: p.year_built,
-        total_parking_space: p.total_parking_space,
+        parking_total: p.parking_total,
         parking_garage: p.parking_garage,
-        parking_covered: p.parking_covered,
-        parking_open: p.parking_open,
+        parking_carport: p.parking_carport,
+        parking_pad: p.parking_pad,
         land_sqft: p.land_sqft,
         property_tax: p.property_tax,
         skytrain_station: p.skytrain_station,
@@ -633,9 +633,9 @@ export function PropertyDetail() {
         { key: 'zillow_url', label: 'Zillow', placeholder: 'https://www.zillow.com/homedetails/…' },
     ]
     const totalParkingSpace =
-        p.total_parking_space ?? (
-            p.parking_garage != null || p.parking_covered != null || p.parking_open != null
-                ? (p.parking_garage ?? 0) + (p.parking_covered ?? 0) + (p.parking_open ?? 0)
+        p.parking_total ?? (
+            p.parking_garage != null || p.parking_carport != null || p.parking_pad != null
+                ? (p.parking_garage ?? 0) + (p.parking_carport ?? 0) + (p.parking_pad ?? 0)
                 : null
         )
     const monthlyTotalBreakdown = `${moneyPart(finance.mortgage_monthly)} mortgage + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
@@ -830,10 +830,10 @@ export function PropertyDetail() {
                                 <Field label="Total Parking Space" viewVal={numLabel(totalParkingSpace)} />
                                 <Field label="Garage" viewVal={numLabel(p.parking_garage)}
                                     editEl={<NumInput label="Garage" value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
-                                <Field label="Carport" viewVal={numLabel(p.parking_covered)}
-                                    editEl={<NumInput label="Carport" value={draft?.parking_covered ?? null} onChange={v => setDraftField('parking_covered', v)} />} />
-                                <Field label="Parking Pad" viewVal={numLabel(p.parking_open)}
-                                    editEl={<NumInput label="Parking Pad" value={draft?.parking_open ?? null} onChange={v => setDraftField('parking_open', v)} />} />
+                                <Field label="Carport" viewVal={numLabel(p.parking_carport)}
+                                    editEl={<NumInput label="Carport" value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
+                                <Field label="Parking Pad" viewVal={numLabel(p.parking_pad)}
+                                    editEl={<NumInput label="Parking Pad" value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
                             </div>
                         </div>
 

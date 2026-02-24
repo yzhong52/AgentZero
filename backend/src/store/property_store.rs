@@ -8,7 +8,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     street_address, city, region, postal_code, country,
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
-                    total_parking_space, parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                    parking_total, parking_garage, parking_carport, parking_pad, land_sqft, property_tax,
                     skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                     down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                     hoa_monthly, monthly_total, monthly_cost, has_rental_suite, rental_income,
@@ -46,7 +46,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 title, description, price, price_currency, offer_price,
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
-                total_parking_space, parking_garage, parking_covered, parking_open, land_sqft,
+                parking_total, parking_garage, parking_carport, parking_pad, land_sqft,
                 property_tax, skytrain_station, skytrain_walk_min,
                 ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
@@ -82,10 +82,10 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
-    .bind(p.total_parking_space)
+    .bind(p.parking_total)
     .bind(p.parking_garage)
-    .bind(p.parking_covered)
-    .bind(p.parking_open)
+    .bind(p.parking_carport)
+    .bind(p.parking_pad)
     .bind(p.land_sqft)
     .bind(p.property_tax)
     .bind(&p.skytrain_station)
@@ -147,7 +147,7 @@ pub async fn update_by_id(
                year_built               = ?,
                lat                      = ?,
                lon                      = ?,
-               total_parking_space      = ?,
+               parking_total            = ?,
                parking_garage           = ?,
                land_sqft                = ?,
                ac                       = ?,
@@ -166,8 +166,8 @@ pub async fn update_by_id(
                listed_date              = ?,
                mls_number               = ?,
                laundry_in_unit          = ?,
-               parking_covered          = ?,
-               parking_open             = ?,
+               parking_carport          = ?,
+               parking_pad              = ?,
                property_tax             = ?,
                hoa_monthly              = ?,
                monthly_total            = ?,
@@ -200,7 +200,7 @@ pub async fn update_by_id(
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
-    .bind(p.total_parking_space)
+    .bind(p.parking_total)
     .bind(p.parking_garage)
     .bind(p.land_sqft)
     .bind(p.ac)
@@ -219,8 +219,8 @@ pub async fn update_by_id(
     .bind(&p.listed_date)
     .bind(&p.mls_number)
     .bind(p.laundry_in_unit)
-    .bind(p.parking_covered)
-    .bind(p.parking_open)
+    .bind(p.parking_carport)
+    .bind(p.parking_pad)
     .bind(p.property_tax)
     .bind(p.hoa_monthly)
     .bind(p.monthly_total)
@@ -339,10 +339,10 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
-        total_parking_space: row.get("total_parking_space"),
+        parking_total: row.get("parking_total"),
         parking_garage: row.get("parking_garage"),
-        parking_covered: row.get("parking_covered"),
-        parking_open: row.get("parking_open"),
+        parking_carport: row.get("parking_carport"),
+        parking_pad: row.get("parking_pad"),
         land_sqft: row.get("land_sqft"),
         property_tax: row.get("property_tax"),
         skytrain_station: row.get("skytrain_station"),
@@ -414,10 +414,10 @@ mod tests {
             created_at: String::new(),
             updated_at: None,
             notes: None,
-            total_parking_space: Some(1),
+            parking_total: Some(1),
             parking_garage: Some(1),
-            parking_covered: Some(0),
-            parking_open: Some(0),
+            parking_carport: Some(0),
+            parking_pad: Some(0),
             land_sqft: Some(1200),
             property_tax: Some(3200),
             skytrain_station: Some("Test Station".to_string()),
@@ -497,10 +497,10 @@ mod tests {
             created_at: String::new(),
             updated_at: None,
             notes: None,
-            total_parking_space: None,
+            parking_total: None,
             parking_garage: None,
-            parking_covered: None,
-            parking_open: None,
+            parking_carport: None,
+            parking_pad: None,
             land_sqft: None,
             property_tax: None,
             skytrain_station: None,
@@ -612,10 +612,10 @@ mod tests {
             sqft: Some(1200),
             year_built: Some(1990),
             // Parking / land
-            total_parking_space: Some(2),
+            parking_total: Some(2),
             parking_garage: Some(1),
-            parking_covered: Some(1),
-            parking_open: Some(0),
+            parking_carport: Some(1),
+            parking_pad: Some(0),
             land_sqft: Some(2000),
             // Features
             radiant_floor_heating: Some(true),
@@ -688,10 +688,10 @@ mod tests {
         merged.bathrooms = details.bathrooms.or(merged.bathrooms);
         merged.sqft = details.sqft.or(merged.sqft);
         merged.year_built = details.year_built.or(merged.year_built);
-        merged.total_parking_space = details.total_parking_space.or(merged.total_parking_space);
+        merged.parking_total = details.parking_total.or(merged.parking_total);
         merged.parking_garage = details.parking_garage.or(merged.parking_garage);
-        merged.parking_covered = details.parking_covered.or(merged.parking_covered);
-        merged.parking_open = details.parking_open.or(merged.parking_open);
+        merged.parking_carport = details.parking_carport.or(merged.parking_carport);
+        merged.parking_pad = details.parking_pad.or(merged.parking_pad);
         merged.land_sqft = details.land_sqft.or(merged.land_sqft);
         merged.radiant_floor_heating = details
             .radiant_floor_heating
@@ -764,10 +764,10 @@ mod tests {
         assert_eq!(updated.sqft, Some(1200));
         assert_eq!(updated.year_built, Some(1990));
         // Parking / land
-        assert_eq!(updated.total_parking_space, Some(2));
+        assert_eq!(updated.parking_total, Some(2));
         assert_eq!(updated.parking_garage, Some(1));
-        assert_eq!(updated.parking_covered, Some(1));
-        assert_eq!(updated.parking_open, Some(0));
+        assert_eq!(updated.parking_carport, Some(1));
+        assert_eq!(updated.parking_pad, Some(0));
         assert_eq!(updated.land_sqft, Some(2000));
         // Features
         assert_eq!(updated.radiant_floor_heating, Some(true));

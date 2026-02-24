@@ -231,17 +231,33 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
 }
 
 /// Retrieve all properties ordered by created_at (newest first).
-pub async fn list(pool: &SqlitePool) -> Result<Vec<Property>, sqlx::Error> {
-    let rows = sqlx::query(&format!("SELECT {COLS} FROM listings ORDER BY created_at DESC"))
-        .fetch_all(pool)
-        .await?;
+/// List properties, optionally filtered by status values.
+///
+/// - `statuses`: if empty, returns all properties.
+/// - `statuses`: if non-empty, returns only rows whose `status` matches one of the given values.
+///   Pass `None` as one of the values to include rows with a NULL status.
+pub async fn list(pool: &SqlitePool, statuses: &[Option<&str>]) -> Result<Vec<Property>, sqlx::Error> {
+    let sql = if statuses.is_empty() {
+        format!("SELECT {COLS} FROM listings ORDER BY created_at DESC")
+    } else {
+        // Build: WHERE (status IN ('A','B') OR status IS NULL)
+        let named: Vec<String> = statuses.iter().filter_map(|s| s.map(|v| format!("'{}'", v.replace('\'', "''")))).collect();
+        let mut clauses: Vec<String> = Vec::new();
+        if !named.is_empty() {
+            clauses.push(format!("status IN ({})", named.join(",")));
+        }
+        if statuses.iter().any(|s| s.is_none()) {
+            clauses.push("status IS NULL".to_string());
+        }
+        format!("SELECT {COLS} FROM listings WHERE {} ORDER BY created_at DESC", clauses.join(" OR "))
+    };
+
+    let rows = sqlx::query(&sql).fetch_all(pool).await?;
 
     let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
-
     for prop in &mut properties {
         prop.images = image_store::list_images_with_meta(pool, prop.id).await.unwrap_or_default();
     }
-
     Ok(properties)
 }
 
@@ -427,7 +443,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool).await.expect("list failed").into_iter().next().expect("no listing");
+        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing");
         assert!(saved.id > 0, "expected saved id > 0");
         assert_eq!(saved.title, "Original Title");
         assert_eq!(saved.price, Some(500_000));
@@ -463,7 +479,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool).await.expect("list failed").into_iter().next().expect("no listing");
+        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing");
 
         // Build UserDetails with every editable field set to a non-null value.
         let details = UserDetails {

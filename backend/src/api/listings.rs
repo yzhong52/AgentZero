@@ -4,21 +4,43 @@
 //! - GET    /api/listings/:id  — get a single property
 //! - DELETE /api/listings/:id  — delete a property and its images
 
-use axum::{Json, extract::{State, Path}, http::StatusCode};
+use axum::{Json, extract::{State, Path, Query}, http::StatusCode};
 use object_store::{ObjectStoreExt, path::Path as ObjectPath};
+use serde::Deserialize;
 use tokio::fs;
 
 use crate::{AppState, db};
 use crate::image_paths;
 
-/// GET /api/listings
+#[derive(Deserialize)]
+pub struct ListingsQuery {
+    /// Comma-separated status values to include, e.g. `status=Interested,Buyable`.
+    /// Omit to return all listings. Use the literal value `null` to include
+    /// listings with no status set.
+    pub status: Option<String>,
+}
+
+/// GET /api/listings[?status=Interested,Buyable]
 ///
-/// Returns all saved properties, newest first. Each record includes cached
-/// image metadata (id, local_path, position).
+/// Returns saved properties, newest first. Optionally filtered by status.
+/// Each record includes cached image metadata (id, local_path, position).
 pub async fn list_listings(
     State(state): State<AppState>,
+    Query(params): Query<ListingsQuery>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
-    let listings = db::list(&state.db)
+    // Parse "Interested,Buyable" → [Some("Interested"), Some("Buyable")]
+    // The special token "null" maps to None (SQL NULL).
+    let statuses: Vec<Option<String>> = match &params.status {
+        None => vec![],
+        Some(s) => s.split(',')
+            .map(|v| if v == "null" { None } else { Some(v.to_string()) })
+            .collect(),
+    };
+    let status_refs: Vec<Option<&str>> = statuses.iter()
+        .map(|o| o.as_deref())
+        .collect();
+
+    let listings = db::list(&state.db, &status_refs)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
     Ok(Json(listings))

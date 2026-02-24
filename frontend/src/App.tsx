@@ -79,14 +79,16 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>('Active')
+  const [statusFilter, setStatusFilter] = useState<Set<StatusOption>>(new Set(['Interested', 'Buyable']))
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
-  async function fetchListings() {
+  async function fetchListings(filter?: Set<StatusOption>) {
+    const active = filter ?? statusFilter
+    const qs = active.size > 0 ? '?status=' + [...active].join(',') : ''
     try {
-      const resp = await fetch('/api/listings')
+      const resp = await fetch(`/api/listings${qs}`)
       if (resp.ok) setListings(await resp.json())
     } catch {
       // non-fatal
@@ -94,6 +96,15 @@ function App() {
   }
 
   useEffect(() => { fetchListings() }, [])
+
+  function toggleStatus(s: StatusOption) {
+    setStatusFilter(prev => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      fetchListings(next)
+      return next
+    })
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -111,7 +122,7 @@ function App() {
       const saved: Property = await resp.json()
       setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url}`)
       setUrl('')
-      fetchListings()
+      await fetchListings()
     } catch (err: any) {
       setError(err?.message || String(err))
     } finally {
@@ -146,15 +157,15 @@ function App() {
             <h2>Saved Listings ({listings.length})</h2>
 
             <div className="status-filter">
-              {['Active', 'All', ...STATUS_OPTIONS].map((s) => (
-                <button
-                  key={s}
-                  className={`filter-btn${statusFilter === s ? ' active' : ''}`}
-                  onClick={() => setStatusFilter(s)}
-                  style={statusFilter === s && s !== 'All' && s !== 'Active' ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
-                >
-                  {s}
-                </button>
+              {STATUS_OPTIONS.map((s) => (
+                <label key={s} className="filter-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={statusFilter.has(s)}
+                    onChange={() => toggleStatus(s)}
+                  />
+                  <span style={statusFilter.has(s) ? { color: STATUS_COLORS[s], fontWeight: 600 } : {}}>{s}</span>
+                </label>
               ))}
             </div>
 
@@ -188,14 +199,9 @@ function App() {
           </div>
 
           {viewMode === 'grid' ? (
-            <ListingGrid
-              rows={listings.filter((p) => statusFilter === 'All' || (statusFilter === 'Active' ? p.status !== 'Pass' : p.status === statusFilter))}
-            />
+            <ListingGrid rows={listings} />
           ) : (
-            <ListingTable
-              rows={listings.filter((p) => statusFilter === 'All' || (statusFilter === 'Active' ? p.status !== 'Pass' : p.status === statusFilter))}
-              cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))}
-            />
+            <ListingTable rows={listings} cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))} />
           )}
         </section>
       )}

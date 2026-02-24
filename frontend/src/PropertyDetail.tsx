@@ -796,20 +796,6 @@ export function PropertyDetail() {
                         </div>
 
                         <div className="tracked-group">
-                            <h4>Location</h4>
-                            <div className="tracked-fields">
-                                <Field label="Street address" viewVal={p.street_address ?? '—'}
-                                    editEl={<TextInput label="Street address" value={draft?.street_address ?? null} onChange={v => setDraftField('street_address', v)} />} />
-                                <Field label="City" viewVal={p.city ?? '—'}
-                                    editEl={<TextInput label="City" value={draft?.city ?? null} onChange={v => setDraftField('city', v)} />} />
-                                <Field label="Region / Province" viewVal={p.region ?? '—'}
-                                    editEl={<TextInput label="Region / Province" value={draft?.region ?? null} onChange={v => setDraftField('region', v)} />} />
-                                <Field label="Postal code" viewVal={p.postal_code ?? '—'}
-                                    editEl={<TextInput label="Postal code" value={draft?.postal_code ?? null} onChange={v => setDraftField('postal_code', v)} />} />
-                            </div>
-                        </div>
-
-                        <div className="tracked-group">
                             <h4>Property</h4>
                             <div className="tracked-fields">
                                 {(p.bedrooms != null || editMode) && (
@@ -821,12 +807,12 @@ export function PropertyDetail() {
                                         editEl={<NumInput label="Bathrooms" value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
                                 )}
                                 {(p.sqft != null || editMode) && (
-                                    <Field label="Square feet" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
-                                        editEl={<NumInput label="Square feet" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
+                                    <Field label="Square Feet" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
+                                        editEl={<NumInput label="Square Feet" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
                                 )}
                                 {(p.year_built != null || editMode) && (
-                                    <Field label="Year built" viewVal={numLabel(p.year_built)}
-                                        editEl={<NumInput label="Year built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
+                                    <Field label="Year Built" viewVal={numLabel(p.year_built)}
+                                        editEl={<NumInput label="Year Built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
                                 )}
                             </div>
                         </div>
@@ -834,51 +820,51 @@ export function PropertyDetail() {
                         <div className="tracked-group">
                             <h4>Parking</h4>
                             <div className="tracked-fields">
-                                <Field label="Garage (indoor)" viewVal={numLabel(p.parking_garage)}
-                                    editEl={<NumInput label="Garage (indoor)" value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
-                                <Field label="Covered outdoor" viewVal={numLabel(p.parking_covered)}
-                                    editEl={<NumInput label="Covered outdoor" value={draft?.parking_covered ?? null} onChange={v => setDraftField('parking_covered', v)} />} />
-                                <Field label="Open outdoor" viewVal={numLabel(p.parking_open)}
-                                    editEl={<NumInput label="Open outdoor" value={draft?.parking_open ?? null} onChange={v => setDraftField('parking_open', v)} />} />
+                                <Field label="Garage (Indoor)" viewVal={numLabel(p.parking_garage)}
+                                    editEl={<NumInput label="Garage (Indoor)" value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
+                                <Field label="Covered Outdoor" viewVal={numLabel(p.parking_covered)}
+                                    editEl={<NumInput label="Covered Outdoor" value={draft?.parking_covered ?? null} onChange={v => setDraftField('parking_covered', v)} />} />
+                                <Field label="Open Outdoor" viewVal={numLabel(p.parking_open)}
+                                    editEl={<NumInput label="Open Outdoor" value={draft?.parking_open ?? null} onChange={v => setDraftField('parking_open', v)} />} />
                             </div>
                         </div>
 
                         <div className="tracked-group">
                             <h4>Land</h4>
                             <div className="tracked-fields">
-                                <Field label="Land size (sqft)" viewVal={numLabel(p.land_sqft, ' sqft')}
-                                    editEl={<NumInput label="Land size (sqft)" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
+                                <Field label="Land Size (Sqft)" viewVal={numLabel(p.land_sqft, ' sqft')}
+                                    editEl={<NumInput label="Land Size (Sqft)" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
                             </div>
                         </div>
 
                         <div className="tracked-group">
                             <h4>Transit</h4>
                             <div className="tracked-fields">
-                                <Field label="Closest Skytrain station" viewVal={p.skytrain_station ?? '—'}
-                                    editEl={<TextInput label="Closest Skytrain station" value={draft?.skytrain_station ?? null} onChange={v => setDraftField('skytrain_station', v)} />} />
-                                <Field label="Walk time (min)" viewVal={numLabel(p.skytrain_walk_min, ' min')}
-                                    editEl={<NumInput label="Walk time (min)" value={draft?.skytrain_walk_min ?? null} onChange={v => setDraftField('skytrain_walk_min', v)} />} />
+                                <Field label="Closest Skytrain Station" viewVal={p.skytrain_station ?? '—'}
+                                    editEl={<TextInput label="Closest Skytrain Station" value={draft?.skytrain_station ?? null} onChange={v => setDraftField('skytrain_station', v)} />} />
+                                <Field label="Walk Time (Min)" viewVal={numLabel(p.skytrain_walk_min, ' min')}
+                                    editEl={<NumInput label="Walk Time (Min)" value={draft?.skytrain_walk_min ?? null} onChange={v => setDraftField('skytrain_walk_min', v)} />} />
                             </div>
                         </div>
 
                         <div className="tracked-group">
                             <h4>Features</h4>
                             <div className="tracked-fields">
-                                <Field label="Radiant floor heating" viewVal={boolLabel(p.radiant_floor_heating)}
-                                    editEl={<BoolSelect label="Radiant floor heating" value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
-                                <Field label="Air conditioning" viewVal={boolLabel(p.ac)}
-                                    editEl={<BoolSelect label="Air conditioning" value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
+                                <Field label="Radiant Floor Heating" viewVal={boolLabel(p.radiant_floor_heating)}
+                                    editEl={<BoolSelect label="Radiant Floor Heating" value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
+                                <Field label="Air Conditioning" viewVal={boolLabel(p.ac)}
+                                    editEl={<BoolSelect label="Air Conditioning" value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
                             </div>
                         </div>
 
                         <div className="tracked-group">
                             <h4>Rental</h4>
                             <div className="tracked-fields">
-                                <Field label="Has rental suite" viewVal={boolLabel(p.has_rental_suite)}
-                                    editEl={<BoolSelect label="Has rental suite" value={draft?.has_rental_suite ?? null} onChange={v => setDraftField('has_rental_suite', v)} />} />
+                                <Field label="Has Rental Suite" viewVal={boolLabel(p.has_rental_suite)}
+                                    editEl={<BoolSelect label="Has Rental Suite" value={draft?.has_rental_suite ?? null} onChange={v => setDraftField('has_rental_suite', v)} />} />
                                 {(editMode || p.has_rental_suite !== false) && (
-                                    <Field label="Rental income (monthly)" viewVal={moneyLabel(p.rental_income)}
-                                        editEl={<NumInput label="Rental income (monthly)" value={draft?.rental_income ?? null} onChange={v => setDraftField('rental_income', v)} />} />
+                                    <Field label="Rental Income (Monthly)" viewVal={moneyLabel(p.rental_income)}
+                                        editEl={<NumInput label="Rental Income (Monthly)" value={draft?.rental_income ?? null} onChange={v => setDraftField('rental_income', v)} />} />
                                 )}
                             </div>
                         </div>
@@ -933,16 +919,30 @@ export function PropertyDetail() {
 
                     </div>
 
-                    {property.lat != null && property.lon != null && (
-                        <div className="map-preview">
-                            <iframe
-                                title="Property location"
-                                src={`https://maps.google.com/maps?q=${property.lat},${property.lon}&z=15&output=embed`}
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                            />
+                    <div className="location-card">
+                        <h3>Location</h3>
+                        <div className="tracked-fields location-fields">
+                            <Field label="Street Address" viewVal={p.street_address ?? '—'}
+                                editEl={<TextInput label="Street Address" value={draft?.street_address ?? null} onChange={v => setDraftField('street_address', v)} />} />
+                            <Field label="City" viewVal={p.city ?? '—'}
+                                editEl={<TextInput label="City" value={draft?.city ?? null} onChange={v => setDraftField('city', v)} />} />
+                            <Field label="Region / Province" viewVal={p.region ?? '—'}
+                                editEl={<TextInput label="Region / Province" value={draft?.region ?? null} onChange={v => setDraftField('region', v)} />} />
+                            <Field label="Postal Code" viewVal={p.postal_code ?? '—'}
+                                editEl={<TextInput label="Postal Code" value={draft?.postal_code ?? null} onChange={v => setDraftField('postal_code', v)} />} />
                         </div>
-                    )}
+
+                        {property.lat != null && property.lon != null && (
+                            <div className="map-preview">
+                                <iframe
+                                    title="Property Location"
+                                    src={`https://maps.google.com/maps?q=${property.lat},${property.lon}&z=15&output=embed`}
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
+                            </div>
+                        )}
+                    </div>
 
                     <div className="offer-finance-card">
                         <div className="offer-finance-header">
@@ -995,7 +995,7 @@ export function PropertyDetail() {
 
                         <div className="offer-finance-row offer-finance-row-3">
                             <div className="tracked-field">
-                                <label>Down payment %</label>
+                                <label>Down Payment %</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1014,7 +1014,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>Mortgage rate %</label>
+                                <label>Mortgage Rate %</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1054,7 +1054,7 @@ export function PropertyDetail() {
 
                         <div className="offer-finance-row offer-finance-row-3">
                             <div className="tracked-field">
-                                <label>Property tax (annual)</label>
+                                <label>Property Tax (Annual)</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1092,15 +1092,15 @@ export function PropertyDetail() {
 
                         <div className="offer-finance-row offer-finance-row-3">
                             <div className="tracked-field">
-                                <label>Mortgage (monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
+                                <label>Mortgage (Monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
                                 <span className="tracked-value">{moneyLabel(finance.mortgage_monthly)}</span>
                             </div>
                             <div className="tracked-field">
-                                <label>Monthly total <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyTotalBreakdown}</span></span></label>
+                                <label>Monthly Total <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyTotalBreakdown}</span></span></label>
                                 <span className="tracked-value">{moneyLabel(monthlyTotalDerived)}</span>
                             </div>
                             <div className="tracked-field">
-                                <label>Monthly cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
+                                <label>Monthly Cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
                                 <span className="tracked-value">{moneyLabel(monthlyCost)}</span>
                             </div>
                         </div>

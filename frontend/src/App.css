@@ -1115,6 +1115,28 @@
   display: block;
 }
 
+.location-card {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e0dfd8;
+  border-radius: 12px;
+  background: #fafaf8;
+}
+
+.location-card h3 {
+  margin: 0 0 0.8rem 0;
+  font-size: 1rem;
+  color: #1c1c1e;
+}
+
+.location-fields {
+  margin-bottom: 0.5rem;
+}
+
+.location-card .map-preview {
+  margin-top: 0.9rem;
+}
+
 .offer-finance-card {
   margin-top: 1.5rem;
   padding: 1rem 1.1rem;

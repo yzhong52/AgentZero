@@ -207,5 +207,9 @@ fn blank_stub() -> db::Property {
         school_middle_rating: None,
         school_secondary: None,
         school_secondary_rating: None,
+        property_type: None,
+        listed_date: None,
+        mls_number: None,
+        laundry_in_unit: None,
     }
 }

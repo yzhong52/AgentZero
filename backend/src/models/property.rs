@@ -36,6 +36,7 @@ pub struct Property {
     pub lon: Option<f64>,                 // parsed; used for map embed
 
     // ── Property facts ───────────────────────────────────────────────────────
+    pub property_type: Option<String>,    // parsed; editable (e.g. "Townhouse", "Single Family Residential")
     pub bedrooms: Option<i64>,            // parsed; editable
     pub bathrooms: Option<i64>,           // parsed; editable
     pub sqft: Option<i64>,                // parsed; editable
@@ -50,6 +51,7 @@ pub struct Property {
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>, // parsed; editable
     pub ac: Option<bool>,                    // parsed; editable
+    pub laundry_in_unit: Option<bool>,       // parsed; editable
 
     // ── Transit ──────────────────────────────────────────────────────────────
     pub skytrain_station: Option<String>, // editable
@@ -82,6 +84,10 @@ pub struct Property {
     pub realtor_url: Option<String>,  // editable
     pub rew_url: Option<String>,      // editable
     pub zillow_url: Option<String>,   // editable
+
+    // ── Listing metadata ─────────────────────────────────────────────────────
+    pub mls_number: Option<String>,   // parsed; editable
+    pub listed_date: Option<String>,  // parsed; display only (ISO date, e.g. "2026-02-17")
 
     // ── User notes / status ──────────────────────────────────────────────────
     /// User-set status: "Interested" | "Pass" | "Buyable"
@@ -117,6 +123,7 @@ pub struct UserDetails {
     pub postal_code: Option<String>,
 
     // ── Property facts ───────────────────────────────────────────────────────
+    pub property_type: Option<String>,
     pub bedrooms: Option<i64>,
     pub bathrooms: Option<i64>,
     pub sqft: Option<i64>,
@@ -131,6 +138,7 @@ pub struct UserDetails {
     // ── Features ─────────────────────────────────────────────────────────────
     pub radiant_floor_heating: Option<bool>,
     pub ac: Option<bool>,
+    pub laundry_in_unit: Option<bool>,
 
     // ── Transit ──────────────────────────────────────────────────────────────
     pub skytrain_station: Option<String>,
@@ -163,7 +171,8 @@ pub struct UserDetails {
     pub realtor_url: Option<String>,
     pub rew_url: Option<String>,
     pub zillow_url: Option<String>,
-
+    // ── Listing metadata ─────────────────────────────────────────────────────
+    pub mls_number: Option<String>,
     // ── Status ───────────────────────────────────────────────────────────────
     pub status: Option<String>,
 }

@@ -101,6 +101,30 @@ fn extract_image_urls(document: &Html) -> Vec<String> {
     out
 }
 
+// ── MLS number extraction ────────────────────────────────────────────────────
+
+/// Extracts the MLS® listing number from the page's description meta tag.
+/// REW includes it as "MLS® # RXXXXXXX" at the end of the description.
+fn extract_mls_number(document: &Html) -> Option<String> {
+    let sel = Selector::parse("meta[name='description']").unwrap();
+    let content = document.select(&sel).next()
+        .and_then(|el| el.value().attr("content"))?;
+    let re = regex::Regex::new(r"MLS[^\s]*\s*#?\s*([A-Z]\d+)").ok()?;
+    re.captures(content).and_then(|c| c.get(1)).map(|m| m.as_str().to_string())
+}
+
+// ── Property type extraction ──────────────────────────────────────────────────
+
+/// Extracts the property type from the page's description meta tag.
+/// REW formats it as "Browse N photos of this TYPE in NEIGHBOURHOOD…".
+fn extract_property_type(document: &Html) -> Option<String> {
+    let sel = Selector::parse("meta[name='description']").unwrap();
+    let content = document.select(&sel).next()
+        .and_then(|el| el.value().attr("content"))?;
+    let re = regex::Regex::new(r"(?i)Browse \d+ photos of this ([\w ]+?) in ").ok()?;
+    re.captures(content).and_then(|c| c.get(1)).map(|m| m.as_str().trim().to_string())
+}
+
 // ── Price extraction ──────────────────────────────────────────────────────────
 
 /// rew.ca renders price as: <div class='mr-3 5'>$2,488,800</div>
@@ -205,6 +229,9 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     // ── Images ────────────────────────────────────────────────────────────────
     let image_urls = extract_image_urls(&document);
 
+    let mls_number = extract_mls_number(&document);
+    let property_type = extract_property_type(&document);
+
     let property = db::Property {
         id: 0,
         redfin_url: None,
@@ -221,6 +248,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         region,
         postal_code,
         country: Some("Canada".to_string()),
+        property_type,
         bedrooms,
         bathrooms,
         sqft: None, // rew.ca often omits interior sqft
@@ -240,6 +268,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         skytrain_walk_min: None,
         radiant_floor_heating: None,
         ac: None,
+        laundry_in_unit: None,
         down_payment_pct: None,
         mortgage_interest_rate: None,
         amortization_years: None,
@@ -256,6 +285,8 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         school_middle_rating: None,
         school_secondary: None,
         school_secondary_rating: None,
+        listed_date: None,
+        mls_number,
     };
 
     Some(ParsedListing { property, image_urls })

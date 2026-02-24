@@ -19,9 +19,14 @@ static LOT_SIZE_RE: OnceLock<Regex> = OnceLock::new();
 static NEARBY_SCHOOLS_RE: OnceLock<Regex> = OnceLock::new();
 static TAX_ANNUAL_RE: OnceLock<Regex> = OnceLock::new();
 static HOA_FEE_RE: OnceLock<Regex> = OnceLock::new();
+static PARKING_COUNT_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
+}
+
+fn parking_count_re() -> &'static Regex {
+    PARKING_COUNT_RE.get_or_init(|| Regex::new(r"(\d+)").unwrap())
 }
 
 fn lot_size_re() -> &'static Regex {
@@ -160,11 +165,13 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 
 // ── Amenity features ──────────────────────────────────────────────────────────
 
-/// Parses `amenityFeature` array entries for parking count, AC, and radiant floor heating.
-fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>) {
+/// Parses `amenityFeature` array entries for parking count, AC, radiant floor heating,
+/// and in-unit laundry.
+fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>, Option<bool>) {
     let mut parking_garage: Option<i64> = None;
     let mut ac: Option<bool> = None;
     let mut radiant: Option<bool> = None;
+    let mut laundry_in_unit: Option<bool> = None;
 
     for f in features {
         let name = match f["name"].as_str() {
@@ -175,11 +182,14 @@ fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>,
         let lower = name.to_lowercase();
 
         if lower.contains("parking") {
-            if let Some(caps) = garage_re().captures(name) {
-                if let Some(n) = caps.get(1).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                    parking_garage = Some(n);
-                }
+            // Handles both "Parking: 2 spaces" and "2 garage spaces" formats.
+            let caps = garage_re().captures(name)
+                .or_else(|| parking_count_re().captures(name));
+            if let Some(n) = caps.and_then(|c| c.get(1)).and_then(|m| m.as_str().parse::<i64>().ok()) {
+                parking_garage = Some(n);
             }
+        } else if active && lower.contains("laundry") {
+            laundry_in_unit = Some(true);
         } else if active && (lower.contains("air conditioning") || lower.contains(" a/c")) {
             ac = Some(true);
         } else if active && lower.contains("radiant") {
@@ -187,7 +197,7 @@ fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>,
         }
     }
 
-    (parking_garage, ac, radiant)
+    (parking_garage, ac, radiant, laundry_in_unit)
 }
 
 // ── JSON-LD extraction ────────────────────────────────────────────────────────
@@ -223,7 +233,10 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
     let lon = entity["geo"]["longitude"].as_f64();
 
     let amenities = entity["amenityFeature"].as_array().map(Vec::as_slice).unwrap_or(&[]);
-    let (parking_garage, ac, radiant_floor_heating) = parse_amenity_features(amenities);
+    let (parking_garage, ac, radiant_floor_heating, laundry_in_unit) = parse_amenity_features(amenities);
+
+    let property_type = entity["accommodationCategory"].as_str().map(str::to_string);
+    let listed_date = listing["datePosted"].as_str().map(|s| s[..s.len().min(10)].to_string());
 
     Some(db::Property {
         id: 0,
@@ -260,6 +273,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         skytrain_walk_min: None,
         radiant_floor_heating,
         ac,
+        laundry_in_unit,
         // Mortgage params are set by main.rs after parsing (save/refresh handlers).
         down_payment_pct: None,
         mortgage_interest_rate: None,
@@ -277,6 +291,9 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         school_middle_rating: None,
         school_secondary: None,
         school_secondary_rating: None,
+        property_type,
+        listed_date,
+        mls_number: None,
     })
 }
 

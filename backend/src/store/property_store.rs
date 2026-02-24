@@ -15,7 +15,8 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     status,
                     school_elementary, school_elementary_rating,
                     school_middle, school_middle_rating,
-                    school_secondary, school_secondary_rating";
+                    school_secondary, school_secondary_rating,
+                    property_type, listed_date, mls_number, laundry_in_unit";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -54,10 +55,11 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 school_elementary, school_elementary_rating,
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
+                property_type, listed_date, mls_number, laundry_in_unit,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                   ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                   ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
            RETURNING id"#,
     )
     .bind(&p.redfin_url)
@@ -105,6 +107,10 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(p.school_middle_rating)
     .bind(&p.school_secondary)
     .bind(p.school_secondary_rating)
+    .bind(&p.property_type)
+    .bind(&p.listed_date)
+    .bind(&p.mls_number)
+    .bind(p.laundry_in_unit)
     .fetch_one(pool)
     .await?;
 
@@ -150,6 +156,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                school_middle_rating     = ?,
                school_secondary         = ?,
                school_secondary_rating  = ?,
+               property_type            = ?,
+               listed_date              = ?,
+               mls_number               = ?,
+               laundry_in_unit          = ?,
                parking_covered          = ?,
                parking_open             = ?,
                property_tax             = ?,
@@ -198,6 +208,10 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.school_middle_rating)
     .bind(&p.school_secondary)
     .bind(p.school_secondary_rating)
+    .bind(&p.property_type)
+    .bind(&p.listed_date)
+    .bind(&p.mls_number)
+    .bind(p.laundry_in_unit)
     .bind(p.parking_covered)
     .bind(p.parking_open)
     .bind(p.property_tax)
@@ -322,6 +336,10 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         school_middle_rating: row.get("school_middle_rating"),
         school_secondary: row.get("school_secondary"),
         school_secondary_rating: row.get("school_secondary_rating"),
+        property_type: row.get("property_type"),
+        listed_date: row.get("listed_date"),
+        mls_number: row.get("mls_number"),
+        laundry_in_unit: row.get("laundry_in_unit"),
     }
 }
 
@@ -392,6 +410,10 @@ mod tests {
             school_middle_rating: None,
             school_secondary: None,
             school_secondary_rating: None,
+            property_type: None,
+            listed_date: None,
+            mls_number: None,
+            laundry_in_unit: None,
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)
@@ -496,8 +518,13 @@ mod tests {
             realtor_url: Some("https://realtor.example/2".to_string()),
             rew_url: Some("https://rew.example/2".to_string()),
             zillow_url: Some("https://zillow.example/2".to_string()),
+            // Listing metadata
+            mls_number: Some("R3086230".to_string()),
             // Status
             status: Some("Interested".to_string()),
+            // Property type and features
+            property_type: Some("Townhouse".to_string()),
+            laundry_in_unit: Some(true),
         };
 
         // Mirror the exact merge logic from patch_details in main.rs
@@ -543,6 +570,9 @@ mod tests {
         merged.school_secondary = details.school_secondary.clone().or(merged.school_secondary.clone());
         merged.school_secondary_rating = details.school_secondary_rating.or(merged.school_secondary_rating);
         merged.status = details.status.clone().or(merged.status.clone());
+        merged.property_type = details.property_type.clone().or(merged.property_type.clone());
+        merged.laundry_in_unit = details.laundry_in_unit.or(merged.laundry_in_unit);
+        merged.mls_number = details.mls_number.clone().or(merged.mls_number.clone());
 
         let updated = update_by_id(&pool, saved.id, &merged).await.expect("update_by_id failed");
 
@@ -599,6 +629,10 @@ mod tests {
         assert_eq!(updated.zillow_url.as_deref(), Some("https://zillow.example/2"));
         // Status
         assert_eq!(updated.status.as_deref(), Some("Interested"));
+        // Property type and new features
+        assert_eq!(updated.property_type.as_deref(), Some("Townhouse"));
+        assert_eq!(updated.laundry_in_unit, Some(true));
+        assert_eq!(updated.mls_number.as_deref(), Some("R3086230"));
 
         let _ = std::fs::remove_file(db_path);
     }

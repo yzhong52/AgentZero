@@ -92,6 +92,9 @@ pub async fn patch_details(
     updated.school_middle_rating = body.school_middle_rating.or(updated.school_middle_rating);
     updated.school_secondary = body.school_secondary.clone().or(updated.school_secondary.clone());
     updated.school_secondary_rating = body.school_secondary_rating.or(updated.school_secondary_rating);
+    updated.property_type = body.property_type.clone().or(updated.property_type.clone());
+    updated.laundry_in_unit = body.laundry_in_unit.or(updated.laundry_in_unit);
+    updated.mls_number = body.mls_number.clone().or(updated.mls_number.clone());
 
     let mut updated = db::update_by_id(&state.db, id, &updated)
         .await

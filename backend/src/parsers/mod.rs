@@ -444,6 +444,10 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
+        property_type: merge_opt("property_type", primary.property_type, fallback.property_type, primary_source, fallback_source),
+        listed_date: merge_opt("listed_date", primary.listed_date, fallback.listed_date, primary_source, fallback_source),
+        mls_number: merge_opt("mls_number", primary.mls_number, fallback.mls_number, primary_source, fallback_source),
+        laundry_in_unit: merge_opt("laundry_in_unit", primary.laundry_in_unit, fallback.laundry_in_unit, primary_source, fallback_source),
     }
 }
 

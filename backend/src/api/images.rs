@@ -5,7 +5,7 @@ use object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use tokio::fs;
 
 use crate::{AppState, db};
-use agent_zero_backend::image_paths;
+use crate::image_paths;
 
 /// DELETE /api/listings/:id/images/:image_id
 ///
@@ -36,7 +36,7 @@ pub async fn delete_image(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
 
     // If no images remain for this listing, remove the empty per-listing directory.
-    let dir = format!("{}/{}", crate::IMAGES_LOCAL_DIR, listing_id);
+    let dir = image_paths::listing_dir(listing_id);
     if let Err(e) = fs::remove_dir(&dir).await {
         // Not empty (other images remain) or already gone — both are fine.
         tracing::debug!("Could not remove image dir {}: {}", dir, e);

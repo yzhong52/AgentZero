@@ -9,7 +9,7 @@ use object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use tokio::fs;
 
 use crate::{AppState, db};
-use agent_zero_backend::image_paths;
+use crate::image_paths;
 
 /// GET /api/listings
 ///
@@ -59,7 +59,7 @@ pub async fn delete_listing(
     }
 
     // 2. Remove the per-listing image directory (now empty after step 1).
-    let dir = format!("{}/{}", crate::IMAGES_LOCAL_DIR, id);
+    let dir = image_paths::listing_dir(id);
     if let Err(e) = fs::remove_dir(&dir).await {
         tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
     }

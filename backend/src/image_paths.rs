@@ -1,4 +1,4 @@
-use crate::IMAGES_URL_PREFIX;
+use crate::{IMAGES_URL_PREFIX, IMAGES_LOCAL_DIR};
 
 /// Object-store key for a cached image: `<listing_id>/<sha256>.<ext>`.
 /// This is the path relative to the store root used for reads and deletes.
@@ -10,4 +10,10 @@ pub fn object_key(listing_id: i64, sha256: &str, ext: &str) -> String {
 /// This is what gets stored in the DB and returned to the frontend.
 pub fn serve_url(listing_id: i64, sha256: &str, ext: &str) -> String {
     format!("{}/{}/{}.{}", IMAGES_URL_PREFIX, listing_id, sha256, ext)
+}
+
+/// Filesystem path for a listing's image directory: `<IMAGES_LOCAL_DIR>/<listing_id>`.
+/// Used to remove the per-listing subdirectory after all images are deleted.
+pub fn listing_dir(listing_id: i64) -> String {
+    format!("{}/{}", IMAGES_LOCAL_DIR, listing_id)
 }

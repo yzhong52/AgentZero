@@ -1,5 +1,5 @@
 ---
-source: src/main.rs
+source: src/parsers/tests.rs
 expression: property
 ---
 {

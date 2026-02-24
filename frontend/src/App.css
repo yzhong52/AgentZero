@@ -783,6 +783,54 @@
   opacity: 0.6;
 }
 
+.notes-edit-wrap {
+  position: relative;
+}
+
+.emoji-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  background: #fff;
+  border: 1px solid #d6d6db;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 20;
+  padding: 0.2rem;
+}
+
+.emoji-suggest-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.emoji-suggest-item:hover,
+.emoji-suggest-item.active {
+  background: #f3f4f6;
+}
+
+.emoji-suggest-glyph {
+  font-size: 1rem;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.emoji-suggest-name {
+  color: #4b5563;
+  font-size: 0.82rem;
+}
+
 .notes-display {
   font-size: 0.9rem;
   line-height: 1.5;

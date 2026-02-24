@@ -755,8 +755,18 @@ export function PropertyDetail() {
         { key: 'rew_url', label: 'rew.ca', placeholder: 'https://www.rew.ca/properties/…' },
         { key: 'zillow_url', label: 'Zillow', placeholder: 'https://www.zillow.com/homedetails/…' },
     ]
-    const monthlyTotalBreakdown = `${moneyPart(finance.mortgage_monthly)} mortgage + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
-    const monthlyCostBreakdown = `${moneyPart(initialMonthlyInterest)} initial interest + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
+    const monthlyTotalParts = [
+        `${moneyPart(finance.mortgage_monthly)} mortgage`,
+        `${moneyPart(taxMonthly)} property tax`,
+        ...(hoaMonthly > 0 ? [`${moneyPart(hoaMonthly)} HOA`] : []),
+    ]
+    const monthlyCostParts = [
+        `${moneyPart(initialMonthlyInterest)} initial interest`,
+        `${moneyPart(taxMonthly)} property tax`,
+        ...(hoaMonthly > 0 ? [`${moneyPart(hoaMonthly)} HOA`] : []),
+    ]
+    const monthlyTotalBreakdown = monthlyTotalParts.join(' + ')
+    const monthlyCostBreakdown = monthlyCostParts.join(' + ')
 
     // Helper to wrap a field: in edit mode shows input, else shows static value
     function Field({ label, viewVal, editEl }: {

@@ -1,6 +1,6 @@
 use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
-use crate::models::property::Property;
+use crate::models::property::{Property, ListingStatus};
 use crate::store::image_store;
 
 // Common column list — keep in sync with row_to_property().
@@ -235,11 +235,11 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
 ///
 /// - `statuses`: if empty, returns all properties.
 /// - `statuses`: if non-empty, returns only rows whose `status` is in the given list.
-pub async fn list(pool: &SqlitePool, statuses: &[&str]) -> Result<Vec<Property>, sqlx::Error> {
+pub async fn list(pool: &SqlitePool, statuses: &[ListingStatus]) -> Result<Vec<Property>, sqlx::Error> {
     let sql = if statuses.is_empty() {
         format!("SELECT {COLS} FROM listings ORDER BY created_at DESC")
     } else {
-        let placeholders: Vec<String> = statuses.iter().map(|v| format!("'{}'", v.replace('\'', "''"))).collect();
+        let placeholders: Vec<String> = statuses.iter().map(|s| format!("'{s}'")).collect();
         format!("SELECT {COLS} FROM listings WHERE status IN ({}) ORDER BY created_at DESC", placeholders.join(","))
     };
 
@@ -410,7 +410,7 @@ mod tests {
             monthly_cost: None,
             has_rental_suite: None,
             rental_income: None,
-            status: "Interested".to_string(),
+            status: ListingStatus::Interested,
             school_elementary: None,
             school_elementary_rating: None,
             school_middle: None,
@@ -424,7 +424,7 @@ mod tests {
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)
-        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', datetime('now'))")
             .bind(&p.redfin_url)
             .bind(&p.title)
             .bind(&p.description)
@@ -460,7 +460,7 @@ mod tests {
         let pool = init(&database_url).await;
 
         // Insert initial listing with a title and known price
-        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', datetime('now'))")
             .bind(&Some("https://example.com/2".to_string()))
             .bind("Seed Title")
             .bind("")
@@ -528,7 +528,7 @@ mod tests {
             // Listing metadata
             mls_number: Some("R3086230".to_string()),
             // Status
-            status: Some("Interested".to_string()),
+            status: Some(ListingStatus::Interested),
             // Property type and features
             property_type: Some("Townhouse".to_string()),
             laundry_in_unit: Some(true),
@@ -635,7 +635,7 @@ mod tests {
         assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
         assert_eq!(updated.zillow_url.as_deref(), Some("https://zillow.example/2"));
         // Status
-        assert_eq!(updated.status, "Interested");
+        assert_eq!(updated.status, ListingStatus::Interested);
         // Property type and new features
         assert_eq!(updated.property_type.as_deref(), Some("Townhouse"));
         assert_eq!(updated.laundry_in_unit, Some(true));

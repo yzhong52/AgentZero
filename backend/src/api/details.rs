@@ -85,7 +85,7 @@ pub async fn patch_details(
     updated.monthly_cost = body.monthly_cost.or(updated.monthly_cost);
     updated.has_rental_suite = body.has_rental_suite.or(updated.has_rental_suite);
     updated.rental_income = body.rental_income.or(updated.rental_income);
-    if let Some(s) = body.status.clone() { updated.status = s; }
+    if let Some(s) = body.status { updated.status = s; }
     updated.school_elementary = body.school_elementary.clone().or(updated.school_elementary.clone());
     updated.school_elementary_rating = body.school_elementary_rating.or(updated.school_elementary_rating);
     updated.school_middle = body.school_middle.clone().or(updated.school_middle.clone());

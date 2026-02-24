@@ -198,7 +198,7 @@ fn blank_stub() -> db::Property {
         monthly_cost: None,
         has_rental_suite: None,
         rental_income: None,
-        status: "Interested".to_string(),
+        status: crate::models::property::ListingStatus::Interested,
         school_elementary: None,
         school_elementary_rating: None,
         school_middle: None,

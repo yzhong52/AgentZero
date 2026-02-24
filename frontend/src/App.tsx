@@ -158,14 +158,14 @@ function App() {
 
             <div className="status-filter">
               {STATUS_OPTIONS.map((s) => (
-                <label key={s} className="filter-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={statusFilter.has(s)}
-                    onChange={() => toggleStatus(s)}
-                  />
-                  <span style={statusFilter.has(s) ? { color: STATUS_COLORS[s], fontWeight: 600 } : {}}>{s}</span>
-                </label>
+                <button
+                  key={s}
+                  className={`filter-btn${statusFilter.has(s) ? ' active' : ''}`}
+                  onClick={() => toggleStatus(s)}
+                  style={statusFilter.has(s) ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+                >
+                  {s}
+                </button>
               ))}
             </div>
 

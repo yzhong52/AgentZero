@@ -1,5 +1,67 @@
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use crate::models::image::ImageEntry;
+
+/// The user-facing status of a listing.
+/// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ListingStatus {
+    Interested,
+    Buyable,
+    Pass,
+}
+
+impl Default for ListingStatus {
+    fn default() -> Self { Self::Interested }
+}
+
+impl std::fmt::Display for ListingStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Interested => "Interested",
+            Self::Buyable    => "Buyable",
+            Self::Pass       => "Pass",
+        })
+    }
+}
+
+impl FromStr for ListingStatus {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Interested" => Ok(Self::Interested),
+            "Buyable"    => Ok(Self::Buyable),
+            "Pass"       => Ok(Self::Pass),
+            _            => Err(format!("unknown listing status: {s}")),
+        }
+    }
+}
+
+// ── sqlx: store/retrieve as TEXT in SQLite ───────────────────────────────────
+
+impl sqlx::Type<sqlx::Sqlite> for ListingStatus {
+    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
+        <String as sqlx::Type<sqlx::Sqlite>>::type_info()
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Sqlite> for ListingStatus {
+    fn decode(value: sqlx::sqlite::SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as sqlx::Decode<sqlx::Sqlite>>::decode(value)?;
+        s.parse().map_err(Into::into)
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
+    fn encode_by_ref(
+        &self,
+        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        use std::borrow::Cow;
+        buf.push(sqlx::sqlite::SqliteArgumentValue::Text(Cow::Owned(self.to_string())));
+        Ok(sqlx::encode::IsNull::No)
+    }
+}
 
 /// A real estate property with all parsed and user-tracked fields.
 /// Images are populated separately from the images_cache table.
@@ -90,8 +152,7 @@ pub struct Property {
     pub listed_date: Option<String>,  // parsed; display only (ISO date, e.g. "2026-02-17")
 
     // ── User notes / status ──────────────────────────────────────────────────
-    /// User-set status: "Interested" | "Pass" | "Buyable". Never null — defaults to "Interested".
-    pub status: String,  // editable (status widget)
+    pub status: ListingStatus,  // editable (status widget); never null, defaults to Interested
     pub notes: Option<String>,   // editable (via PATCH /notes)
 
     // ── System metadata ──────────────────────────────────────────────────────
@@ -174,5 +235,5 @@ pub struct UserDetails {
     // ── Listing metadata ─────────────────────────────────────────────────────
     pub mls_number: Option<String>,
     // ── Status ───────────────────────────────────────────────────────────────
-    pub status: Option<String>,
+    pub status: Option<ListingStatus>,
 }

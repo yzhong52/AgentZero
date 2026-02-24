@@ -11,6 +11,7 @@ use tokio::fs;
 
 use crate::{AppState, db};
 use crate::image_paths;
+use crate::models::property::ListingStatus;
 
 #[derive(Deserialize)]
 pub struct ListingsQuery {
@@ -27,14 +28,13 @@ pub async fn list_listings(
     State(state): State<AppState>,
     Query(params): Query<ListingsQuery>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
-    // Parse "Interested,Buyable" → ["Interested", "Buyable"]; empty = all.
-    let statuses: Vec<String> = match &params.status {
+    // Parse "Interested,Buyable" → [ListingStatus::Interested, ...]; empty = all.
+    let statuses: Vec<ListingStatus> = match &params.status {
         None => vec![],
-        Some(s) => s.split(',').map(str::to_string).collect(),
+        Some(s) => s.split(',').filter_map(|v| v.parse().ok()).collect(),
     };
-    let status_refs: Vec<&str> = statuses.iter().map(String::as_str).collect();
 
-    let listings = db::list(&state.db, &status_refs)
+    let listings = db::list(&state.db, &statuses)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
     Ok(Json(listings))

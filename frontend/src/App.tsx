@@ -63,7 +63,7 @@ export type Property = {
   school_secondary_rating: number | null
 }
 
-export const STATUS_OPTIONS = ['Interested', 'Buyable', 'Pass'] as const
+export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass'] as const
 export type StatusOption = typeof STATUS_OPTIONS[number]
 
 export const STATUS_COLORS: Record<string, string> = {

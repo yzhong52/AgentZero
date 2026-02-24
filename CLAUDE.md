@@ -95,3 +95,29 @@ Snapshots live in `backend/src/snapshots/`. To update them after intentional cha
 ```bash
 cargo insta review
 ```
+
+## Coding Conventions
+
+### Rust: prefer named structs over tuples
+
+When a function returns or stores more than one related value, define a small named struct instead of using a tuple. This improves call-site readability and makes fields self-documenting.
+
+**Don't:**
+```rust
+fn parse_amenity_features(features: &[JsonValue]) -> (Option<i64>, Option<bool>, Option<bool>, Option<bool>) { … }
+let (parking, ac, radiant, laundry) = parse_amenity_features(amenities);
+```
+
+**Do:**
+```rust
+struct AmenityFeatures {
+    parking_garage: Option<i64>,
+    ac: Option<bool>,
+    radiant_floor_heating: Option<bool>,
+    laundry_in_unit: Option<bool>,
+}
+fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures { … }
+let af = parse_amenity_features(amenities);
+```
+
+Existing examples in this codebase: `AmenityFeatures`, `AddressInfo`, `SchoolEntry`, `ParsedSource` (all in `backend/src/parsers/`).

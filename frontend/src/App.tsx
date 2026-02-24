@@ -133,7 +133,11 @@ function App() {
           </div>
 
           {viewMode === 'grid' ? (
-            <ListingGrid rows={listings} />
+            <ListingGrid rows={[...listings].sort((a, b) => {
+              const ra = STATUS_OPTIONS.indexOf(a.status as any)
+              const rb = STATUS_OPTIONS.indexOf(b.status as any)
+              return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb)
+            })} />
           ) : (
             <ListingTable rows={listings} cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))} />
           )}

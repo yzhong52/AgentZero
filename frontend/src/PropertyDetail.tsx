@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { marked } from 'marked'
 import type { Property } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
@@ -270,6 +271,7 @@ export function PropertyDetail() {
     // Notes
     const [notes, setNotes] = useState<string>('')
     const [notesSaving, setNotesSaving] = useState(false)
+    const [notesEditing, setNotesEditing] = useState(false)
 
     // Title (inline header)
     const [titleDraft, setTitleDraft] = useState<string>('')
@@ -299,6 +301,10 @@ export function PropertyDetail() {
     }>({ redfin_url: null, realtor_url: null, rew_url: null, zillow_url: null })
     const [editingUrlKey, setEditingUrlKey] = useState<'redfin_url' | 'realtor_url' | 'rew_url' | 'zillow_url' | null>(null)
     const [urlsSaving, setUrlsSaving] = useState(false)
+    const [urlsExpanded, setUrlsExpanded] = useState(false)
+
+    // History expand
+    const [historyExpanded, setHistoryExpanded] = useState(false)
 
     // Lightbox
     const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -1120,14 +1126,28 @@ export function PropertyDetail() {
 
                     <div className="right-panel-section">
                         <h3 className="notes-heading">My Notes</h3>
-                        <textarea
-                            className="notes-textarea"
-                            value={notes}
-                            onChange={e => setNotes(e.target.value)}
-                            onBlur={handleNotesSave}
-                            placeholder="Add personal notes about this property…"
-                            disabled={notesSaving}
-                        />
+                        {notesEditing ? (
+                            <textarea
+                                className="notes-textarea"
+                                value={notes}
+                                onChange={e => setNotes(e.target.value)}
+                                onBlur={() => { setNotesEditing(false); handleNotesSave() }}
+                                placeholder="Add personal notes… (supports markdown)"
+                                disabled={notesSaving}
+                                autoFocus
+                            />
+                        ) : (
+                            <div
+                                className={`notes-display${notes ? '' : ' notes-display-empty'}`}
+                                onClick={() => setNotesEditing(true)}
+                                title="Click to edit"
+                            >
+                                {notes
+                                    ? <div dangerouslySetInnerHTML={{ __html: marked(notes) as string }} />
+                                    : <span>Add personal notes…</span>
+                                }
+                            </div>
+                        )}
                         {notesSaving && <div className="notes-saving">Saving…</div>}
                     </div>
 
@@ -1143,66 +1163,83 @@ export function PropertyDetail() {
                                 {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
                             </button>
                         </div>
-                        {externalUrlRows.map(({ key, label, placeholder }) => {
-                            const currentValue = urlDraft[key]
-                            const isEditing = editingUrlKey === key
-                            return (
-                                <div className="source-url-field" key={key}>
-                                    <label>{label}</label>
-                                    {isEditing ? (
-                                        <div className="source-url-edit-row">
-                                            <input
-                                                className="edit-input"
-                                                type="url"
-                                                value={currentValue ?? ''}
-                                                onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
-                                                placeholder={placeholder}
-                                            />
-                                            <button
-                                                className="source-url-edit-btn"
-                                                onClick={() => setEditingUrlKey(null)}
-                                                title="Done editing"
-                                                type="button"
-                                            >
-                                                ✓
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="source-url-line">
-                                            {currentValue ? (
-                                                <a className="source-url-link" href={currentValue} target="_blank" rel="noreferrer">
-                                                    {currentValue}
-                                                </a>
+                        {(() => {
+                            const filledRows = externalUrlRows.filter(({ key }) => urlDraft[key])
+                            const hiddenCount = externalUrlRows.length - filledRows.length
+                            const visibleRows = urlsExpanded ? externalUrlRows : filledRows
+                            return <>
+                                {visibleRows.map(({ key, label, placeholder }) => {
+                                    const currentValue = urlDraft[key]
+                                    const isEditing = editingUrlKey === key
+                                    return (
+                                        <div className="source-url-field" key={key}>
+                                            <label>{label}</label>
+                                            {isEditing ? (
+                                                <div className="source-url-edit-row">
+                                                    <input
+                                                        className="edit-input"
+                                                        type="url"
+                                                        value={currentValue ?? ''}
+                                                        onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
+                                                        placeholder={placeholder}
+                                                    />
+                                                    <button
+                                                        className="source-url-edit-btn"
+                                                        onClick={() => setEditingUrlKey(null)}
+                                                        title="Done editing"
+                                                        type="button"
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                </div>
                                             ) : (
-                                                <span className="source-url-empty">—</span>
+                                                <div className="source-url-line">
+                                                    {currentValue ? (
+                                                        <a className="source-url-link" href={currentValue} target="_blank" rel="noreferrer">
+                                                            {currentValue}
+                                                        </a>
+                                                    ) : (
+                                                        <span className="source-url-empty">—</span>
+                                                    )}
+                                                    <button
+                                                        className="source-url-edit-btn"
+                                                        onClick={() => setEditingUrlKey(key)}
+                                                        title={`Edit ${label} URL`}
+                                                        type="button"
+                                                    >
+                                                        <svg className="source-url-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                            <path
+                                                                d="M4 20l4.7-1 9.3-9.3a1.4 1.4 0 0 0 0-2l-1.7-1.7a1.4 1.4 0 0 0-2 0L5 15.3 4 20z"
+                                                                stroke="currentColor"
+                                                                strokeWidth="1.8"
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                            />
+                                                            <path
+                                                                d="M13.2 6.8l4 4"
+                                                                stroke="currentColor"
+                                                                strokeWidth="1.8"
+                                                                strokeLinecap="round"
+                                                            />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             )}
-                                            <button
-                                                className="source-url-edit-btn"
-                                                onClick={() => setEditingUrlKey(key)}
-                                                title={`Edit ${label} URL`}
-                                                type="button"
-                                            >
-                                                <svg className="source-url-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                    <path
-                                                        d="M4 20l4.7-1 9.3-9.3a1.4 1.4 0 0 0 0-2l-1.7-1.7a1.4 1.4 0 0 0-2 0L5 15.3 4 20z"
-                                                        stroke="currentColor"
-                                                        strokeWidth="1.8"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                    <path
-                                                        d="M13.2 6.8l4 4"
-                                                        stroke="currentColor"
-                                                        strokeWidth="1.8"
-                                                        strokeLinecap="round"
-                                                    />
-                                                </svg>
-                                            </button>
                                         </div>
-                                    )}
-                                </div>
-                            )
-                        })}
+                                    )
+                                })}
+                                {!urlsExpanded && hiddenCount > 0 && (
+                                    <button className="panel-more-btn" onClick={() => setUrlsExpanded(true)}>
+                                        + {hiddenCount} more
+                                    </button>
+                                )}
+                                {urlsExpanded && (
+                                    <button className="panel-more-btn" onClick={() => { setUrlsExpanded(false); setEditingUrlKey(null) }}>
+                                        Show less
+                                    </button>
+                                )}
+                            </>
+                        })()}
                         {hasUrlChanges && (
                             <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
                                 {urlsSaving ? 'Saving…' : 'Save URLs'}
@@ -1214,7 +1251,7 @@ export function PropertyDetail() {
                         <div className="history-panel right-panel-section">
                             <h3 className="notes-heading">Change History</h3>
                             <ul className="history-list">
-                                {history.map(entry => (
+                                {(historyExpanded ? history : history.slice(0, 1)).map(entry => (
                                     <li key={entry.id} className="history-entry">
                                         <span className="history-field">{entry.field_name}</span>
                                         <span className="history-change">
@@ -1228,6 +1265,11 @@ export function PropertyDetail() {
                                     </li>
                                 ))}
                             </ul>
+                            {history.length > 1 && (
+                                <button className="panel-more-btn" onClick={() => setHistoryExpanded(h => !h)}>
+                                    {historyExpanded ? 'Show less' : `+ ${history.length - 1} more`}
+                                </button>
+                            )}
                         </div>
                     )}
 

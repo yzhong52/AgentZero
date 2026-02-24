@@ -179,10 +179,6 @@
 }
 
 /* ── status picker (detail panel) ── */
-.status-picker {
-  margin-bottom: 1.25rem;
-}
-
 .status-picker-buttons {
   display: flex;
   gap: 0.35rem;
@@ -747,9 +743,24 @@
   color: #1c1c1e;
 }
 
+.panel-more-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.3rem;
+  font-size: 0.78rem;
+  color: #9ca3af;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.panel-more-btn:hover {
+  color: #6b7280;
+}
+
 .notes-textarea {
   width: 100%;
-  min-height: 260px;
+  min-height: 100px;
   resize: vertical;
   background: #fff;
   color: #1c1c1e;
@@ -772,6 +783,34 @@
   opacity: 0.6;
 }
 
+.notes-display {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1c1c1e;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  margin: -0.4rem -0.5rem;
+  transition: background 0.15s;
+}
+
+.notes-display:hover {
+  background: #f0efeb;
+}
+
+.notes-display-empty {
+  color: #bbb;
+  font-style: italic;
+}
+
+.notes-display p { margin: 0 0 0.5em; }
+.notes-display p:last-child { margin-bottom: 0; }
+.notes-display ul, .notes-display ol { margin: 0 0 0.5em; padding-left: 1.4em; }
+.notes-display h1, .notes-display h2, .notes-display h3 { margin: 0.5em 0 0.25em; font-size: 0.95em; }
+.notes-display code { background: #f0efeb; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.85em; }
+.notes-display pre { background: #f0efeb; border-radius: 5px; padding: 0.5em; overflow-x: auto; }
+.notes-display pre code { background: none; padding: 0; }
+
 .notes-saving {
   font-size: 0.8rem;
   color: #aaa;
@@ -780,6 +819,8 @@
 /* ── change history ── */
 .history-panel {
   margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .right-panel-section {

@@ -642,6 +642,43 @@
   top: 1rem;
 }
 
+/* ── source URLs panel (inside notes-panel) ── */
+.source-urls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e5ea;
+  margin-bottom: 0.5rem;
+}
+
+.source-urls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.source-url-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.source-url-field label {
+  font-size: 0.72rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.save-urls-btn {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.75rem;
+}
+
 .notes-heading {
   margin: 0;
   font-size: 1rem;

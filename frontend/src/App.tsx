@@ -3,6 +3,9 @@ import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
+import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
+import type { StatusOption } from './constants'
+export { STATUS_OPTIONS, STATUS_COLORS, type StatusOption }
 
 export type ImageEntry = {
   id: number
@@ -62,16 +65,6 @@ export type Property = {
   school_secondary: string | null
   school_secondary_rating: number | null
 }
-
-export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass'] as const
-export type StatusOption = typeof STATUS_OPTIONS[number]
-
-export const STATUS_COLORS: Record<string, string> = {
-  Interested: '#4f46e5',
-  Buyable: '#16a34a',
-  Pass: '#9ca3af',
-}
-
 
 function App() {
   const [url, setUrl] = useState('')

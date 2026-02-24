@@ -217,10 +217,6 @@ function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
 function toUserDetails(p: Property) {
     return {
         title: p.title,
-        redfin_url: p.redfin_url,
-        realtor_url: p.realtor_url,
-        rew_url: p.rew_url,
-        zillow_url: p.zillow_url,
         price: p.price,
         price_currency: p.price_currency,
         offer_price: p.offer_price,
@@ -294,6 +290,15 @@ export function PropertyDetail() {
     // Delete
     const [deleting, setDeleting] = useState(false)
 
+    // URL draft (right panel — always editable, independent of main edit mode)
+    const [urlDraft, setUrlDraft] = useState<{
+        redfin_url: string | null
+        realtor_url: string | null
+        rew_url: string | null
+        zillow_url: string | null
+    }>({ redfin_url: null, realtor_url: null, rew_url: null, zillow_url: null })
+    const [urlsSaving, setUrlsSaving] = useState(false)
+
     // Lightbox
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [activeIdx, setActiveIdx] = useState(0)
@@ -314,6 +319,7 @@ export function PropertyDetail() {
             setProperty(p)
             setNotes(p.notes ?? '')
             setTitleDraft(p.title ?? '')
+            setUrlDraft({ redfin_url: p.redfin_url, realtor_url: p.realtor_url, rew_url: p.rew_url, zillow_url: p.zillow_url })
 
             const histResp = await fetch(`/api/listings/${id}/history`)
             if (histResp.ok) setHistory(await histResp.json())
@@ -423,12 +429,46 @@ export function PropertyDetail() {
         }
     }
 
+    // ── URL save (right panel) ────────────────────────────────────────────────
+
+    async function saveUrls(): Promise<boolean> {
+        if (!property) return false
+        setUrlsSaving(true)
+        setError(null)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/details`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(urlDraft),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+            const updated: Property = await resp.json()
+            setProperty({ ...updated, images: property.images })
+            setUrlDraft({ redfin_url: updated.redfin_url, realtor_url: updated.realtor_url, rew_url: updated.rew_url, zillow_url: updated.zillow_url })
+            return true
+        } catch (err: any) {
+            setError(err?.message || String(err))
+            return false
+        } finally {
+            setUrlsSaving(false)
+        }
+    }
+
     // ── Refresh with preview diff ─────────────────────────────────────────────
 
     async function handleRefreshPreview() {
         if (!property) return
         setError(null)
         setRefreshMsg(null)
+        // Save any URL edits before refreshing
+        const hasChanges = urlDraft.redfin_url !== property.redfin_url ||
+            urlDraft.realtor_url !== property.realtor_url ||
+            urlDraft.rew_url !== property.rew_url ||
+            urlDraft.zillow_url !== property.zillow_url
+        if (hasChanges) {
+            const ok = await saveUrls()
+            if (!ok) return
+        }
         setPreviewing(true)
         try {
             const resp = await fetch(`/api/listings/${property.id}/preview`)
@@ -451,6 +491,7 @@ export function PropertyDetail() {
             const updated: Property = await resp.json()
             setProperty(updated)
             setTitleDraft(updated.title ?? '')
+            setUrlDraft({ redfin_url: updated.redfin_url, realtor_url: updated.realtor_url, rew_url: updated.rew_url, zillow_url: updated.zillow_url })
             setDiffModal(null)
             setRefreshMsg('Property updated successfully')
             setTimeout(() => setRefreshMsg(null), 3000)
@@ -572,6 +613,10 @@ export function PropertyDetail() {
     const hoaMonthly = finance.hoa_monthly ?? 0
     const effectiveOfferPrice = finance.offer_price ?? finance.price
     const hasCustomOfferPrice = finance.offer_price != null && finance.price != null && finance.offer_price !== finance.price
+    const hasUrlChanges = urlDraft.redfin_url !== property.redfin_url ||
+        urlDraft.realtor_url !== property.realtor_url ||
+        urlDraft.rew_url !== property.rew_url ||
+        urlDraft.zillow_url !== property.zillow_url
     const monthlyTotalBreakdown = `${moneyPart(finance.mortgage_monthly)} mortgage + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
     const monthlyCostBreakdown = `${moneyPart(initialMonthlyInterest)} initial interest + ${moneyPart(taxMonthly)} tax + ${moneyPart(hoaMonthly)} HOA`
 
@@ -601,14 +646,6 @@ export function PropertyDetail() {
 
             <div className="detail-nav">
                 <button className="back-btn" onClick={() => navigate('/')}>← Back</button>
-                <button
-                    className="refresh-btn"
-                    onClick={handleRefreshPreview}
-                    disabled={previewing || editMode}
-                    title="Preview changes from source"
-                >
-                    {previewing ? '⟳ Checking…' : '⟳ Refresh'}
-                </button>
                 {!editMode ? (
                     <button className="edit-btn" onClick={enterEdit}>Edit</button>
                 ) : (
@@ -882,65 +919,6 @@ export function PropertyDetail() {
 
                     </div>
 
-                    <div className="detail-metadata">
-                        <div className="meta-item">
-                            <strong>Redfin:</strong>
-                            {editMode ? (
-                                <input
-                                    className="edit-input"
-                                    type="url"
-                                    value={draft?.redfin_url ?? ''}
-                                    onChange={e => setDraftField('redfin_url', e.target.value || null)}
-                                    placeholder="https://www.redfin.ca/…"
-                                />
-                            ) : property.redfin_url ? (
-                                <a href={property.redfin_url} target="_blank" rel="noreferrer">{property.redfin_url}</a>
-                            ) : <span className="tracked-value">—</span>}
-                        </div>
-                        <div className="meta-item">
-                            <strong>Realtor.ca:</strong>
-                            {editMode ? (
-                                <input
-                                    className="edit-input"
-                                    type="url"
-                                    value={draft?.realtor_url ?? ''}
-                                    onChange={e => setDraftField('realtor_url', e.target.value || null)}
-                                    placeholder="https://www.realtor.ca/real-estate/…"
-                                />
-                            ) : property.realtor_url ? (
-                                <a href={property.realtor_url} target="_blank" rel="noreferrer">{property.realtor_url}</a>
-                            ) : <span className="tracked-value">—</span>}
-                        </div>
-                        <div className="meta-item">
-                            <strong>rew.ca:</strong>
-                            {editMode ? (
-                                <input
-                                    className="edit-input"
-                                    type="url"
-                                    value={draft?.rew_url ?? ''}
-                                    onChange={e => setDraftField('rew_url', e.target.value || null)}
-                                    placeholder="https://www.rew.ca/properties/…"
-                                />
-                            ) : property.rew_url ? (
-                                <a href={property.rew_url} target="_blank" rel="noreferrer">{property.rew_url}</a>
-                            ) : <span className="tracked-value">—</span>}
-                        </div>
-                        <div className="meta-item">
-                            <strong>Zillow:</strong>
-                            {editMode ? (
-                                <input
-                                    className="edit-input"
-                                    type="url"
-                                    value={draft?.zillow_url ?? ''}
-                                    onChange={e => setDraftField('zillow_url', e.target.value || null)}
-                                    placeholder="https://www.zillow.com/homedetails/…"
-                                />
-                            ) : property.zillow_url ? (
-                                <a href={property.zillow_url} target="_blank" rel="noreferrer">{property.zillow_url}</a>
-                            ) : <span className="tracked-value">—</span>}
-                        </div>
-                    </div>
-
                     {property.lat != null && property.lon != null && (
                         <div className="map-preview">
                             <iframe
@@ -1116,6 +1094,41 @@ export function PropertyDetail() {
                 </div>
 
                 <div className="notes-panel">
+                    <div className="source-urls-panel">
+                        <div className="source-urls-header">
+                            <h3 className="notes-heading">Source URLs</h3>
+                            <button
+                                className="refresh-btn"
+                                onClick={handleRefreshPreview}
+                                disabled={previewing || editMode || urlsSaving}
+                                title="Preview changes from source (saves URL edits first)"
+                            >
+                                {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
+                            </button>
+                        </div>
+                        <div className="source-url-field">
+                            <label>Redfin</label>
+                            <input className="edit-input" type="url" value={urlDraft.redfin_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, redfin_url: e.target.value || null }))} placeholder="https://www.redfin.ca/…" />
+                        </div>
+                        <div className="source-url-field">
+                            <label>Realtor.ca</label>
+                            <input className="edit-input" type="url" value={urlDraft.realtor_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, realtor_url: e.target.value || null }))} placeholder="https://www.realtor.ca/…" />
+                        </div>
+                        <div className="source-url-field">
+                            <label>rew.ca</label>
+                            <input className="edit-input" type="url" value={urlDraft.rew_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, rew_url: e.target.value || null }))} placeholder="https://www.rew.ca/properties/…" />
+                        </div>
+                        <div className="source-url-field">
+                            <label>Zillow</label>
+                            <input className="edit-input" type="url" value={urlDraft.zillow_url ?? ''} onChange={e => setUrlDraft(d => ({ ...d, zillow_url: e.target.value || null }))} placeholder="https://www.zillow.com/homedetails/…" />
+                        </div>
+                        {hasUrlChanges && (
+                            <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
+                                {urlsSaving ? 'Saving…' : 'Save URLs'}
+                            </button>
+                        )}
+                    </div>
+
                     <div className="status-picker">
                         <label className="status-picker-label">Status</label>
                         <div className="status-picker-buttons">

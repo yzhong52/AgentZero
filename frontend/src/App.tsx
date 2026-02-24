@@ -79,7 +79,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>('All')
+  const [statusFilter, setStatusFilter] = useState<string>('Active')
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
@@ -146,12 +146,12 @@ function App() {
             <h2>Saved Listings ({listings.length})</h2>
 
             <div className="status-filter">
-              {['All', ...STATUS_OPTIONS].map((s) => (
+              {['Active', 'All', ...STATUS_OPTIONS].map((s) => (
                 <button
                   key={s}
                   className={`filter-btn${statusFilter === s ? ' active' : ''}`}
                   onClick={() => setStatusFilter(s)}
-                  style={statusFilter === s && s !== 'All' ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+                  style={statusFilter === s && s !== 'All' && s !== 'Active' ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
                 >
                   {s}
                 </button>
@@ -189,11 +189,11 @@ function App() {
 
           {viewMode === 'grid' ? (
             <ListingGrid
-              rows={listings.filter((p) => statusFilter === 'All' || p.status === statusFilter)}
+              rows={listings.filter((p) => statusFilter === 'All' || (statusFilter === 'Active' ? p.status !== 'Pass' : p.status === statusFilter))}
             />
           ) : (
             <ListingTable
-              rows={listings.filter((p) => statusFilter === 'All' || p.status === statusFilter)}
+              rows={listings.filter((p) => statusFilter === 'All' || (statusFilter === 'Active' ? p.status !== 'Pass' : p.status === statusFilter))}
               cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))}
             />
           )}

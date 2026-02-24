@@ -57,20 +57,19 @@ pub async fn add_listing(
     // fetch error for a known-blocked host we fall through with empty HTML;
     // the stub path below saves the listing so the user can fill in details
     // manually.  Non-blocked hosts still return 502 on fetch failure.
-    let mut sources: Vec<(String, String)> = Vec::new();
+    let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &parsed_urls {
         match fetch_html(&state.client, url).await {
-            Ok(html) => sources.push((url.to_string(), html)),
+            Ok(html) => sources.push(parsers::SourceInput { url: url.to_string(), html }),
             Err(e) if is_blocked_host(url) => {
                 tracing::info!("add_listing: fetch blocked ({}), will save stub for {}", e, url);
-                sources.push((url.to_string(), String::new()));
+                sources.push(parsers::SourceInput { url: url.to_string(), html: String::new() });
             }
             Err(e) => return Err((StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e))),
         }
     }
 
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing_opt = parsers::parse_multi(&source_refs);
+    let listing_opt = parsers::parse_multi(&sources);
 
     let (mut property, image_urls) = match listing_opt {
         Some(listing) => (listing.property, listing.image_urls),

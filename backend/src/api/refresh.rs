@@ -36,7 +36,7 @@ pub async fn refresh_listing(
         return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
     }
 
-    let mut sources: Vec<(String, String)> = Vec::new();
+    let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &source_urls {
         let parsed_url = safe_url(url)
             .ok_or((StatusCode::BAD_REQUEST, format!("Invalid stored URL: {url}")))?;
@@ -44,12 +44,11 @@ pub async fn refresh_listing(
             .await
             .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {url}: {e}")))?;
         tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
-        sources.push((parsed_url.to_string(), html));
+        sources.push(parsers::SourceInput { url: parsed_url.to_string(), html });
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing = parsers::parse_multi(&source_refs)
+    let listing = parsers::parse_multi(&sources)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut updated = listing.property;
     let image_urls = listing.image_urls;
@@ -166,19 +165,18 @@ pub async fn preview_refresh(
         return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
     }
 
-    let mut sources: Vec<(String, String)> = Vec::new();
+    let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &stored_urls {
         let parsed_url = safe_url(url)
             .ok_or((StatusCode::BAD_REQUEST, format!("Invalid stored URL: {url}")))?;
         let html = fetch_html(&state.client, &parsed_url)
             .await
             .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {url}: {e}")))?;
-        sources.push((parsed_url.to_string(), html));
+        sources.push(parsers::SourceInput { url: parsed_url.to_string(), html });
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
-    let source_refs: Vec<(&str, &str)> = sources.iter().map(|(u, h)| (u.as_str(), h.as_str())).collect();
-    let listing = parsers::parse_multi(&source_refs)
+    let listing = parsers::parse_multi(&sources)
         .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
     let mut preview = listing.property;
 

@@ -120,4 +120,4 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures { … }
 let af = parse_amenity_features(amenities);
 ```
 
-Existing examples in this codebase: `AmenityFeatures`, `AddressInfo`, `SchoolEntry`, `ParsedSource` (all in `backend/src/parsers/`).
+Existing examples in this codebase: `AmenityFeatures`, `AddressInfo`, `SchoolEntry`, `ParsedSource`, `SourceInput` (all in `backend/src/parsers/`).

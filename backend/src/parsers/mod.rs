@@ -29,6 +29,12 @@ pub struct ParsedListing {
     pub image_urls: Vec<String>,
 }
 
+/// A (url, html) pair handed to `parse_multi`.
+pub struct SourceInput {
+    pub url: String,
+    pub html: String,
+}
+
 /// Raw debug output returned by `GET /api/parse`.
 #[derive(Serialize)]
 pub struct ParseResult {
@@ -499,11 +505,11 @@ fn parse_source(url: &str, html: &str) -> Option<ParsedSource> {
 /// - Other successful parsers fill in missing fields by priority order.
 /// - When two sources disagree on the same populated field, keeps the higher-priority value.
 ///
-/// `sources` is a slice of `(url, html)` pairs. Unknown URLs are ignored.
-pub fn parse_multi(sources: &[(&str, &str)]) -> Option<ParsedListing> {
+/// `sources` is a slice of `SourceInput` items (url + html). Unknown URLs are ignored.
+pub fn parse_multi(sources: &[SourceInput]) -> Option<ParsedListing> {
     let mut parsed: Vec<ParsedSource> = sources
         .iter()
-        .filter_map(|(url, html)| parse_source(url, html))
+        .filter_map(|s| parse_source(&s.url, &s.html))
         .collect();
 
     if parsed.is_empty() {

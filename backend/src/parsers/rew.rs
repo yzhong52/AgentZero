@@ -265,33 +265,8 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
 #[cfg(test)]
 mod tests {
-    use crate::db;
     use super::*;
-
-    fn fixture(name: &str) -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("src")
-            .join("parsers")
-            .join("fixtures")
-            .join(name)
-    }
-
-    fn listing_to_property(listing: ParsedListing) -> db::Property {
-        let images = listing
-            .image_urls
-            .into_iter()
-            .enumerate()
-            .map(|(i, url)| db::ImageEntry {
-                id: i as i64,
-                url,
-                created_at: String::new(),
-            })
-            .collect();
-        db::Property {
-            images,
-            ..listing.property
-        }
-    }
+    use crate::parsers::test_support::{fixture, listing_to_property};
 
     #[test]
     fn rew_788_w8th() {

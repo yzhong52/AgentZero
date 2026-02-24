@@ -10,6 +10,9 @@ pub mod realtor;
 pub mod rew;
 pub mod zillow;
 
+#[cfg(test)]
+pub(crate) mod test_support;
+
 use crate::db;
 use scraper::{Html, Selector};
 use serde::Serialize;

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Property } from './App'
-import { STATUS_OPTIONS } from './App'
+import type { Property } from './types'
+import { STATUS_OPTIONS } from './constants'
 
 export type ColKey =
   | 'name' | 'price' | 'status' | 'address' | 'bedrooms' | 'bathrooms'

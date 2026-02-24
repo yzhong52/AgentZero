@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import type { Property } from './App'
-import { STATUS_OPTIONS, STATUS_COLORS } from './App'
+import type { Property } from './types'
+import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
 type HistoryEntry = {
     id: number

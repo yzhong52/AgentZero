@@ -1,11 +1,17 @@
 //! GET /api/parse — fetch a URL and return raw parsed fields without saving to the DB.
 
-use axum::{Json, extract::{State, Query}, http::StatusCode};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    Json,
+};
 use scraper::Html;
 use std::collections::HashMap;
 
-use crate::{AppState, fetch_html, safe_url};
-use crate::parsers::{ParseResult, extract_description, extract_images, extract_json_ld, extract_title, meta_map};
+use crate::parsers::{
+    extract_description, extract_images, extract_json_ld, extract_title, meta_map, ParseResult,
+};
+use crate::{fetch_html, safe_url, AppState};
 
 /// GET /api/parse?url=<url>
 ///
@@ -15,15 +21,19 @@ pub async fn parse(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<ParseResult>, (StatusCode, String)> {
-    let url = params
-        .get("url")
-        .ok_or((StatusCode::BAD_REQUEST, "Missing 'url' query parameter".to_string()))?;
+    let url = params.get("url").ok_or((
+        StatusCode::BAD_REQUEST,
+        "Missing 'url' query parameter".to_string(),
+    ))?;
     let url = url.trim();
     let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL".to_string()))?;
 
-    let html = fetch_html(&state.client, &parsed)
-        .await
-        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch URL: {}", e)))?;
+    let html = fetch_html(&state.client, &parsed).await.map_err(|e| {
+        (
+            StatusCode::BAD_GATEWAY,
+            format!("Failed to fetch URL: {}", e),
+        )
+    })?;
 
     let document = Html::parse_document(&html);
     let json_ld = extract_json_ld(&document);

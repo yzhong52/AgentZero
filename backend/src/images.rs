@@ -1,7 +1,7 @@
 use crate::db;
 use crate::image_paths;
 use image::imageops::FilterType;
-use object_store::{ObjectStore, ObjectStoreExt, path::Path as ObjectPath};
+use object_store::{path::Path as ObjectPath, ObjectStore, ObjectStoreExt};
 use reqwest::Client;
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
@@ -13,9 +13,7 @@ const PHASH_THRESHOLD: u32 = 8;
 /// Compute a 64-bit difference hash (dHash) for perceptual deduplication.
 /// Resize to 9×8 grayscale, compare adjacent pixels in each row.
 fn dhash(img: &image::DynamicImage) -> i64 {
-    let small = img
-        .resize_exact(9, 8, FilterType::Lanczos3)
-        .grayscale();
+    let small = img.resize_exact(9, 8, FilterType::Lanczos3).grayscale();
     let pixels = small.to_luma8().into_raw();
     let mut hash: u64 = 0;
     for row in 0..8u32 {
@@ -65,7 +63,11 @@ pub async fn cache_images(
     let pending = match db::list_pending_image_urls(pool, listing_id).await {
         Ok(urls) => urls,
         Err(e) => {
-            tracing::error!("Failed to list pending images for listing {}: {}", listing_id, e);
+            tracing::error!(
+                "Failed to list pending images for listing {}: {}",
+                listing_id,
+                e
+            );
             return 0;
         }
     };
@@ -113,13 +115,17 @@ pub async fn cache_images(
 
         // dHash dedup — perceptual duplicate within this listing (only when ph != 0).
         if ph != 0 {
-            if let Some(existing) = cached.iter().find(|c| hamming(c.phash, ph) <= PHASH_THRESHOLD) {
+            if let Some(existing) = cached
+                .iter()
+                .find(|c| hamming(c.phash, ph) <= PHASH_THRESHOLD)
+            {
                 tracing::debug!(
                     "dHash duplicate for {} (distance={})",
                     url,
                     hamming(existing.phash, ph)
                 );
-                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.ext).await;
+                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.ext)
+                    .await;
                 continue;
             }
         }

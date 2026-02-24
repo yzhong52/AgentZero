@@ -1,5 +1,5 @@
-use sqlx::{Row, SqlitePool};
 use crate::models::history::HistoryEntry;
+use sqlx::{Row, SqlitePool};
 
 /// Record a field value change for a listing.
 pub async fn insert_change(

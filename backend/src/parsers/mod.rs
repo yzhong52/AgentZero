@@ -5,8 +5,8 @@
 //!
 //! The top-level `parse()` function dispatches to the right parser based on the URL.
 
-pub mod redfin;
 pub mod realtor;
+pub mod redfin;
 pub mod rew;
 pub mod zillow;
 
@@ -141,9 +141,9 @@ enum SourceKind {
 impl SourceKind {
     fn name(self) -> &'static str {
         match self {
-            SourceKind::Redfin  => "redfin",
-            SourceKind::Rew     => "rew",
-            SourceKind::Zillow  => "zillow",
+            SourceKind::Redfin => "redfin",
+            SourceKind::Rew => "rew",
+            SourceKind::Zillow => "zillow",
             SourceKind::Realtor => "realtor",
         }
     }
@@ -151,9 +151,9 @@ impl SourceKind {
 
 fn source_rank(kind: SourceKind) -> u8 {
     match kind {
-        SourceKind::Redfin  => 0,
-        SourceKind::Rew     => 1,
-        SourceKind::Zillow  => 2,
+        SourceKind::Redfin => 0,
+        SourceKind::Rew => 1,
+        SourceKind::Zillow => 2,
         SourceKind::Realtor => 3,
     }
 }
@@ -217,7 +217,13 @@ fn merge_property(
         title: merge_text(primary.title, fallback.title),
         description: merge_text(primary.description, fallback.description),
 
-        price: merge_opt("price", primary.price, fallback.price, primary_source, fallback_source),
+        price: merge_opt(
+            "price",
+            primary.price,
+            fallback.price,
+            primary_source,
+            fallback_source,
+        ),
         price_currency: merge_opt(
             "price_currency",
             primary.price_currency,
@@ -240,8 +246,20 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
-        city: merge_opt("city", primary.city, fallback.city, primary_source, fallback_source),
-        region: merge_opt("region", primary.region, fallback.region, primary_source, fallback_source),
+        city: merge_opt(
+            "city",
+            primary.city,
+            fallback.city,
+            primary_source,
+            fallback_source,
+        ),
+        region: merge_opt(
+            "region",
+            primary.region,
+            fallback.region,
+            primary_source,
+            fallback_source,
+        ),
         postal_code: merge_opt(
             "postal_code",
             primary.postal_code,
@@ -257,9 +275,27 @@ fn merge_property(
             fallback_source,
         ),
 
-        bedrooms: merge_opt("bedrooms", primary.bedrooms, fallback.bedrooms, primary_source, fallback_source),
-        bathrooms: merge_opt("bathrooms", primary.bathrooms, fallback.bathrooms, primary_source, fallback_source),
-        sqft: merge_opt("sqft", primary.sqft, fallback.sqft, primary_source, fallback_source),
+        bedrooms: merge_opt(
+            "bedrooms",
+            primary.bedrooms,
+            fallback.bedrooms,
+            primary_source,
+            fallback_source,
+        ),
+        bathrooms: merge_opt(
+            "bathrooms",
+            primary.bathrooms,
+            fallback.bathrooms,
+            primary_source,
+            fallback_source,
+        ),
+        sqft: merge_opt(
+            "sqft",
+            primary.sqft,
+            fallback.sqft,
+            primary_source,
+            fallback_source,
+        ),
         year_built: merge_opt(
             "year_built",
             primary.year_built,
@@ -268,8 +304,20 @@ fn merge_property(
             fallback_source,
         ),
 
-        lat: merge_opt("lat", primary.lat, fallback.lat, primary_source, fallback_source),
-        lon: merge_opt("lon", primary.lon, fallback.lon, primary_source, fallback_source),
+        lat: merge_opt(
+            "lat",
+            primary.lat,
+            fallback.lat,
+            primary_source,
+            fallback_source,
+        ),
+        lon: merge_opt(
+            "lon",
+            primary.lon,
+            fallback.lon,
+            primary_source,
+            fallback_source,
+        ),
 
         images: if primary.images.is_empty() {
             fallback.images
@@ -285,7 +333,21 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
-        notes: merge_opt("notes", primary.notes, fallback.notes, primary_source, fallback_source),
+        notes: merge_opt(
+            "notes",
+            primary.notes,
+            fallback.notes,
+            primary_source,
+            fallback_source,
+        ),
+
+        total_parking_space: merge_opt(
+            "total_parking_space",
+            primary.total_parking_space,
+            fallback.total_parking_space,
+            primary_source,
+            fallback_source,
+        ),
 
         parking_garage: merge_opt(
             "parking_garage",
@@ -345,7 +407,13 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
-        ac: merge_opt("ac", primary.ac, fallback.ac, primary_source, fallback_source),
+        ac: merge_opt(
+            "ac",
+            primary.ac,
+            fallback.ac,
+            primary_source,
+            fallback_source,
+        ),
 
         down_payment_pct: merge_opt(
             "down_payment_pct",
@@ -456,10 +524,34 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
-        property_type: merge_opt("property_type", primary.property_type, fallback.property_type, primary_source, fallback_source),
-        listed_date: merge_opt("listed_date", primary.listed_date, fallback.listed_date, primary_source, fallback_source),
-        mls_number: merge_opt("mls_number", primary.mls_number, fallback.mls_number, primary_source, fallback_source),
-        laundry_in_unit: merge_opt("laundry_in_unit", primary.laundry_in_unit, fallback.laundry_in_unit, primary_source, fallback_source),
+        property_type: merge_opt(
+            "property_type",
+            primary.property_type,
+            fallback.property_type,
+            primary_source,
+            fallback_source,
+        ),
+        listed_date: merge_opt(
+            "listed_date",
+            primary.listed_date,
+            fallback.listed_date,
+            primary_source,
+            fallback_source,
+        ),
+        mls_number: merge_opt(
+            "mls_number",
+            primary.mls_number,
+            fallback.mls_number,
+            primary_source,
+            fallback_source,
+        ),
+        laundry_in_unit: merge_opt(
+            "laundry_in_unit",
+            primary.laundry_in_unit,
+            fallback.laundry_in_unit,
+            primary_source,
+            fallback_source,
+        ),
     }
 }
 
@@ -477,23 +569,40 @@ fn merge_listing(
     }
 
     ParsedListing {
-        property: merge_property(primary.property, fallback.property, primary_source, fallback_source),
+        property: merge_property(
+            primary.property,
+            fallback.property,
+            primary_source,
+            fallback_source,
+        ),
         image_urls,
     }
 }
 
 fn parse_source(url: &str, html: &str) -> Option<ParsedSource> {
     if url.contains("redfin") {
-        return redfin::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Redfin, listing });
+        return redfin::parse(url, html).map(|listing| ParsedSource {
+            kind: SourceKind::Redfin,
+            listing,
+        });
     }
     if url.contains("rew.ca") {
-        return rew::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Rew, listing });
+        return rew::parse(url, html).map(|listing| ParsedSource {
+            kind: SourceKind::Rew,
+            listing,
+        });
     }
     if url.contains("zillow.com") {
-        return zillow::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Zillow, listing });
+        return zillow::parse(url, html).map(|listing| ParsedSource {
+            kind: SourceKind::Zillow,
+            listing,
+        });
     }
     if url.contains("realtor.ca") {
-        return realtor::parse(url, html).map(|listing| ParsedSource { kind: SourceKind::Realtor, listing });
+        return realtor::parse(url, html).map(|listing| ParsedSource {
+            kind: SourceKind::Realtor,
+            listing,
+        });
     }
     None
 }
@@ -521,12 +630,7 @@ pub fn parse_multi(sources: &[SourceInput]) -> Option<ParsedListing> {
     let first = parsed.remove(0);
     let (primary_source, mut merged_listing) = (first.kind, first.listing);
     for ps in parsed {
-        merged_listing = merge_listing(
-            merged_listing,
-            ps.listing,
-            primary_source,
-            ps.kind,
-        );
+        merged_listing = merge_listing(merged_listing, ps.listing, primary_source, ps.kind);
     }
 
     tracing::info!(

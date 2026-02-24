@@ -1,5 +1,5 @@
 //! Store module - contains database operations for models
-//! 
+//!
 //! Submodules:
 //! - `image_store`: Image database operations (read/write)
 //! - `property_store`: Property database operations (read/write)

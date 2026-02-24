@@ -1,14 +1,14 @@
-use sqlx::{Row, SqlitePool, sqlite::SqliteConnectOptions};
-use std::str::FromStr;
-use crate::models::property::{Property, ListingStatus};
+use crate::models::property::{ListingStatus, Property};
 use crate::store::image_store;
+use sqlx::{sqlite::SqliteConnectOptions, Row, SqlitePool};
+use std::str::FromStr;
 
 // Common column list — keep in sync with row_to_property().
 const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, description, price, price_currency, offer_price,
                     street_address, city, region, postal_code, country,
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
-                    parking_garage, parking_covered, parking_open, land_sqft, property_tax,
+                    total_parking_space, parking_garage, parking_covered, parking_open, land_sqft, property_tax,
                     skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
                     down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                     hoa_monthly, monthly_total, monthly_cost, has_rental_suite, rental_income,
@@ -46,7 +46,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 title, description, price, price_currency, offer_price,
                 street_address, city, region, postal_code, country,
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
-                parking_garage, parking_covered, parking_open, land_sqft,
+                total_parking_space, parking_garage, parking_covered, parking_open, land_sqft,
                 property_tax, skytrain_station, skytrain_walk_min,
                 ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
@@ -59,7 +59,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
            RETURNING id"#,
     )
     .bind(&p.redfin_url)
@@ -82,6 +82,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
+    .bind(p.total_parking_space)
     .bind(p.parking_garage)
     .bind(p.parking_covered)
     .bind(p.parking_open)
@@ -119,7 +120,11 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
 }
 
 /// Update an existing property by ID (called on refresh — overwrites parsed fields).
-pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Property, sqlx::Error> {
+pub async fn update_by_id(
+    pool: &SqlitePool,
+    id: i64,
+    p: &Property,
+) -> Result<Property, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
               redfin_url              = ?,
@@ -142,6 +147,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
                year_built               = ?,
                lat                      = ?,
                lon                      = ?,
+               total_parking_space      = ?,
                parking_garage           = ?,
                land_sqft                = ?,
                ac                       = ?,
@@ -194,6 +200,7 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
     .bind(p.year_built)
     .bind(p.lat)
     .bind(p.lon)
+    .bind(p.total_parking_space)
     .bind(p.parking_garage)
     .bind(p.land_sqft)
     .bind(p.ac)
@@ -235,19 +242,27 @@ pub async fn update_by_id(pool: &SqlitePool, id: i64, p: &Property) -> Result<Pr
 ///
 /// - `statuses`: if empty, returns all properties.
 /// - `statuses`: if non-empty, returns only rows whose `status` is in the given list.
-pub async fn list(pool: &SqlitePool, statuses: &[ListingStatus]) -> Result<Vec<Property>, sqlx::Error> {
+pub async fn list(
+    pool: &SqlitePool,
+    statuses: &[ListingStatus],
+) -> Result<Vec<Property>, sqlx::Error> {
     let sql = if statuses.is_empty() {
         format!("SELECT {COLS} FROM listings ORDER BY created_at DESC")
     } else {
         let placeholders: Vec<String> = statuses.iter().map(|s| format!("'{s}'")).collect();
-        format!("SELECT {COLS} FROM listings WHERE status IN ({}) ORDER BY created_at DESC", placeholders.join(","))
+        format!(
+            "SELECT {COLS} FROM listings WHERE status IN ({}) ORDER BY created_at DESC",
+            placeholders.join(",")
+        )
     };
 
     let rows = sqlx::query(&sql).fetch_all(pool).await?;
 
     let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
     for prop in &mut properties {
-        prop.images = image_store::list_images_with_meta(pool, prop.id).await.unwrap_or_default();
+        prop.images = image_store::list_images_with_meta(pool, prop.id)
+            .await
+            .unwrap_or_default();
     }
     Ok(properties)
 }
@@ -255,14 +270,20 @@ pub async fn list(pool: &SqlitePool, statuses: &[ListingStatus]) -> Result<Vec<P
 /// Fetch a single property by ID (with images).
 pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
     let mut p = fetch_one_by_id(pool, id).await?;
-    p.images = image_store::list_images_with_meta(pool, p.id).await.unwrap_or_default();
+    p.images = image_store::list_images_with_meta(pool, p.id)
+        .await
+        .unwrap_or_default();
     Ok(p)
 }
 
 // `update_details` removed — use `update_by_id` after merging `UserDetails` in the caller.
 
 /// Update the notes field for a property.
-pub async fn update_notes(pool: &SqlitePool, id: i64, notes: Option<&str>) -> Result<(), sqlx::Error> {
+pub async fn update_notes(
+    pool: &SqlitePool,
+    id: i64,
+    notes: Option<&str>,
+) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE listings SET notes = ? WHERE id = ?")
         .bind(notes)
         .bind(id)
@@ -318,6 +339,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
+        total_parking_space: row.get("total_parking_space"),
         parking_garage: row.get("parking_garage"),
         parking_covered: row.get("parking_covered"),
         parking_open: row.get("parking_open"),
@@ -358,7 +380,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_listing_roundtrip() {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let db_path = std::env::temp_dir().join(format!("agentzero_test_add_{}.db", now));
         let database_url = format!("sqlite://{}", db_path.display());
         let pool = init(&database_url).await;
@@ -389,6 +414,7 @@ mod tests {
             created_at: String::new(),
             updated_at: None,
             notes: None,
+            total_parking_space: Some(1),
             parking_garage: Some(1),
             parking_covered: Some(0),
             parking_open: Some(0),
@@ -435,7 +461,10 @@ mod tests {
     #[tokio::test]
     async fn test_update_by_id_roundtrip() {
         // Create a unique temporary database file in the system temp dir.
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let db_path = std::env::temp_dir().join(format!("agentzero_test_{}.db", now));
         let database_url = format!("sqlite://{}", db_path.display());
 
@@ -468,6 +497,7 @@ mod tests {
             created_at: String::new(),
             updated_at: None,
             notes: None,
+            total_parking_space: None,
             parking_garage: None,
             parking_covered: None,
             parking_open: None,
@@ -510,7 +540,12 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing"); // &[] = all
+        let saved = list(&pool, &[])
+            .await
+            .expect("list failed")
+            .into_iter()
+            .next()
+            .expect("no listing"); // &[] = all
         assert!(saved.id > 0, "expected saved id > 0");
         assert_eq!(saved.title, "Original Title");
         assert_eq!(saved.price, Some(500_000));
@@ -520,7 +555,9 @@ mod tests {
         updated.title = "Updated Title".to_string();
         updated.price = Some(510_000);
 
-        let after = update_by_id(&pool, saved.id, &updated).await.expect("update_by_id failed");
+        let after = update_by_id(&pool, saved.id, &updated)
+            .await
+            .expect("update_by_id failed");
         assert_eq!(after.title, "Updated Title");
         assert_eq!(after.price, Some(510_000));
 
@@ -530,7 +567,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_details_roundtrip() {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let db_path = std::env::temp_dir().join(format!("agentzero_test2_{}.db", now));
         let database_url = format!("sqlite://{}", db_path.display());
         let pool = init(&database_url).await;
@@ -546,7 +586,12 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[]).await.expect("list failed").into_iter().next().expect("no listing"); // &[] = all
+        let saved = list(&pool, &[])
+            .await
+            .expect("list failed")
+            .into_iter()
+            .next()
+            .expect("no listing"); // &[] = all
 
         // Build UserDetails with every editable field set to a non-null value.
         let details = UserDetails {
@@ -567,6 +612,7 @@ mod tests {
             sqft: Some(1200),
             year_built: Some(1990),
             // Parking / land
+            total_parking_space: Some(2),
             parking_garage: Some(1),
             parking_covered: Some(1),
             parking_open: Some(0),
@@ -613,14 +659,28 @@ mod tests {
         // Mirror the exact merge logic from patch_details in main.rs
         let mut merged = saved.clone();
         merged.title = details.title.clone().unwrap_or(merged.title.clone());
-        if details.redfin_url.is_some() { merged.redfin_url = details.redfin_url.clone(); }
-        if details.realtor_url.is_some() { merged.realtor_url = details.realtor_url.clone(); }
-        if details.rew_url.is_some() { merged.rew_url = details.rew_url.clone(); }
-        if details.zillow_url.is_some() { merged.zillow_url = details.zillow_url.clone(); }
+        if details.redfin_url.is_some() {
+            merged.redfin_url = details.redfin_url.clone();
+        }
+        if details.realtor_url.is_some() {
+            merged.realtor_url = details.realtor_url.clone();
+        }
+        if details.rew_url.is_some() {
+            merged.rew_url = details.rew_url.clone();
+        }
+        if details.zillow_url.is_some() {
+            merged.zillow_url = details.zillow_url.clone();
+        }
         merged.price = details.price.or(merged.price);
-        merged.price_currency = details.price_currency.clone().or(merged.price_currency.clone());
+        merged.price_currency = details
+            .price_currency
+            .clone()
+            .or(merged.price_currency.clone());
         merged.offer_price = details.offer_price.or(merged.offer_price);
-        merged.street_address = details.street_address.clone().or(merged.street_address.clone());
+        merged.street_address = details
+            .street_address
+            .clone()
+            .or(merged.street_address.clone());
         merged.city = details.city.clone().or(merged.city.clone());
         merged.region = details.region.clone().or(merged.region.clone());
         merged.postal_code = details.postal_code.clone().or(merged.postal_code.clone());
@@ -628,36 +688,64 @@ mod tests {
         merged.bathrooms = details.bathrooms.or(merged.bathrooms);
         merged.sqft = details.sqft.or(merged.sqft);
         merged.year_built = details.year_built.or(merged.year_built);
+        merged.total_parking_space = details.total_parking_space.or(merged.total_parking_space);
         merged.parking_garage = details.parking_garage.or(merged.parking_garage);
         merged.parking_covered = details.parking_covered.or(merged.parking_covered);
         merged.parking_open = details.parking_open.or(merged.parking_open);
         merged.land_sqft = details.land_sqft.or(merged.land_sqft);
-        merged.radiant_floor_heating = details.radiant_floor_heating.or(merged.radiant_floor_heating);
+        merged.radiant_floor_heating = details
+            .radiant_floor_heating
+            .or(merged.radiant_floor_heating);
         merged.ac = details.ac.or(merged.ac);
-        merged.skytrain_station = details.skytrain_station.clone().or(merged.skytrain_station.clone());
+        merged.skytrain_station = details
+            .skytrain_station
+            .clone()
+            .or(merged.skytrain_station.clone());
         merged.skytrain_walk_min = details.skytrain_walk_min.or(merged.skytrain_walk_min);
         merged.property_tax = details.property_tax.or(merged.property_tax);
         merged.hoa_monthly = details.hoa_monthly.or(merged.hoa_monthly);
         merged.down_payment_pct = details.down_payment_pct.or(merged.down_payment_pct);
-        merged.mortgage_interest_rate = details.mortgage_interest_rate.or(merged.mortgage_interest_rate);
+        merged.mortgage_interest_rate = details
+            .mortgage_interest_rate
+            .or(merged.mortgage_interest_rate);
         merged.amortization_years = details.amortization_years.or(merged.amortization_years);
         merged.mortgage_monthly = details.mortgage_monthly.or(merged.mortgage_monthly);
         merged.monthly_total = details.monthly_total.or(merged.monthly_total);
         merged.monthly_cost = details.monthly_cost.or(merged.monthly_cost);
         merged.has_rental_suite = details.has_rental_suite.or(merged.has_rental_suite);
         merged.rental_income = details.rental_income.or(merged.rental_income);
-        merged.school_elementary = details.school_elementary.clone().or(merged.school_elementary.clone());
-        merged.school_elementary_rating = details.school_elementary_rating.or(merged.school_elementary_rating);
-        merged.school_middle = details.school_middle.clone().or(merged.school_middle.clone());
+        merged.school_elementary = details
+            .school_elementary
+            .clone()
+            .or(merged.school_elementary.clone());
+        merged.school_elementary_rating = details
+            .school_elementary_rating
+            .or(merged.school_elementary_rating);
+        merged.school_middle = details
+            .school_middle
+            .clone()
+            .or(merged.school_middle.clone());
         merged.school_middle_rating = details.school_middle_rating.or(merged.school_middle_rating);
-        merged.school_secondary = details.school_secondary.clone().or(merged.school_secondary.clone());
-        merged.school_secondary_rating = details.school_secondary_rating.or(merged.school_secondary_rating);
-        if let Some(s) = details.status.clone() { merged.status = s; }
-        merged.property_type = details.property_type.clone().or(merged.property_type.clone());
+        merged.school_secondary = details
+            .school_secondary
+            .clone()
+            .or(merged.school_secondary.clone());
+        merged.school_secondary_rating = details
+            .school_secondary_rating
+            .or(merged.school_secondary_rating);
+        if let Some(s) = details.status.clone() {
+            merged.status = s;
+        }
+        merged.property_type = details
+            .property_type
+            .clone()
+            .or(merged.property_type.clone());
         merged.laundry_in_unit = details.laundry_in_unit.or(merged.laundry_in_unit);
         merged.mls_number = details.mls_number.clone().or(merged.mls_number.clone());
 
-        let updated = update_by_id(&pool, saved.id, &merged).await.expect("update_by_id failed");
+        let updated = update_by_id(&pool, saved.id, &merged)
+            .await
+            .expect("update_by_id failed");
 
         // Assert every field was persisted and round-tripped correctly.
         assert_eq!(updated.title, "Updated Title");
@@ -676,6 +764,7 @@ mod tests {
         assert_eq!(updated.sqft, Some(1200));
         assert_eq!(updated.year_built, Some(1990));
         // Parking / land
+        assert_eq!(updated.total_parking_space, Some(2));
         assert_eq!(updated.parking_garage, Some(1));
         assert_eq!(updated.parking_covered, Some(1));
         assert_eq!(updated.parking_open, Some(0));
@@ -706,10 +795,19 @@ mod tests {
         assert_eq!(updated.school_secondary.as_deref(), Some("Pine Secondary"));
         assert!((updated.school_secondary_rating.unwrap() - 8.5).abs() < 1e-9);
         // Source URLs
-        assert_eq!(updated.redfin_url.as_deref(), Some("https://redfin.example/2-updated"));
-        assert_eq!(updated.realtor_url.as_deref(), Some("https://realtor.example/2"));
+        assert_eq!(
+            updated.redfin_url.as_deref(),
+            Some("https://redfin.example/2-updated")
+        );
+        assert_eq!(
+            updated.realtor_url.as_deref(),
+            Some("https://realtor.example/2")
+        );
         assert_eq!(updated.rew_url.as_deref(), Some("https://rew.example/2"));
-        assert_eq!(updated.zillow_url.as_deref(), Some("https://zillow.example/2"));
+        assert_eq!(
+            updated.zillow_url.as_deref(),
+            Some("https://zillow.example/2")
+        );
         // Status
         assert_eq!(updated.status, ListingStatus::Interested);
         // Property type and new features

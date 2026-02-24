@@ -12,14 +12,17 @@
 use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;
 
+use super::{extract_description, extract_json_ld, extract_title, ParsedListing};
 use crate::db;
-use super::{ParsedListing, extract_json_ld, extract_title, extract_description};
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
 /// Strip currency symbols and commas, parse as i64.
 pub fn parse_money_i64(s: &str) -> Option<i64> {
-    let clean: String = s.chars().filter(|c| c.is_ascii_digit() || *c == '.').collect();
+    let clean: String = s
+        .chars()
+        .filter(|c| c.is_ascii_digit() || *c == '.')
+        .collect();
     clean.parse::<f64>().ok().map(|v| v as i64)
 }
 
@@ -45,7 +48,7 @@ pub fn find_section_value_contains(document: &Html, label_substr: &str) -> Optio
 
 fn find_section_value_pred<F: Fn(&str) -> bool>(document: &Html, pred: F) -> Option<String> {
     let section_sel = Selector::parse("section").unwrap();
-    let div_sel     = Selector::parse("div").unwrap();
+    let div_sel = Selector::parse("div").unwrap();
 
     for section in document.select(&section_sel) {
         let divs: Vec<_> = section.select(&div_sel).collect();
@@ -85,11 +88,14 @@ fn extract_image_urls(document: &Html) -> Vec<String> {
     // Stripping the query string yields the full-resolution original.
     let sel = Selector::parse(
         "img[data-src*='assets-listings.rew.ca'], img[src*='assets-listings.rew.ca']",
-    ).unwrap();
+    )
+    .unwrap();
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
     for el in document.select(&sel) {
-        let raw = el.value().attr("data-src")
+        let raw = el
+            .value()
+            .attr("data-src")
             .or_else(|| el.value().attr("src"))
             .unwrap_or("");
         // Strip Imgix query params to get the full-resolution original.
@@ -107,10 +113,14 @@ fn extract_image_urls(document: &Html) -> Vec<String> {
 /// REW includes it as "MLS® # RXXXXXXX" at the end of the description.
 fn extract_mls_number(document: &Html) -> Option<String> {
     let sel = Selector::parse("meta[name='description']").unwrap();
-    let content = document.select(&sel).next()
+    let content = document
+        .select(&sel)
+        .next()
         .and_then(|el| el.value().attr("content"))?;
     let re = regex::Regex::new(r"MLS[^\s]*\s*#?\s*([A-Z]\d+)").ok()?;
-    re.captures(content).and_then(|c| c.get(1)).map(|m| m.as_str().to_string())
+    re.captures(content)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string())
 }
 
 // ── Property type extraction ──────────────────────────────────────────────────
@@ -119,10 +129,14 @@ fn extract_mls_number(document: &Html) -> Option<String> {
 /// REW formats it as "Browse N photos of this TYPE in NEIGHBOURHOOD…".
 fn extract_property_type(document: &Html) -> Option<String> {
     let sel = Selector::parse("meta[name='description']").unwrap();
-    let content = document.select(&sel).next()
+    let content = document
+        .select(&sel)
+        .next()
         .and_then(|el| el.value().attr("content"))?;
     let re = regex::Regex::new(r"(?i)Browse \d+ photos of this ([\w ]+?) in ").ok()?;
-    re.captures(content).and_then(|c| c.get(1)).map(|m| m.as_str().trim().to_string())
+    re.captures(content)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
 }
 
 // ── Floor area (sqft) extraction ─────────────────────────────────────────────
@@ -143,7 +157,9 @@ fn extract_sqft(document: &Html) -> Option<i64> {
     }
     // Fallback: "This property features N beds, M baths and is N Sqft."
     let desc_sel = Selector::parse("meta[name='description']").unwrap();
-    let content = document.select(&desc_sel).next()
+    let content = document
+        .select(&desc_sel)
+        .next()
         .and_then(|el| el.value().attr("content"))?;
     let re = regex::Regex::new(r"(?i)is ([\d,]+)\s*sqft").ok()?;
     re.captures(content)
@@ -158,7 +174,10 @@ fn extract_price(document: &Html) -> Option<i64> {
     // Try the "List Price" section first
     if let Some(raw) = find_section_value(document, "List Price") {
         // The value div may contain nested elements; grab text starting with $
-        let price_str: String = raw.chars().take_while(|c| c.is_ascii_digit() || *c == '$' || *c == ',').collect();
+        let price_str: String = raw
+            .chars()
+            .take_while(|c| c.is_ascii_digit() || *c == '$' || *c == ',')
+            .collect();
         if let Some(v) = parse_money_i64(&price_str) {
             return Some(v);
         }
@@ -204,6 +223,55 @@ fn extract_address(residence: Option<&JsonValue>) -> AddressInfo {
         lon: r["geo"]["longitude"].as_f64(),
     }
 }
+
+struct ParkingInfo {
+    total_parking_space: Option<i64>,
+    parking_garage: Option<i64>,
+    parking_covered: Option<i64>,
+    parking_open: Option<i64>,
+}
+
+fn parse_parking_info(document: &Html) -> ParkingInfo {
+    let total = find_section_value(&document, "Parking Spaces").and_then(|s| parse_int(&s));
+
+    let details = find_section_value(&document, "Parking Details")
+        .unwrap_or_default()
+        .to_lowercase();
+
+    let has_garage = details.contains("garage");
+    let has_carport = details.contains("carport") || details.contains("covered");
+    let has_open =
+        details.contains("open") || details.contains("pad") || details.contains("driveway");
+    let category_count = (has_garage as u8) + (has_carport as u8) + (has_open as u8);
+
+    if let Some(total_spaces) = total {
+        if category_count == 1 {
+            return ParkingInfo {
+                total_parking_space: Some(total_spaces),
+                parking_garage: if has_garage { Some(total_spaces) } else { None },
+                parking_covered: if has_carport {
+                    Some(total_spaces)
+                } else {
+                    None
+                },
+                parking_open: if has_open { Some(total_spaces) } else { None },
+            };
+        }
+        return ParkingInfo {
+            total_parking_space: Some(total_spaces),
+            parking_garage: None,
+            parking_covered: None,
+            parking_open: None,
+        };
+    }
+
+    ParkingInfo {
+        total_parking_space: None,
+        parking_garage: None,
+        parking_covered: None,
+        parking_open: None,
+    }
+}
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /// Parses a rew.ca listing page into a full `ParsedListing`.
@@ -227,34 +295,28 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let price = extract_price(&document);
 
     // ── Property tax — "Gross Taxes for YYYY" ─────────────────────────────────
-    let property_tax = find_section_value_contains(&document, "Gross Taxes")
-        .and_then(|s| parse_money_i64(&s));
+    let property_tax =
+        find_section_value_contains(&document, "Gross Taxes").and_then(|s| parse_money_i64(&s));
 
     // ── Home facts ────────────────────────────────────────────────────────────
-    let bedrooms = find_section_value(&document, "Bedrooms")
-        .and_then(|s| parse_int(&s));
+    let bedrooms = find_section_value(&document, "Bedrooms").and_then(|s| parse_int(&s));
 
-    let bathrooms = find_section_value(&document, "Full Bathrooms")
-        .and_then(|s| parse_int(&s));
+    let bathrooms = find_section_value(&document, "Full Bathrooms").and_then(|s| parse_int(&s));
 
     // Year built: "Built in 1927 (99 yrs old)"
-    let year_built = find_section_value(&document, "Year Built")
-        .and_then(|s| {
-            s.split_whitespace()
-                .find_map(|tok| tok.parse::<i64>().ok().filter(|&y| y > 1800 && y < 2100))
-        });
+    let year_built = find_section_value(&document, "Year Built").and_then(|s| {
+        s.split_whitespace()
+            .find_map(|tok| tok.parse::<i64>().ok().filter(|&y| y > 1800 && y < 2100))
+    });
 
     // Lot size: "33 ft x 122 ft (4026 ft²)" — extract the sqft number in parens
-    let land_sqft = find_section_value(&document, "Lot Size")
-        .and_then(|s| {
-            // Look for number before "ft²" or "ft&sup2;"
-            let re_pat = regex::Regex::new(r"\(([0-9,]+)\s*ft").ok()?;
-            re_pat.captures(&s).and_then(|c| parse_int(&c[1]))
-        });
+    let land_sqft = find_section_value(&document, "Lot Size").and_then(|s| {
+        // Look for number before "ft²" or "ft&sup2;"
+        let re_pat = regex::Regex::new(r"\(([0-9,]+)\s*ft").ok()?;
+        re_pat.captures(&s).and_then(|c| parse_int(&c[1]))
+    });
 
-    // Parking spaces
-    let parking_garage = find_section_value(&document, "Parking Spaces")
-        .and_then(|s| parse_int(&s));
+    let parking = parse_parking_info(&document);
 
     // Strata / HOA fee.
     // Label variants seen in the wild:
@@ -300,9 +362,10 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         created_at: String::new(),
         updated_at: None,
         notes: None,
-        parking_garage,
-        parking_covered: None,
-        parking_open: None,
+        total_parking_space: parking.total_parking_space,
+        parking_garage: parking.parking_garage,
+        parking_covered: parking.parking_covered,
+        parking_open: parking.parking_open,
         land_sqft,
         property_tax,
         skytrain_station: None,
@@ -330,7 +393,10 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         mls_number,
     };
 
-    Some(ParsedListing { property, image_urls })
+    Some(ParsedListing {
+        property,
+        image_urls,
+    })
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -342,7 +408,8 @@ mod tests {
 
     #[test]
     fn rew_788_w8th() {
-        let html = std::fs::read_to_string(fixture("rew_788_w8th.html")).expect("fixture not found");
+        let html =
+            std::fs::read_to_string(fixture("rew_788_w8th.html")).expect("fixture not found");
         let listing = parse(
             "https://www.rew.ca/properties/l01-788-w-8th-avenue-vancouver-bc",
             &html,
@@ -357,8 +424,11 @@ mod tests {
     #[ignore = "requires a locally fetched page: curl -s -A 'Mozilla/5.0' https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc > /tmp/rew_page.html"]
     fn test_parse_909_w18th() {
         let html = std::fs::read_to_string("/tmp/rew_page.html").expect("file not found");
-        let result = parse("https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc", &html)
-            .expect("Parser returned None");
+        let result = parse(
+            "https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc",
+            &html,
+        )
+        .expect("Parser returned None");
 
         let p = &result.property;
         assert_eq!(p.property_tax, Some(12125), "property_tax");
@@ -367,7 +437,11 @@ mod tests {
         assert_eq!(p.bathrooms, Some(3), "bathrooms");
         assert_eq!(p.year_built, Some(1927), "year_built");
         assert_eq!(p.land_sqft, Some(4026), "land_sqft");
-        assert_eq!(p.street_address.as_deref(), Some("909 W 18th Avenue"), "street_address");
+        assert_eq!(
+            p.street_address.as_deref(),
+            Some("909 W 18th Avenue"),
+            "street_address"
+        );
         assert_eq!(p.region.as_deref(), Some("BC"), "region");
         assert!(!result.image_urls.is_empty(), "images");
         println!("property_tax = {:?}", p.property_tax);

@@ -1,9 +1,15 @@
-use axum::{extract::{State, Path}, Json};
-use axum::http::StatusCode;
 use crate::db;
 use crate::images;
 use crate::parsers;
-use crate::{safe_url, fetch_html, compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost, AppState};
+use crate::{
+    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
+    compute_mortgage, fetch_html, safe_url, AppState,
+};
+use axum::http::StatusCode;
+use axum::{
+    extract::{Path, State},
+    Json,
+};
 
 /// PUT /api/listings/:id/refresh
 ///
@@ -33,44 +39,70 @@ pub async fn refresh_listing(
     .collect();
 
     if source_urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "No source URL stored for this listing".to_string(),
+        ));
     }
 
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &source_urls {
-        let parsed_url = safe_url(url)
-            .ok_or((StatusCode::BAD_REQUEST, format!("Invalid stored URL: {url}")))?;
-        let html = fetch_html(&state.client, &parsed_url)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {url}: {e}")))?;
-        tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
-        sources.push(parsers::SourceInput { url: parsed_url.to_string(), html });
+        let parsed_url = safe_url(url).ok_or((
+            StatusCode::BAD_REQUEST,
+            format!("Invalid stored URL: {url}"),
+        ))?;
+        let html = fetch_html(&state.client, &parsed_url).await.map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("Failed to fetch {url}: {e}"),
+            )
+        })?;
+        tracing::info!(
+            "refresh_listing: fetched source url={}",
+            parsed_url.as_str()
+        );
+        sources.push(parsers::SourceInput {
+            url: parsed_url.to_string(),
+            html,
+        });
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
-    let listing = parsers::parse_multi(&sources)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
+    let listing = parsers::parse_multi(&sources).ok_or((
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "No recognized listing format found in page".to_string(),
+    ))?;
     let mut updated = listing.property;
     let image_urls = listing.image_urls;
-    tracing::info!("refresh_listing: parse result property_tax={:?}, price={:?}", updated.property_tax, updated.price);
+    tracing::info!(
+        "refresh_listing: parse result property_tax={:?}, price={:?}",
+        updated.property_tax,
+        updated.price
+    );
 
     // ── 4. Merge identity and user-preserved fields ────────────────────────────
     // Keep the DB id and the stored source URLs — users may link additional
     // sources that the parser cannot re-derive.
-    updated.id          = id;
-    updated.redfin_url  = stored.redfin_url.clone();
+    updated.id = id;
+    updated.redfin_url = stored.redfin_url.clone();
     updated.realtor_url = stored.realtor_url.clone();
-    updated.rew_url     = stored.rew_url.clone();
-    updated.zillow_url  = stored.zillow_url.clone();
+    updated.rew_url = stored.rew_url.clone();
+    updated.zillow_url = stored.zillow_url.clone();
 
     // Parsers currently do not populate school fields — users enter them manually.
     // Fall back to whatever the user already stored.
-    updated.school_elementary        = updated.school_elementary.or(stored.school_elementary.clone());
-    updated.school_elementary_rating = updated.school_elementary_rating.or(stored.school_elementary_rating);
-    updated.school_middle            = updated.school_middle.or(stored.school_middle.clone());
-    updated.school_middle_rating     = updated.school_middle_rating.or(stored.school_middle_rating);
-    updated.school_secondary         = updated.school_secondary.or(stored.school_secondary.clone());
-    updated.school_secondary_rating  = updated.school_secondary_rating.or(stored.school_secondary_rating);
+    updated.school_elementary = updated
+        .school_elementary
+        .or(stored.school_elementary.clone());
+    updated.school_elementary_rating = updated
+        .school_elementary_rating
+        .or(stored.school_elementary_rating);
+    updated.school_middle = updated.school_middle.or(stored.school_middle.clone());
+    updated.school_middle_rating = updated.school_middle_rating.or(stored.school_middle_rating);
+    updated.school_secondary = updated.school_secondary.or(stored.school_secondary.clone());
+    updated.school_secondary_rating = updated
+        .school_secondary_rating
+        .or(stored.school_secondary_rating);
 
     // Preserve the user's HOA fee when the parser finds nothing (strata fees are
     // sometimes scraped but often absent — don't clobber a manually entered value).
@@ -83,17 +115,24 @@ pub async fn refresh_listing(
     // Carry forward the user's saved mortgage parameters and recompute the monthly
     // payment against the (potentially updated) price.
     let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate     = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years    = stored.amortization_years.unwrap_or(25);
-    updated.down_payment_pct       = Some(down_pct);
+    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored.amortization_years.unwrap_or(25);
+    updated.down_payment_pct = Some(down_pct);
     updated.mortgage_interest_rate = Some(rate);
-    updated.amortization_years     = Some(years);
+    updated.amortization_years = Some(years);
     if let Some(price) = updated.offer_price.or(updated.price) {
         updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
-    updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
+    updated.monthly_total = compute_monthly_total(
+        updated.mortgage_monthly,
+        updated.property_tax,
+        updated.hoa_monthly,
+    );
     updated.monthly_cost = compute_monthly_cost(
-        updated.offer_price.or(updated.price).map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
+        updated
+            .offer_price
+            .or(updated.price)
+            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
         updated.property_tax,
         updated.hoa_monthly,
     );
@@ -112,20 +151,19 @@ pub async fn refresh_listing(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
 
-    tracing::info!("refresh_listing: saved listing id={} property_tax={:?} price={:?}", saved.id, saved.property_tax, saved.price);
+    tracing::info!(
+        "refresh_listing: saved listing id={} property_tax={:?} price={:?}",
+        saved.id,
+        saved.property_tax,
+        saved.price
+    );
 
     // ── 8. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
     }
-    images::cache_images(
-        &state.db,
-        &state.client,
-        state.store.as_ref(),
-        id,
-    )
-    .await;
+    images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
 
     // ── 9. Return the refreshed record with image metadata ────────────────────
     let images = db::list_images_with_meta(&state.db, saved.id)
@@ -161,32 +199,51 @@ pub async fn preview_refresh(
     .collect();
 
     if stored_urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "No source URL stored for this listing".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "No source URL stored for this listing".to_string(),
+        ));
     }
 
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &stored_urls {
-        let parsed_url = safe_url(url)
-            .ok_or((StatusCode::BAD_REQUEST, format!("Invalid stored URL: {url}")))?;
-        let html = fetch_html(&state.client, &parsed_url)
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, format!("Failed to fetch {url}: {e}")))?;
-        sources.push(parsers::SourceInput { url: parsed_url.to_string(), html });
+        let parsed_url = safe_url(url).ok_or((
+            StatusCode::BAD_REQUEST,
+            format!("Invalid stored URL: {url}"),
+        ))?;
+        let html = fetch_html(&state.client, &parsed_url).await.map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("Failed to fetch {url}: {e}"),
+            )
+        })?;
+        sources.push(parsers::SourceInput {
+            url: parsed_url.to_string(),
+            html,
+        });
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
-    let listing = parsers::parse_multi(&sources)
-        .ok_or((StatusCode::UNPROCESSABLE_ENTITY, "No recognized listing format found in page".to_string()))?;
+    let listing = parsers::parse_multi(&sources).ok_or((
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "No recognized listing format found in page".to_string(),
+    ))?;
     let mut preview = listing.property;
 
     // ── 4. Apply the same field-preservation rules as refresh ─────────────────
     // School fields are user-entered; parsers never populate them.
-    preview.school_elementary        = preview.school_elementary.or(stored.school_elementary.clone());
-    preview.school_elementary_rating = preview.school_elementary_rating.or(stored.school_elementary_rating);
-    preview.school_middle            = preview.school_middle.or(stored.school_middle.clone());
-    preview.school_middle_rating     = preview.school_middle_rating.or(stored.school_middle_rating);
-    preview.school_secondary         = preview.school_secondary.or(stored.school_secondary.clone());
-    preview.school_secondary_rating  = preview.school_secondary_rating.or(stored.school_secondary_rating);
+    preview.school_elementary = preview
+        .school_elementary
+        .or(stored.school_elementary.clone());
+    preview.school_elementary_rating = preview
+        .school_elementary_rating
+        .or(stored.school_elementary_rating);
+    preview.school_middle = preview.school_middle.or(stored.school_middle.clone());
+    preview.school_middle_rating = preview.school_middle_rating.or(stored.school_middle_rating);
+    preview.school_secondary = preview.school_secondary.or(stored.school_secondary.clone());
+    preview.school_secondary_rating = preview
+        .school_secondary_rating
+        .or(stored.school_secondary_rating);
 
     // Keep a manually-entered HOA fee when the parser has nothing to say.
     preview.hoa_monthly = preview.hoa_monthly.or(stored.hoa_monthly);
@@ -196,17 +253,24 @@ pub async fn preview_refresh(
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate     = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years    = stored.amortization_years.unwrap_or(25);
-    preview.down_payment_pct       = Some(down_pct);
+    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored.amortization_years.unwrap_or(25);
+    preview.down_payment_pct = Some(down_pct);
     preview.mortgage_interest_rate = Some(rate);
-    preview.amortization_years     = Some(years);
+    preview.amortization_years = Some(years);
     if let Some(price) = preview.offer_price.or(preview.price) {
         preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
-    preview.monthly_total = compute_monthly_total(preview.mortgage_monthly, preview.property_tax, preview.hoa_monthly);
+    preview.monthly_total = compute_monthly_total(
+        preview.mortgage_monthly,
+        preview.property_tax,
+        preview.hoa_monthly,
+    );
     preview.monthly_cost = compute_monthly_cost(
-        preview.offer_price.or(preview.price).map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
+        preview
+            .offer_price
+            .or(preview.price)
+            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
         preview.property_tax,
         preview.hoa_monthly,
     );

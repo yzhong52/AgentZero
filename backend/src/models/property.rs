@@ -1,6 +1,6 @@
-use std::str::FromStr;
-use serde::{Deserialize, Serialize};
 use crate::models::image::ImageEntry;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// The user-facing status of a listing.
 /// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
@@ -12,15 +12,17 @@ pub enum ListingStatus {
 }
 
 impl Default for ListingStatus {
-    fn default() -> Self { Self::Interested }
+    fn default() -> Self {
+        Self::Interested
+    }
 }
 
 impl std::fmt::Display for ListingStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Interested => "Interested",
-            Self::Buyable    => "Buyable",
-            Self::Pass       => "Pass",
+            Self::Buyable => "Buyable",
+            Self::Pass => "Pass",
         })
     }
 }
@@ -30,9 +32,9 @@ impl FromStr for ListingStatus {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Interested" => Ok(Self::Interested),
-            "Buyable"    => Ok(Self::Buyable),
-            "Pass"       => Ok(Self::Pass),
-            _            => Err(format!("unknown listing status: {s}")),
+            "Buyable" => Ok(Self::Buyable),
+            "Pass" => Ok(Self::Pass),
+            _ => Err(format!("unknown listing status: {s}")),
         }
     }
 }
@@ -58,7 +60,9 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
         buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
     ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
         use std::borrow::Cow;
-        buf.push(sqlx::sqlite::SqliteArgumentValue::Text(Cow::Owned(self.to_string())));
+        buf.push(sqlx::sqlite::SqliteArgumentValue::Text(Cow::Owned(
+            self.to_string(),
+        )));
         Ok(sqlx::encode::IsNull::No)
     }
 }
@@ -75,34 +79,35 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
 #[derive(Serialize, Clone)]
 pub struct Property {
     // ── System ──────────────────────────────────────────────────────────────
-    pub id: i64,                          // system
+    pub id: i64, // system
 
     // ── Header ──────────────────────────────────────────────────────────────
-    pub title: String,                    // parsed; editable (inline header, via PATCH /details)
-    pub description: String,              // parsed; display only
+    pub title: String,       // parsed; editable (inline header, via PATCH /details)
+    pub description: String, // parsed; display only
 
     // ── Price ────────────────────────────────────────────────────────────────
-    pub price: Option<i64>,               // parsed; editable
-    pub price_currency: Option<String>,   // parsed; editable
+    pub price: Option<i64>,             // parsed; editable
+    pub price_currency: Option<String>, // parsed; editable
 
     // ── Location ─────────────────────────────────────────────────────────────
-    pub street_address: Option<String>,   // parsed; editable
-    pub city: Option<String>,             // parsed; editable
-    pub region: Option<String>,           // parsed; editable
-    pub postal_code: Option<String>,      // parsed; editable
-    pub country: Option<String>,          // parsed; display only
-    pub lat: Option<f64>,                 // parsed; used for map embed
-    pub lon: Option<f64>,                 // parsed; used for map embed
+    pub street_address: Option<String>, // parsed; editable
+    pub city: Option<String>,           // parsed; editable
+    pub region: Option<String>,         // parsed; editable
+    pub postal_code: Option<String>,    // parsed; editable
+    pub country: Option<String>,        // parsed; display only
+    pub lat: Option<f64>,               // parsed; used for map embed
+    pub lon: Option<f64>,               // parsed; used for map embed
 
     // ── Property facts ───────────────────────────────────────────────────────
-    pub property_type: Option<String>,    // parsed; editable (e.g. "Townhouse", "Single Family Residential")
-    pub bedrooms: Option<i64>,            // parsed; editable
-    pub bathrooms: Option<i64>,           // parsed; editable
-    pub sqft: Option<i64>,                // parsed; editable
-    pub land_sqft: Option<i64>,           // parsed; editable
-    pub year_built: Option<i64>,          // parsed; editable
+    pub property_type: Option<String>, // parsed; editable (e.g. "Townhouse", "Single Family Residential")
+    pub bedrooms: Option<i64>,         // parsed; editable
+    pub bathrooms: Option<i64>,        // parsed; editable
+    pub sqft: Option<i64>,             // parsed; editable
+    pub land_sqft: Option<i64>,        // parsed; editable
+    pub year_built: Option<i64>,       // parsed; editable
 
     // ── Parking ──────────────────────────────────────────────────────────────
+    pub total_parking_space: Option<i64>, // parsed; editable
     pub parking_garage: Option<i64>,      // parsed; editable
     pub parking_covered: Option<i64>,     // parsed; editable
     pub parking_open: Option<i64>,        // parsed; editable
@@ -119,46 +124,46 @@ pub struct Property {
     // ── Finance ──────────────────────────────────────────────────────────────
     /// User's intended offer price — drives all mortgage calculations.
     /// When null the application falls back to `price` for calculations.
-    pub offer_price: Option<i64>,           // editable (Finance panel)
-    pub property_tax: Option<i64>,          // parsed; editable (Finance panel)
-    pub hoa_monthly: Option<i64>,           // parsed; editable (Finance panel)
-    pub down_payment_pct: Option<f64>,      // editable (Finance panel)
+    pub offer_price: Option<i64>, // editable (Finance panel)
+    pub property_tax: Option<i64>, // parsed; editable (Finance panel)
+    pub hoa_monthly: Option<i64>,  // parsed; editable (Finance panel)
+    pub down_payment_pct: Option<f64>, // editable (Finance panel)
     pub mortgage_interest_rate: Option<f64>, // editable (Finance panel)
-    pub amortization_years: Option<i64>,    // editable (Finance panel)
-    pub mortgage_monthly: Option<i64>,      // editable (Finance panel, overrides computed value)
-    pub monthly_total: Option<i64>,         // derived; read-only (mortgage + tax + HOA)
-    pub monthly_cost: Option<i64>,          // derived; read-only (initial interest + tax + HOA)
+    pub amortization_years: Option<i64>, // editable (Finance panel)
+    pub mortgage_monthly: Option<i64>, // editable (Finance panel, overrides computed value)
+    pub monthly_total: Option<i64>, // derived; read-only (mortgage + tax + HOA)
+    pub monthly_cost: Option<i64>, // derived; read-only (initial interest + tax + HOA)
 
     // ── Rental ───────────────────────────────────────────────────────────────
-    pub has_rental_suite: Option<bool>,   // editable
-    pub rental_income: Option<i64>,       // editable
+    pub has_rental_suite: Option<bool>, // editable
+    pub rental_income: Option<i64>,     // editable
 
     // ── Schools ──────────────────────────────────────────────────────────────
-    pub school_elementary: Option<String>,       // editable
-    pub school_elementary_rating: Option<f64>,   // editable
-    pub school_middle: Option<String>,           // editable
-    pub school_middle_rating: Option<f64>,       // editable
-    pub school_secondary: Option<String>,        // editable
-    pub school_secondary_rating: Option<f64>,    // editable
+    pub school_elementary: Option<String>,     // editable
+    pub school_elementary_rating: Option<f64>, // editable
+    pub school_middle: Option<String>,         // editable
+    pub school_middle_rating: Option<f64>,     // editable
+    pub school_secondary: Option<String>,      // editable
+    pub school_secondary_rating: Option<f64>,  // editable
 
     // ── Source URLs ──────────────────────────────────────────────────────────
-    pub redfin_url: Option<String>,   // editable
-    pub realtor_url: Option<String>,  // editable
-    pub rew_url: Option<String>,      // editable
-    pub zillow_url: Option<String>,   // editable
+    pub redfin_url: Option<String>,  // editable
+    pub realtor_url: Option<String>, // editable
+    pub rew_url: Option<String>,     // editable
+    pub zillow_url: Option<String>,  // editable
 
     // ── Listing metadata ─────────────────────────────────────────────────────
-    pub mls_number: Option<String>,   // parsed; editable
-    pub listed_date: Option<String>,  // parsed; display only (ISO date, e.g. "2026-02-17")
+    pub mls_number: Option<String>,  // parsed; editable
+    pub listed_date: Option<String>, // parsed; display only (ISO date, e.g. "2026-02-17")
 
     // ── User notes / status ──────────────────────────────────────────────────
-    pub status: ListingStatus,  // editable (status widget); never null, defaults to Interested
-    pub notes: Option<String>,   // editable (via PATCH /notes)
+    pub status: ListingStatus, // editable (status widget); never null, defaults to Interested
+    pub notes: Option<String>, // editable (via PATCH /notes)
 
     // ── System metadata ──────────────────────────────────────────────────────
     /// Populated from images_cache, not stored directly in listings.
-    pub images: Vec<ImageEntry>,  // system
-    pub created_at: String,       // system
+    pub images: Vec<ImageEntry>, // system
+    pub created_at: String,         // system
     pub updated_at: Option<String>, // system
 }
 
@@ -190,6 +195,7 @@ pub struct UserDetails {
     pub year_built: Option<i64>,
 
     // ── Parking ──────────────────────────────────────────────────────────────
+    pub total_parking_space: Option<i64>,
     pub parking_garage: Option<i64>,
     pub parking_covered: Option<i64>,
     pub parking_open: Option<i64>,

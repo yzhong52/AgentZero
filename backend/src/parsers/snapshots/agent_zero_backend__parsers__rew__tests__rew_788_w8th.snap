@@ -21,6 +21,7 @@ expression: property
   "sqft": 1560,
   "land_sqft": null,
   "year_built": 1991,
+  "total_parking_space": 2,
   "parking_garage": 2,
   "parking_covered": null,
   "parking_open": null,

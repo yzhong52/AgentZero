@@ -1,6 +1,6 @@
-use sqlx::{Row, SqlitePool};
-use crate::models::image::{ImageEntry, CachedImage};
 use crate::image_paths;
+use crate::models::image::{CachedImage, ImageEntry};
+use sqlx::{Row, SqlitePool};
 
 /// All successfully cached images for a listing (used for SHA-256 / phash dedup).
 pub async fn list_cached_images(
@@ -121,13 +121,11 @@ pub async fn get_image_ext(
     image_id: i64,
     listing_id: i64,
 ) -> Result<Option<Option<(String, String)>>, sqlx::Error> {
-    let row = sqlx::query(
-        "SELECT sha256, ext FROM images_cache WHERE id = ? AND listing_id = ?",
-    )
-    .bind(image_id)
-    .bind(listing_id)
-    .fetch_optional(pool)
-    .await?;
+    let row = sqlx::query("SELECT sha256, ext FROM images_cache WHERE id = ? AND listing_id = ?")
+        .bind(image_id)
+        .bind(listing_id)
+        .fetch_optional(pool)
+        .await?;
     Ok(row.map(|r| {
         let ext: Option<String> = r.get("ext");
         ext.map(|e| (r.get("sha256"), e))

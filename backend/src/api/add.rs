@@ -19,15 +19,13 @@
 //! user can fill in details manually via the edit panel.  A mix of blocked
 //! and unrecognised URLs still returns 422.
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 use url::Url;
 
 use crate::{
-    AppState,
-    db, images, parsers,
-    safe_url, fetch_html,
-    compute_mortgage, compute_monthly_total, compute_initial_monthly_interest, compute_monthly_cost,
+    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
+    compute_mortgage, db, fetch_html, images, parsers, safe_url, AppState,
 };
 
 #[derive(Deserialize)]
@@ -41,14 +39,22 @@ pub async fn add_listing(
     Json(body): Json<AddRequest>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
     if body.urls.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "At least one URL is required".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "At least one URL is required".to_string(),
+        ));
     }
 
     // Validate all URLs upfront.
     let parsed_urls: Vec<Url> = body
         .urls
         .iter()
-        .map(|raw| safe_url(raw.trim()).ok_or((StatusCode::BAD_REQUEST, format!("Invalid URL: {}", raw.trim()))))
+        .map(|raw| {
+            safe_url(raw.trim()).ok_or((
+                StatusCode::BAD_REQUEST,
+                format!("Invalid URL: {}", raw.trim()),
+            ))
+        })
         .collect::<Result<_, _>>()?;
 
     // Fetch HTML for each URL.
@@ -60,12 +66,27 @@ pub async fn add_listing(
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &parsed_urls {
         match fetch_html(&state.client, url).await {
-            Ok(html) => sources.push(parsers::SourceInput { url: url.to_string(), html }),
+            Ok(html) => sources.push(parsers::SourceInput {
+                url: url.to_string(),
+                html,
+            }),
             Err(e) if is_blocked_host(url) => {
-                tracing::info!("add_listing: fetch blocked ({}), will save stub for {}", e, url);
-                sources.push(parsers::SourceInput { url: url.to_string(), html: String::new() });
+                tracing::info!(
+                    "add_listing: fetch blocked ({}), will save stub for {}",
+                    e,
+                    url
+                );
+                sources.push(parsers::SourceInput {
+                    url: url.to_string(),
+                    html: String::new(),
+                });
             }
-            Err(e) => return Err((StatusCode::BAD_GATEWAY, format!("Failed to fetch {}: {}", url, e))),
+            Err(e) => {
+                return Err((
+                    StatusCode::BAD_GATEWAY,
+                    format!("Failed to fetch {}: {}", url, e),
+                ))
+            }
         }
     }
 
@@ -77,8 +98,10 @@ pub async fn add_listing(
             // Parsing yielded nothing.  Only save a stub when ALL URLs are
             // from known-blocked hosts — for unrecognised URLs return 422.
             if !parsed_urls.iter().all(is_blocked_host) {
-                return Err((StatusCode::UNPROCESSABLE_ENTITY,
-                    "No recognized listing format found in page".to_string()));
+                return Err((
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "No recognized listing format found in page".to_string(),
+                ));
             }
             tracing::info!(
                 "add_listing: all URLs are from blocked hosts, saving stub for {:?}",
@@ -88,8 +111,8 @@ pub async fn add_listing(
             // Populate whichever URL fields we know about.
             for u in &parsed_urls {
                 match u.host_str().unwrap_or("") {
-                    h if h.contains("zillow.com")   => stub.zillow_url   = Some(u.to_string()),
-                    h if h.contains("realtor.ca")   => stub.realtor_url  = Some(u.to_string()),
+                    h if h.contains("zillow.com") => stub.zillow_url = Some(u.to_string()),
+                    h if h.contains("realtor.ca") => stub.realtor_url = Some(u.to_string()),
                     _ => {}
                 }
             }
@@ -99,22 +122,33 @@ pub async fn add_listing(
 
     // Auto-calculate mortgage with defaults on first save.
     let down_pct = property.down_payment_pct.unwrap_or(0.20);
-    let rate     = property.mortgage_interest_rate.unwrap_or(0.04);
-    let years    = property.amortization_years.unwrap_or(25);
-    property.down_payment_pct       = Some(down_pct);
+    let rate = property.mortgage_interest_rate.unwrap_or(0.04);
+    let years = property.amortization_years.unwrap_or(25);
+    property.down_payment_pct = Some(down_pct);
     property.mortgage_interest_rate = Some(rate);
-    property.amortization_years     = Some(years);
+    property.amortization_years = Some(years);
     let base_price = property.offer_price.or(property.price);
     if let Some(price) = base_price {
         property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
     }
-    property.monthly_total = compute_monthly_total(property.mortgage_monthly, property.property_tax, property.hoa_monthly);
+    property.monthly_total = compute_monthly_total(
+        property.mortgage_monthly,
+        property.property_tax,
+        property.hoa_monthly,
+    );
     let initial_interest = base_price.map(|p| compute_initial_monthly_interest(p, down_pct, rate));
-    property.monthly_cost = compute_monthly_cost(initial_interest, property.property_tax, property.hoa_monthly);
+    property.monthly_cost = compute_monthly_cost(
+        initial_interest,
+        property.property_tax,
+        property.hoa_monthly,
+    );
 
-    let saved = db::add_listing(&state.db, &property)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let saved = db::add_listing(&state.db, &property).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB error: {}", e),
+        )
+    })?;
 
     // Register image URLs in images_cache, preserving parser ordering.
     for (position, url) in image_urls.iter().enumerate() {
@@ -122,17 +156,16 @@ pub async fn add_listing(
     }
 
     // Download any pending images.
-    images::cache_images(
-        &state.db,
-        &state.client,
-        state.store.as_ref(),
-        saved.id,
-    )
-    .await;
+    images::cache_images(&state.db, &state.client, state.store.as_ref(), saved.id).await;
 
     let images = db::list_images_with_meta(&state.db, saved.id)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
     Ok(Json(db::Property { images, ..saved }))
 }
 
@@ -144,7 +177,7 @@ pub async fn add_listing(
 /// - **realtor.ca** — Imperva Incapsula
 fn is_blocked_host(url: &Url) -> bool {
     match url.host_str().unwrap_or("") {
-        h if h.contains("zillow.com")  => true,
+        h if h.contains("zillow.com") => true,
         h if h.contains("realtor.ca") => true,
         _ => false,
     }
@@ -180,6 +213,7 @@ fn blank_stub() -> db::Property {
         created_at: String::new(),
         updated_at: None,
         notes: None,
+        total_parking_space: None,
         parking_garage: None,
         parking_covered: None,
         parking_open: None,

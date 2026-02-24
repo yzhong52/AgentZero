@@ -1,22 +1,27 @@
-mod models;
-mod store;
-mod db;
-mod images;
-mod image_paths;
-mod parsers;
 mod api;
+mod db;
+mod image_paths;
+mod images;
+mod models;
+mod parsers;
+mod store;
 
-use axum::{Router, routing::{delete, get, patch, post, put}};
+use axum::{
+    routing::{delete, get, patch, post, put},
+    Router,
+};
 use object_store::local::LocalFileSystem;
-use std::sync::Arc;
-use tower_http::services::ServeDir;
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, REFERER, USER_AGENT,
+};
 use reqwest::Client;
-use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, HeaderMap, HeaderValue, REFERER, USER_AGENT};
+use std::sync::Arc;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use url::Url;
 
-use agent_zero_backend::{IMAGES_URL_PREFIX, IMAGES_LOCAL_DIR};
+use agent_zero_backend::{IMAGES_LOCAL_DIR, IMAGES_URL_PREFIX};
 
 #[derive(Clone)]
 pub(crate) struct AppState {
@@ -40,7 +45,9 @@ pub(crate) fn compute_monthly_total(
 /// Initial monthly mortgage interest only (principal * annual_rate / 12).
 pub(crate) fn compute_initial_monthly_interest(price: i64, down_pct: f64, annual_rate: f64) -> i64 {
     let loan = price as f64 * (1.0 - down_pct);
-    if loan <= 0.0 { return 0; }
+    if loan <= 0.0 {
+        return 0;
+    }
     ((loan * annual_rate) / 12.0).round() as i64
 }
 
@@ -60,7 +67,9 @@ pub(crate) fn compute_monthly_cost(
 /// Returns 0 if price is 0 or rate is 0 (handled gracefully).
 pub(crate) fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, years: i64) -> i64 {
     let loan = price as f64 * (1.0 - down_pct);
-    if loan <= 0.0 { return 0; }
+    if loan <= 0.0 {
+        return 0;
+    }
     let n = (years * 12) as f64;
     if annual_rate == 0.0 {
         return (loan / n).round() as i64;
@@ -89,10 +98,15 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, req
     );
     headers.insert(
         ACCEPT,
-        HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"),
+        HeaderValue::from_static(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        ),
     );
     headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("en-US,en;q=0.9"));
-    headers.insert(ACCEPT_ENCODING, HeaderValue::from_static("gzip, deflate, br"));
+    headers.insert(
+        ACCEPT_ENCODING,
+        HeaderValue::from_static("gzip, deflate, br"),
+    );
     if let Ok(rv) = HeaderValue::from_str(url.as_str()) {
         headers.insert(REFERER, rv);
     }
@@ -101,8 +115,6 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, req
     resp.error_for_status_ref()?;
     resp.text().await
 }
-
-
 
 #[tokio::main]
 async fn main() {
@@ -124,11 +136,7 @@ async fn main() {
         .build()
         .unwrap();
 
-    let state = AppState {
-        db,
-        client,
-        store,
-    };
+    let state = AppState { db, client, store };
 
     let cors = CorsLayer::new()
         .allow_origin(
@@ -141,18 +149,36 @@ async fn main() {
 
     let app = Router::new()
         // Utility
-        .route("/api/parse",                          get(api::parse::parse))
+        .route("/api/parse", get(api::parse::parse))
         // Listings collection
-        .route("/api/listings",                       post(api::add::add_listing).get(api::listings::list_listings))
+        .route(
+            "/api/listings",
+            post(api::add::add_listing).get(api::listings::list_listings),
+        )
         // Single listing
-        .route("/api/listings/:id",                   get(api::listings::get_listing))
-        .route("/api/listings/:id/delete",            delete(api::listings::delete_listing))
-        .route("/api/listings/:id/refresh",           put(api::refresh::refresh_listing))
-        .route("/api/listings/:id/preview",           get(api::refresh::preview_refresh))
-        .route("/api/listings/:id/notes",             patch(api::details::patch_notes))
-        .route("/api/listings/:id/details",           patch(api::details::patch_details))
-        .route("/api/listings/:id/history",           get(api::details::get_history))
-        .route("/api/listings/:id/images/:image_id",  delete(api::images::delete_image))
+        .route("/api/listings/:id", get(api::listings::get_listing))
+        .route(
+            "/api/listings/:id/delete",
+            delete(api::listings::delete_listing),
+        )
+        .route(
+            "/api/listings/:id/refresh",
+            put(api::refresh::refresh_listing),
+        )
+        .route(
+            "/api/listings/:id/preview",
+            get(api::refresh::preview_refresh),
+        )
+        .route("/api/listings/:id/notes", patch(api::details::patch_notes))
+        .route(
+            "/api/listings/:id/details",
+            patch(api::details::patch_details),
+        )
+        .route("/api/listings/:id/history", get(api::details::get_history))
+        .route(
+            "/api/listings/:id/images/:image_id",
+            delete(api::images::delete_image),
+        )
         // Static image files
         .nest_service(IMAGES_URL_PREFIX, ServeDir::new(IMAGES_LOCAL_DIR))
         .with_state(state)

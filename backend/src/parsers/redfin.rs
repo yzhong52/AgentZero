@@ -9,8 +9,8 @@ use scraper::Html;
 use serde_json::Value as JsonValue;
 use std::sync::OnceLock;
 
+use super::{extract_json_ld, extract_title, ParsedListing};
 use crate::db;
-use super::{ParsedListing, extract_json_ld, extract_title};
 
 // ── Static regexes ────────────────────────────────────────────────────────────
 
@@ -34,15 +34,11 @@ fn lot_size_re() -> &'static Regex {
 }
 
 fn nearby_schools_re() -> &'static Regex {
-    NEARBY_SCHOOLS_RE.get_or_init(|| {
-        Regex::new(r#""nearbySchools":\s*(\[[^\]]*\])"#).unwrap()
-    })
+    NEARBY_SCHOOLS_RE.get_or_init(|| Regex::new(r#""nearbySchools":\s*(\[[^\]]*\])"#).unwrap())
 }
 
 fn tax_annual_re() -> &'static Regex {
-    TAX_ANNUAL_RE.get_or_init(|| {
-        Regex::new(r"Tax Annual Amount:\s*\$?([\d,]+)").unwrap()
-    })
+    TAX_ANNUAL_RE.get_or_init(|| Regex::new(r"Tax Annual Amount:\s*\$?([\d,]+)").unwrap())
 }
 
 /// Matches HOA / strata / maintenance fee text as it appears in Redfin's
@@ -52,7 +48,8 @@ fn tax_annual_re() -> &'static Regex {
 ///   "Maintenance Fee: $650"
 fn hoa_fee_re() -> &'static Regex {
     HOA_FEE_RE.get_or_init(|| {
-        Regex::new(r"(?i)(?:hoa\s*dues|hoa\s*fee|maintenance\s*fee)[s]?\s*:?\s*\$?([\d,]+)").unwrap()
+        Regex::new(r"(?i)(?:hoa\s*dues|hoa\s*fee|maintenance\s*fee)[s]?\s*:?\s*\$?([\d,]+)")
+            .unwrap()
     })
 }
 
@@ -88,20 +85,31 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
             Some(n) => n.to_string(),
             None => continue,
         };
-        let rating = s["rating"].as_f64()
+        let rating = s["rating"]
+            .as_f64()
             .or_else(|| s["greatSchoolsRating"].as_f64())
             .or_else(|| s["score"].as_f64());
-        let level = s["levelCode"].as_str()
+        let level = s["levelCode"]
+            .as_str()
             .or_else(|| s["type"].as_str())
             .or_else(|| s["gradeRange"].as_str())
             .unwrap_or("");
 
         let lower = level.to_lowercase();
-        if (lower.contains('e') || lower.starts_with('k') || lower.contains("elementary") || lower.contains("primary")) && elementary.is_none() {
+        if (lower.contains('e')
+            || lower.starts_with('k')
+            || lower.contains("elementary")
+            || lower.contains("primary"))
+            && elementary.is_none()
+        {
             elementary = Some(SchoolEntry { name, rating });
-        } else if (lower.contains('m') || lower.contains("middle") || lower.contains("junior")) && middle.is_none() {
+        } else if (lower.contains('m') || lower.contains("middle") || lower.contains("junior"))
+            && middle.is_none()
+        {
             middle = Some(SchoolEntry { name, rating });
-        } else if (lower.contains('h') || lower.contains("high") || lower.contains("secondary")) && secondary.is_none() {
+        } else if (lower.contains('h') || lower.contains("high") || lower.contains("secondary"))
+            && secondary.is_none()
+        {
             secondary = Some(SchoolEntry { name, rating });
         }
     }
@@ -110,7 +118,11 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
         return None;
     }
 
-    Some(SchoolInfo { elementary, middle, secondary })
+    Some(SchoolInfo {
+        elementary,
+        middle,
+        secondary,
+    })
 }
 
 // ── Property tax ──────────────────────────────────────────────────────────────
@@ -119,7 +131,12 @@ pub fn extract_schools(html: &str) -> Option<SchoolInfo> {
 /// Matches "Tax Annual Amount: $9,082.04" in the rendered HTML.
 pub fn extract_property_tax(html: &str) -> Option<i64> {
     let caps = tax_annual_re().captures(html)?;
-    let digits: String = caps.get(1)?.as_str().chars().filter(|c| c.is_ascii_digit()).collect();
+    let digits: String = caps
+        .get(1)?
+        .as_str()
+        .chars()
+        .filter(|c| c.is_ascii_digit())
+        .collect();
     digits.parse().ok()
 }
 
@@ -140,19 +157,29 @@ pub fn extract_property_tax(html: &str) -> Option<i64> {
 pub fn extract_hoa_monthly(html: &str) -> Option<i64> {
     // 1. Text-block match ("HOA Dues: $543/month", "Maintenance Fee: $650", …)
     if let Some(caps) = hoa_fee_re().captures(html) {
-        let digits: String = caps.get(1)?.as_str().chars().filter(|c| c.is_ascii_digit()).collect();
+        let digits: String = caps
+            .get(1)?
+            .as_str()
+            .chars()
+            .filter(|c| c.is_ascii_digit())
+            .collect();
         if let Ok(v) = digits.parse::<i64>() {
-            if v > 0 { return Some(v); }
+            if v > 0 {
+                return Some(v);
+            }
         }
     }
     // 2. Embedded JSON blob — Redfin uses several key names.
     //    The blob is an escaped JSON string, so quotes appear as \" and
     //    the pattern looks like: \"monthlyHoaDues\":1137
     //    Regex: optional-\ + " + key + optional-\ + " + :digits
-    let json_re = Regex::new(r#"\\?"(?:hoaFee|maintenanceFee|monthlyHoaDues)\\?":\s*(\d+)"#).unwrap();
+    let json_re =
+        Regex::new(r#"\\?"(?:hoaFee|maintenanceFee|monthlyHoaDues)\\?":\s*(\d+)"#).unwrap();
     if let Some(caps) = json_re.captures(html) {
         if let Ok(v) = caps[1].parse::<i64>() {
-            if v > 0 { return Some(v); }
+            if v > 0 {
+                return Some(v);
+            }
         }
     }
     None
@@ -173,7 +200,10 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 
 /// Parsed results from a property's `amenityFeature` array.
 struct AmenityFeatures {
+    total_parking_space: Option<i64>,
     parking_garage: Option<i64>,
+    parking_covered: Option<i64>,
+    parking_open: Option<i64>,
     ac: Option<bool>,
     radiant_floor_heating: Option<bool>,
     laundry_in_unit: Option<bool>,
@@ -182,7 +212,10 @@ struct AmenityFeatures {
 /// Parses `amenityFeature` array entries for parking count, AC, radiant floor heating,
 /// and in-unit laundry.
 fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
+    let mut total_parking_space: Option<i64> = None;
     let mut parking_garage: Option<i64> = None;
+    let mut parking_covered: Option<i64> = None;
+    let mut parking_open: Option<i64> = None;
     let mut ac: Option<bool> = None;
     let mut radiant_floor_heating: Option<bool> = None;
     let mut laundry_in_unit: Option<bool> = None;
@@ -197,10 +230,28 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
 
         if lower.contains("parking") {
             // Handles both "Parking: 2 spaces" and "2 garage spaces" formats.
-            let caps = garage_re().captures(name)
+            let caps = garage_re()
+                .captures(name)
                 .or_else(|| parking_count_re().captures(name));
-            if let Some(n) = caps.and_then(|c| c.get(1)).and_then(|m| m.as_str().parse::<i64>().ok()) {
-                parking_garage = Some(n);
+            if let Some(n) = caps
+                .and_then(|c| c.get(1))
+                .and_then(|m| m.as_str().parse::<i64>().ok())
+            {
+                if lower.contains("garage") {
+                    parking_garage = Some(n);
+                    total_parking_space = Some(n);
+                } else if lower.contains("carport") || lower.contains("covered") {
+                    parking_covered = Some(n);
+                    total_parking_space = Some(n);
+                } else if lower.contains("open")
+                    || lower.contains("pad")
+                    || lower.contains("driveway")
+                {
+                    parking_open = Some(n);
+                    total_parking_space = Some(n);
+                } else {
+                    total_parking_space = Some(n);
+                }
             }
         } else if active && lower.contains("laundry") {
             laundry_in_unit = Some(true);
@@ -211,7 +262,15 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
         }
     }
 
-    AmenityFeatures { parking_garage, ac, radiant_floor_heating, laundry_in_unit }
+    AmenityFeatures {
+        total_parking_space,
+        parking_garage,
+        parking_covered,
+        parking_open,
+        ac,
+        radiant_floor_heating,
+        laundry_in_unit,
+    }
 }
 
 // ── JSON-LD extraction ────────────────────────────────────────────────────────
@@ -233,7 +292,9 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     let description = listing["description"].as_str().unwrap_or("").to_string();
     let price = listing["offers"]["price"].as_i64();
-    let price_currency = listing["offers"]["priceCurrency"].as_str().map(str::to_string);
+    let price_currency = listing["offers"]["priceCurrency"]
+        .as_str()
+        .map(str::to_string);
     let street_address = addr["streetAddress"].as_str().map(str::to_string);
     let city = addr["addressLocality"].as_str().map(str::to_string);
     let region = addr["addressRegion"].as_str().map(str::to_string);
@@ -246,11 +307,16 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
     let lat = entity["geo"]["latitude"].as_f64();
     let lon = entity["geo"]["longitude"].as_f64();
 
-    let amenities = entity["amenityFeature"].as_array().map(Vec::as_slice).unwrap_or(&[]);
+    let amenities = entity["amenityFeature"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or(&[]);
     let af = parse_amenity_features(amenities);
 
     let property_type = entity["accommodationCategory"].as_str().map(str::to_string);
-    let listed_date = listing["datePosted"].as_str().map(|s| s[..s.len().min(10)].to_string());
+    let listed_date = listing["datePosted"]
+        .as_str()
+        .map(|s| s[..s.len().min(10)].to_string());
 
     Some(db::Property {
         id: 0,
@@ -278,9 +344,10 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         created_at: String::new(),
         updated_at: None,
         notes: None,
+        total_parking_space: af.total_parking_space,
         parking_garage: af.parking_garage,
-        parking_covered: None,
-        parking_open: None,
+        parking_covered: af.parking_covered,
+        parking_open: af.parking_open,
         land_sqft: None,
         property_tax: None,
         skytrain_station: None,
@@ -360,7 +427,10 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     }
 
     let image_urls = extract_image_urls(&json_ld);
-    Some(ParsedListing { property, image_urls })
+    Some(ParsedListing {
+        property,
+        image_urls,
+    })
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -372,7 +442,8 @@ mod tests {
 
     #[test]
     fn redfin_829_e14th() {
-        let html = std::fs::read_to_string(fixture("redfin_829_e14th.html")).expect("fixture not found");
+        let html =
+            std::fs::read_to_string(fixture("redfin_829_e14th.html")).expect("fixture not found");
         let listing = parse(
             "https://www.redfin.ca/bc/vancouver/829-E-14th-Ave-V5T-2N5/home/155809679",
             &html,
@@ -383,7 +454,8 @@ mod tests {
 
     #[test]
     fn redfin_788_w8th() {
-        let html = std::fs::read_to_string(fixture("redfin_788_w8th.html")).expect("fixture not found");
+        let html =
+            std::fs::read_to_string(fixture("redfin_788_w8th.html")).expect("fixture not found");
         let listing = parse(
             "https://www.redfin.ca/bc/vancouver/788-W-8th-Ave-V5Z-1E1/home/",
             &html,

@@ -31,6 +31,7 @@ export type Property = {
   updated_at: string | null
   notes: string | null
   parking_garage: number | null
+  total_parking_space: number | null
   parking_covered: number | null
   parking_open: number | null
   land_sqft: number | null

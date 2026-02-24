@@ -1,4 +1,4 @@
-use crate::{IMAGES_URL_PREFIX, IMAGES_LOCAL_DIR};
+use crate::{IMAGES_LOCAL_DIR, IMAGES_URL_PREFIX};
 
 /// Object-store key for a cached image: `<listing_id>/<sha256>.<ext>`.
 /// This is the path relative to the store root used for reads and deletes.

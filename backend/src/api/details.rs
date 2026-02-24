@@ -4,12 +4,15 @@
 //! - PATCH /api/listings/:id/details  — update any user-editable field
 //! - GET   /api/listings/:id/history  — field change history
 
-use axum::{Json, extract::{State, Path}, http::StatusCode};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
 use serde::Deserialize;
 
 use crate::{
-    AppState, db,
-    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
+    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, db, AppState,
 };
 
 #[derive(Deserialize)]
@@ -27,7 +30,12 @@ pub async fn patch_notes(
 ) -> Result<StatusCode, (StatusCode, String)> {
     db::update_notes(&state.db, id, body.notes.as_deref())
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -51,15 +59,29 @@ pub async fn patch_details(
 
     updated.title = body.title.clone().unwrap_or(updated.title.clone());
 
-    if body.redfin_url.is_some() { updated.redfin_url = body.redfin_url.clone(); }
-    if body.realtor_url.is_some() { updated.realtor_url = body.realtor_url.clone(); }
-    if body.rew_url.is_some() { updated.rew_url = body.rew_url.clone(); }
-    if body.zillow_url.is_some() { updated.zillow_url = body.zillow_url.clone(); }
+    if body.redfin_url.is_some() {
+        updated.redfin_url = body.redfin_url.clone();
+    }
+    if body.realtor_url.is_some() {
+        updated.realtor_url = body.realtor_url.clone();
+    }
+    if body.rew_url.is_some() {
+        updated.rew_url = body.rew_url.clone();
+    }
+    if body.zillow_url.is_some() {
+        updated.zillow_url = body.zillow_url.clone();
+    }
 
     updated.price = body.price.or(updated.price);
-    updated.price_currency = body.price_currency.clone().or(updated.price_currency.clone());
+    updated.price_currency = body
+        .price_currency
+        .clone()
+        .or(updated.price_currency.clone());
     updated.offer_price = body.offer_price.or(updated.offer_price);
-    updated.street_address = body.street_address.clone().or(updated.street_address.clone());
+    updated.street_address = body
+        .street_address
+        .clone()
+        .or(updated.street_address.clone());
     updated.city = body.city.clone().or(updated.city.clone());
     updated.region = body.region.clone().or(updated.region.clone());
     updated.postal_code = body.postal_code.clone().or(updated.postal_code.clone());
@@ -67,17 +89,33 @@ pub async fn patch_details(
     updated.bathrooms = body.bathrooms.or(updated.bathrooms);
     updated.sqft = body.sqft.or(updated.sqft);
     updated.year_built = body.year_built.or(updated.year_built);
+    updated.total_parking_space = body.total_parking_space.or(updated.total_parking_space);
     updated.parking_garage = body.parking_garage.or(updated.parking_garage);
     updated.parking_covered = body.parking_covered.or(updated.parking_covered);
     updated.parking_open = body.parking_open.or(updated.parking_open);
+    if body.parking_garage.is_some()
+        || body.parking_covered.is_some()
+        || body.parking_open.is_some()
+    {
+        updated.total_parking_space = Some(
+            updated.parking_garage.unwrap_or(0)
+                + updated.parking_covered.unwrap_or(0)
+                + updated.parking_open.unwrap_or(0),
+        );
+    }
     updated.land_sqft = body.land_sqft.or(updated.land_sqft);
     updated.property_tax = body.property_tax.or(updated.property_tax);
-    updated.skytrain_station = body.skytrain_station.clone().or(updated.skytrain_station.clone());
+    updated.skytrain_station = body
+        .skytrain_station
+        .clone()
+        .or(updated.skytrain_station.clone());
     updated.skytrain_walk_min = body.skytrain_walk_min.or(updated.skytrain_walk_min);
     updated.radiant_floor_heating = body.radiant_floor_heating.or(updated.radiant_floor_heating);
     updated.ac = body.ac.or(updated.ac);
     updated.down_payment_pct = body.down_payment_pct.or(updated.down_payment_pct);
-    updated.mortgage_interest_rate = body.mortgage_interest_rate.or(updated.mortgage_interest_rate);
+    updated.mortgage_interest_rate = body
+        .mortgage_interest_rate
+        .or(updated.mortgage_interest_rate);
     updated.amortization_years = body.amortization_years.or(updated.amortization_years);
     updated.mortgage_monthly = body.mortgage_monthly.or(updated.mortgage_monthly);
     updated.hoa_monthly = body.hoa_monthly.or(updated.hoa_monthly);
@@ -85,23 +123,44 @@ pub async fn patch_details(
     updated.monthly_cost = body.monthly_cost.or(updated.monthly_cost);
     updated.has_rental_suite = body.has_rental_suite.or(updated.has_rental_suite);
     updated.rental_income = body.rental_income.or(updated.rental_income);
-    if let Some(s) = body.status { updated.status = s; }
-    updated.school_elementary = body.school_elementary.clone().or(updated.school_elementary.clone());
-    updated.school_elementary_rating = body.school_elementary_rating.or(updated.school_elementary_rating);
+    if let Some(s) = body.status {
+        updated.status = s;
+    }
+    updated.school_elementary = body
+        .school_elementary
+        .clone()
+        .or(updated.school_elementary.clone());
+    updated.school_elementary_rating = body
+        .school_elementary_rating
+        .or(updated.school_elementary_rating);
     updated.school_middle = body.school_middle.clone().or(updated.school_middle.clone());
     updated.school_middle_rating = body.school_middle_rating.or(updated.school_middle_rating);
-    updated.school_secondary = body.school_secondary.clone().or(updated.school_secondary.clone());
-    updated.school_secondary_rating = body.school_secondary_rating.or(updated.school_secondary_rating);
+    updated.school_secondary = body
+        .school_secondary
+        .clone()
+        .or(updated.school_secondary.clone());
+    updated.school_secondary_rating = body
+        .school_secondary_rating
+        .or(updated.school_secondary_rating);
     updated.property_type = body.property_type.clone().or(updated.property_type.clone());
     updated.laundry_in_unit = body.laundry_in_unit.or(updated.laundry_in_unit);
     updated.mls_number = body.mls_number.clone().or(updated.mls_number.clone());
 
     let mut updated = db::update_by_id(&state.db, id, &updated)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
 
     // Recompute monthly_total/monthly_cost from the freshly saved values.
-    updated.monthly_total = compute_monthly_total(updated.mortgage_monthly, updated.property_tax, updated.hoa_monthly);
+    updated.monthly_total = compute_monthly_total(
+        updated.mortgage_monthly,
+        updated.property_tax,
+        updated.hoa_monthly,
+    );
     let base_price = updated.offer_price.or(updated.price);
     let initial_interest = base_price.map(|price| {
         compute_initial_monthly_interest(
@@ -110,7 +169,8 @@ pub async fn patch_details(
             updated.mortgage_interest_rate.unwrap_or(0.05),
         )
     });
-    updated.monthly_cost = compute_monthly_cost(initial_interest, updated.property_tax, updated.hoa_monthly);
+    updated.monthly_cost =
+        compute_monthly_cost(initial_interest, updated.property_tax, updated.hoa_monthly);
 
     let _ = sqlx::query("UPDATE listings SET monthly_total = ?, monthly_cost = ? WHERE id = ?")
         .bind(updated.monthly_total)
@@ -128,7 +188,12 @@ pub async fn patch_details(
     // Re-attach images (update_by_id doesn't load them).
     let images = db::list_images_with_meta(&state.db, id)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
 
     Ok(Json(db::Property { images, ..updated }))
 }
@@ -140,8 +205,11 @@ pub async fn get_history(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<db::HistoryEntry>>, (StatusCode, String)> {
-    let entries = db::list_history(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let entries = db::list_history(&state.db, id).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB error: {}", e),
+        )
+    })?;
     Ok(Json(entries))
 }

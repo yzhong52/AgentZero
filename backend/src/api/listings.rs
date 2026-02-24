@@ -4,14 +4,18 @@
 //! - GET    /api/listings/:id  — get a single property
 //! - DELETE /api/listings/:id  — delete a property and its images
 
-use axum::{Json, extract::{State, Path, Query}, http::StatusCode};
-use object_store::{ObjectStoreExt, path::Path as ObjectPath};
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    Json,
+};
+use object_store::{path::Path as ObjectPath, ObjectStoreExt};
 use serde::Deserialize;
 use tokio::fs;
 
-use crate::{AppState, db};
 use crate::image_paths;
 use crate::models::property::ListingStatus;
+use crate::{db, AppState};
 
 #[derive(Deserialize)]
 pub struct ListingsQuery {
@@ -34,9 +38,12 @@ pub async fn list_listings(
         Some(s) => s.split(',').filter_map(|v| v.parse().ok()).collect(),
     };
 
-    let listings = db::list(&state.db, &statuses)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let listings = db::list(&state.db, &statuses).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB error: {}", e),
+        )
+    })?;
     Ok(Json(listings))
 }
 
@@ -62,14 +69,25 @@ pub async fn delete_listing(
     Path(id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     // 1. Delete locally-cached image files from the object store.
-    let cached = db::list_cached_images(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let cached = db::list_cached_images(&state.db, id).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB error: {}", e),
+        )
+    })?;
 
     for img in &cached {
         let object_key = image_paths::object_key(id, &img.sha256, &img.ext);
-        if let Err(e) = state.store.delete(&ObjectPath::from(object_key.as_str())).await {
-            tracing::warn!("delete_listing: could not remove image file {}: {}", object_key, e);
+        if let Err(e) = state
+            .store
+            .delete(&ObjectPath::from(object_key.as_str()))
+            .await
+        {
+            tracing::warn!(
+                "delete_listing: could not remove image file {}: {}",
+                object_key,
+                e
+            );
             // Continue — file may already be gone; don't block the delete.
         }
     }
@@ -83,12 +101,20 @@ pub async fn delete_listing(
     // 3. Remove images_cache rows (no CASCADE on this FK).
     db::delete_all_image_records(&state.db, id)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
 
     // 4. Delete the listing row (listing_history cascades automatically).
-    db::delete(&state.db, id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    db::delete(&state.db, id).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB error: {}", e),
+        )
+    })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

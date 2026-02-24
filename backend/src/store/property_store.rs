@@ -59,7 +59,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                   ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
            RETURNING id"#,
     )
     .bind(&p.redfin_url)
@@ -355,6 +355,82 @@ mod tests {
     use super::*;
     use crate::models::property::UserDetails;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[tokio::test]
+    async fn test_add_listing_roundtrip() {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let db_path = std::env::temp_dir().join(format!("agentzero_test_add_{}.db", now));
+        let database_url = format!("sqlite://{}", db_path.display());
+        let pool = init(&database_url).await;
+
+        let p = Property {
+            id: 0,
+            redfin_url: Some("https://example.com/add".to_string()),
+            realtor_url: Some("https://realtor.example/add".to_string()),
+            rew_url: Some("https://rew.example/add".to_string()),
+            zillow_url: None,
+            title: "Add Listing Test".to_string(),
+            description: "desc".to_string(),
+            price: Some(700_000),
+            price_currency: Some("CAD".to_string()),
+            offer_price: Some(690_000),
+            street_address: Some("999 Test Ave".to_string()),
+            city: Some("Vancouver".to_string()),
+            region: Some("BC".to_string()),
+            postal_code: Some("V6B1A1".to_string()),
+            country: Some("Canada".to_string()),
+            bedrooms: Some(2),
+            bathrooms: Some(2),
+            sqft: Some(900),
+            year_built: Some(2001),
+            lat: Some(49.28),
+            lon: Some(-123.12),
+            images: vec![],
+            created_at: String::new(),
+            updated_at: None,
+            notes: None,
+            parking_garage: Some(1),
+            parking_covered: Some(0),
+            parking_open: Some(0),
+            land_sqft: Some(1200),
+            property_tax: Some(3200),
+            skytrain_station: Some("Test Station".to_string()),
+            skytrain_walk_min: Some(8),
+            radiant_floor_heating: Some(false),
+            ac: Some(true),
+            down_payment_pct: Some(0.2),
+            mortgage_interest_rate: Some(0.05),
+            amortization_years: Some(25),
+            mortgage_monthly: Some(2800),
+            hoa_monthly: Some(400),
+            monthly_total: Some(3466),
+            monthly_cost: Some(3333),
+            has_rental_suite: Some(false),
+            rental_income: Some(0),
+            status: ListingStatus::Interested,
+            school_elementary: Some("Elm".to_string()),
+            school_elementary_rating: Some(7.1),
+            school_middle: Some("Oak".to_string()),
+            school_middle_rating: Some(7.8),
+            school_secondary: Some("Pine".to_string()),
+            school_secondary_rating: Some(8.2),
+            property_type: Some("Condo".to_string()),
+            listed_date: Some("2026-02-24".to_string()),
+            mls_number: Some("R9999999".to_string()),
+            laundry_in_unit: Some(true),
+        };
+
+        let saved = add_listing(&pool, &p).await.expect("add_listing failed");
+        assert!(saved.id > 0);
+        assert_eq!(saved.title, "Add Listing Test");
+        assert_eq!(saved.price, Some(700_000));
+        assert_eq!(saved.property_type.as_deref(), Some("Condo"));
+        assert_eq!(saved.listed_date.as_deref(), Some("2026-02-24"));
+        assert_eq!(saved.mls_number.as_deref(), Some("R9999999"));
+        assert_eq!(saved.laundry_in_unit, Some(true));
+
+        let _ = std::fs::remove_file(db_path);
+    }
 
     #[tokio::test]
     async fn test_update_by_id_roundtrip() {

@@ -11,10 +11,10 @@ use axum::{
     Router,
 };
 use object_store::local::LocalFileSystem;
-use reqwest::header::{
+use rquest::header::{
     HeaderMap, HeaderValue, ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, REFERER, USER_AGENT,
 };
-use reqwest::Client;
+use rquest::{Client, Impersonate};
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
@@ -90,11 +90,12 @@ pub(crate) fn safe_url(input: &str) -> Option<Url> {
     }
 }
 
-pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
+/// Fetch HTML using the rquest HTTP client (with browser TLS impersonation).
+async fn fetch_html_direct(client: &Client, url: &Url) -> Result<String, rquest::Error> {
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_static("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+        HeaderValue::from_static("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"),
     );
     headers.insert(
         ACCEPT,
@@ -116,6 +117,95 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, req
     resp.text().await
 }
 
+/// Fetch HTML by opening the URL in Safari via AppleScript.
+///
+/// Safari passes bot-protection checks (Incapsula, PerimeterX) that block
+/// plain HTTP clients because it runs the full JS challenge in a real browser
+/// context.  The page is opened in a new tab, allowed to settle for ~20 s,
+/// and the rendered DOM source is returned.
+async fn fetch_html_safari(url: &Url) -> Result<String, String> {
+    let script = format!(
+        r#"
+tell application "Safari"
+    activate
+    make new document with properties {{URL:"{url}"}}
+    delay 20
+    set pageSource to source of document 1
+    close document 1
+    return pageSource
+end tell
+"#,
+        url = url.as_str()
+    );
+    let output = tokio::process::Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output()
+        .await
+        .map_err(|e| format!("osascript failed: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("osascript error: {stderr}"));
+    }
+    let html = String::from_utf8_lossy(&output.stdout).to_string();
+    if html.len() < 2000 {
+        return Err(format!("Safari returned only {} bytes (likely blocked)", html.len()));
+    }
+    Ok(html)
+}
+
+/// Returns `true` when the HTML looks like a bot-protection challenge page
+/// rather than real listing content.
+fn is_challenge_page(html: &str) -> bool {
+    html.len() < 2000
+        && (html.contains("Incapsula")
+            || html.contains("_Incapsula_Resource")
+            || html.contains("px-blocked")
+            || html.contains("PerimeterX"))
+}
+
+/// Returns `true` for hosts known to use aggressive bot protection that
+/// blocks plain HTTP clients (even with TLS impersonation).
+fn is_bot_protected_host(url: &Url) -> bool {
+    match url.host_str().unwrap_or("") {
+        h if h.contains("zillow.com") => true,
+        h if h.contains("realtor.ca") => true,
+        _ => false,
+    }
+}
+
+/// Fetch HTML for a listing URL.
+///
+/// Strategy:
+/// 1. Try the fast `rquest` HTTP client (with Chrome TLS impersonation).
+/// 2. If that fails with a 403 or returns a bot-challenge page for a known
+///    protected host, fall back to Safari via AppleScript.
+pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, String> {
+    // Fast path: direct HTTP fetch.
+    match fetch_html_direct(client, url).await {
+        Ok(html) if !is_challenge_page(&html) => return Ok(html),
+        Ok(html) if !is_bot_protected_host(url) => return Ok(html),
+        Ok(_challenge) => {
+            tracing::info!(
+                "fetch_html: direct fetch returned challenge page for {}, trying Safari",
+                url
+            );
+        }
+        Err(e) if is_bot_protected_host(url) => {
+            tracing::info!(
+                "fetch_html: direct fetch failed for {} ({}), trying Safari",
+                url,
+                e
+            );
+        }
+        Err(e) => return Err(format!("Failed to fetch {url}: {e}")),
+    }
+
+    // Slow path: Safari via AppleScript (macOS only).
+    fetch_html_safari(url).await
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
@@ -132,6 +222,7 @@ async fn main() {
     );
 
     let client = Client::builder()
+        .impersonate(Impersonate::Chrome130)
         .timeout(Duration::from_secs(15))
         .build()
         .unwrap();

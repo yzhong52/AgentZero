@@ -2,7 +2,7 @@ use crate::db;
 use crate::image_paths;
 use image::imageops::FilterType;
 use object_store::{path::Path as ObjectPath, ObjectStore, ObjectStoreExt};
-use reqwest::Client;
+use rquest::Client;
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
 use tokio::fs;

@@ -1181,6 +1181,21 @@
   margin-bottom: 0.5rem;
 }
 
+.location-subsection {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0dfd8;
+}
+
+.location-subsection h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
+}
+
 .location-card .map-preview {
   margin-top: 0.9rem;
 }
@@ -1214,6 +1229,21 @@
 .offer-finance-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.offer-finance-rental {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0dfd8;
+}
+
+.offer-finance-rental h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9ca3af;
 }
 
 .offer-price-btn {
@@ -1416,16 +1446,62 @@ button.listing-card {
 .tracked-details-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
 }
 
-.edit-mode-badge {
-  font-size: 0.75rem;
-  padding: 0.15em 0.6em;
-  border-radius: 999px;
-  background: #e0e7ff;
-  color: #4f46e5;
-  font-weight: 600;
+.tracked-details-header .edit-btn {
+  padding: 0.25em 0.75em;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.tracked-details-header .edit-btn:hover {
+  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+.detail-edit-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.detail-edit-actions .save-btn {
+  padding: 0.25em 0.75em;
+  border-radius: 5px;
+  border: 1px solid #6ee7b7;
+  background: transparent;
+  color: #059669;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.detail-edit-actions .save-btn:hover:not(:disabled) {
+  background: #ecfdf5;
+}
+
+.detail-edit-actions .cancel-btn {
+  padding: 0.25em 0.75em;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: color 0.15s;
+}
+
+.detail-edit-actions .cancel-btn:hover:not(:disabled) {
+  color: #6b7280;
 }
 
 .school-edit-row {

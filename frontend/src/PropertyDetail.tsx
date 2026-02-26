@@ -161,21 +161,6 @@ function buildEmojiSuggestions(query: string): EmojiSuggestion[] {
 
 // ── Edit helpers ──────────────────────────────────────────────────────────────
 
-function TextInput({ label, value, onChange }: {
-    label: string; value: string | null; onChange: (v: string | null) => void
-}) {
-    return (
-        <div className="tracked-field">
-            <label>{label}</label>
-            <input
-                className="edit-input"
-                value={value ?? ''}
-                onChange={e => onChange(e.target.value || null)}
-            />
-        </div>
-    )
-}
-
 function NumInput({ label, value, onChange, suffix }: {
     label: string; value: number | null; onChange: (v: number | null) => void; suffix?: string
 }) {
@@ -287,7 +272,7 @@ const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
     { key: 'ac', label: 'Air conditioning' },
     { key: 'radiant_floor_heating', label: 'Radiant heating' },
     { key: 'property_tax', label: 'Property tax (annual)' },
-    { key: 'hoa_monthly', label: 'HOA / Strata (monthly)' },
+    { key: 'hoa_monthly', label: 'HOA / Strata (Monthly)' },
     { key: 'school_elementary', label: 'Elementary school' },
     { key: 'school_middle', label: 'Middle school' },
     { key: 'school_secondary', label: 'Secondary school' },
@@ -374,6 +359,9 @@ export function PropertyDetail() {
     const [financeEditMode, setFinanceEditMode] = useState(false)
     const [financeSaving, setFinanceSaving] = useState(false)
     const [financeDraft, setFinanceDraft] = useState<Property | null>(null)
+    const [locationEditMode, setLocationEditMode] = useState(false)
+    const [locationSaving, setLocationSaving] = useState(false)
+    const [locationDraft, setLocationDraft] = useState<{ street_address: string | null; city: string | null; region: string | null; postal_code: string | null; skytrain_station: string | null; skytrain_walk_min: number | null } | null>(null)
 
     // Refresh preview
     const [previewing, setPreviewing] = useState(false)
@@ -466,6 +454,39 @@ export function PropertyDetail() {
             mortgage_monthly: monthly,
             monthly_total: calcMonthlyTotal(monthly, d.property_tax, d.hoa_monthly),
             monthly_cost: calcMonthlyTotal(initialInterest, d.property_tax, d.hoa_monthly),
+        }
+    }
+
+    function enterLocationEdit() {
+        if (!property) return
+        setLocationDraft({ street_address: property.street_address ?? null, city: property.city ?? null, region: property.region ?? null, postal_code: property.postal_code ?? null, skytrain_station: property.skytrain_station ?? null, skytrain_walk_min: property.skytrain_walk_min ?? null })
+        setLocationEditMode(true)
+    }
+
+    function cancelLocationEdit() {
+        setLocationEditMode(false)
+        setLocationDraft(null)
+    }
+
+    async function saveLocationEdits() {
+        if (!locationDraft || !property) return
+        setLocationSaving(true)
+        setError(null)
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/details`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(locationDraft),
+            })
+            if (!resp.ok) throw new Error(await resp.text())
+            const updated: Property = await resp.json()
+            setProperty({ ...updated, images: property.images })
+            setLocationEditMode(false)
+            setLocationDraft(null)
+        } catch (err: any) {
+            setError(err?.message || String(err))
+        } finally {
+            setLocationSaving(false)
         }
     }
 
@@ -801,16 +822,6 @@ export function PropertyDetail() {
 
             <div className="detail-nav">
                 <button className="back-btn" onClick={() => navigate('/')}>← Back</button>
-                {!editMode ? (
-                    <button className="edit-btn" onClick={enterEdit}>Edit</button>
-                ) : (
-                    <>
-                        <button className="save-btn" onClick={handleSaveEdits} disabled={saving}>
-                            {saving ? 'Saving…' : 'Save'}
-                        </button>
-                        <button className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
-                    </>
-                )}
                 <button
                     className="delete-btn"
                     onClick={handleDelete}
@@ -921,7 +932,7 @@ export function PropertyDetail() {
                         <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
                     </div>
 
-                    {!editMode && address && <div className="detail-address">{address}</div>}
+                    {address && <div className="detail-address">{address}</div>}
 
                     {property.description && (
                         <div className="detail-description">
@@ -933,7 +944,16 @@ export function PropertyDetail() {
                     <div className="tracked-details">
                         <div className="tracked-details-header">
                             <h3>Details</h3>
-                            {editMode && <span className="edit-mode-badge">Editing</span>}
+                            {!editMode ? (
+                                <button className="edit-btn" onClick={enterEdit}>Edit</button>
+                            ) : (
+                                <div className="detail-edit-actions">
+                                    <button className="save-btn" onClick={handleSaveEdits} disabled={saving}>
+                                        {saving ? 'Saving…' : 'Save'}
+                                    </button>
+                                    <button className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="tracked-group">
@@ -964,10 +984,14 @@ export function PropertyDetail() {
                                 <Field label="Total Parking Space" viewVal={numLabel(totalParkingSpace)} />
                                 <Field label="Garage" viewVal={numLabel(p.parking_garage)}
                                     editEl={<NumInput label="Garage" value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
-                                <Field label="Carport" viewVal={numLabel(p.parking_carport)}
-                                    editEl={<NumInput label="Carport" value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
-                                <Field label="Parking Pad" viewVal={numLabel(p.parking_pad)}
-                                    editEl={<NumInput label="Parking Pad" value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
+                                {(p.parking_carport != null || editMode) && (
+                                    <Field label="Carport" viewVal={numLabel(p.parking_carport)}
+                                        editEl={<NumInput label="Carport" value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
+                                )}
+                                {(p.parking_pad != null || editMode) && (
+                                    <Field label="Parking Pad" viewVal={numLabel(p.parking_pad)}
+                                        editEl={<NumInput label="Parking Pad" value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
+                                )}
                             </div>
                         </div>
 
@@ -979,99 +1003,121 @@ export function PropertyDetail() {
                             </div>
                         </div>
 
-                        <div className="tracked-group">
-                            <h4>Transit</h4>
-                            <div className="tracked-fields">
-                                <Field label="Closest Skytrain Station" viewVal={p.skytrain_station ?? '—'}
-                                    editEl={<TextInput label="Closest Skytrain Station" value={draft?.skytrain_station ?? null} onChange={v => setDraftField('skytrain_station', v)} />} />
-                                <Field label="Walk Time (Min)" viewVal={numLabel(p.skytrain_walk_min, ' min')}
-                                    editEl={<NumInput label="Walk Time (Min)" value={draft?.skytrain_walk_min ?? null} onChange={v => setDraftField('skytrain_walk_min', v)} />} />
-                            </div>
-                        </div>
-
-                        <div className="tracked-group">
-                            <h4>Features</h4>
-                            <div className="tracked-fields">
-                                <Field label="Radiant Floor Heating" viewVal={boolLabel(p.radiant_floor_heating)}
-                                    editEl={<BoolSelect label="Radiant Floor Heating" value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
-                                <Field label="Air Conditioning" viewVal={boolLabel(p.ac)}
-                                    editEl={<BoolSelect label="Air Conditioning" value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
-                            </div>
-                        </div>
-
-                        <div className="tracked-group">
-                            <h4>Rental</h4>
-                            <div className="tracked-fields">
-                                <Field label="Has Rental Suite" viewVal={boolLabel(p.has_rental_suite)}
-                                    editEl={<BoolSelect label="Has Rental Suite" value={draft?.has_rental_suite ?? null} onChange={v => setDraftField('has_rental_suite', v)} />} />
-                                {(editMode || p.has_rental_suite !== false) && (
-                                    <Field label="Rental Income (Monthly)" viewVal={moneyLabel(p.rental_income)}
-                                        editEl={<NumInput label="Rental Income (Monthly)" value={draft?.rental_income ?? null} onChange={v => setDraftField('rental_income', v)} />} />
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="tracked-group">
-                            <h4>Nearby Schools <span className="school-source-note">(Fraser Institute rating /10)</span></h4>
-                            <div className="tracked-fields">
-                                <div className="tracked-field">
-                                    <label>Elementary</label>
-                                    {editMode ? (
-                                        <div className="school-edit-row">
-                                            <input className="edit-input" value={draft?.school_elementary ?? ''} onChange={e => setDraftField('school_elementary', e.target.value || null)} placeholder="School name" />
-                                            <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_elementary_rating ?? ''} onChange={e => setDraftField('school_elementary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                        </div>
-                                    ) : (
-                                        <span className="tracked-value school-entry">
-                                            {p.school_elementary ?? '—'}
-                                            {p.school_elementary_rating != null && <span className="school-rating">{p.school_elementary_rating.toFixed(1)}</span>}
-                                        </span>
+                        {(editMode || p.radiant_floor_heating != null || p.ac != null) && (
+                            <div className="tracked-group">
+                                <h4>Features</h4>
+                                <div className="tracked-fields">
+                                    {(p.radiant_floor_heating != null || editMode) && (
+                                        <Field label="Radiant Floor Heating" viewVal={boolLabel(p.radiant_floor_heating)}
+                                            editEl={<BoolSelect label="Radiant Floor Heating" value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
                                     )}
-                                </div>
-                                <div className="tracked-field">
-                                    <label>Middle</label>
-                                    {editMode ? (
-                                        <div className="school-edit-row">
-                                            <input className="edit-input" value={draft?.school_middle ?? ''} onChange={e => setDraftField('school_middle', e.target.value || null)} placeholder="School name" />
-                                            <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_middle_rating ?? ''} onChange={e => setDraftField('school_middle_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                        </div>
-                                    ) : (
-                                        <span className="tracked-value school-entry">
-                                            {p.school_middle ?? '—'}
-                                            {p.school_middle_rating != null && <span className="school-rating">{p.school_middle_rating.toFixed(1)}</span>}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="tracked-field">
-                                    <label>Secondary</label>
-                                    {editMode ? (
-                                        <div className="school-edit-row">
-                                            <input className="edit-input" value={draft?.school_secondary ?? ''} onChange={e => setDraftField('school_secondary', e.target.value || null)} placeholder="School name" />
-                                            <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_secondary_rating ?? ''} onChange={e => setDraftField('school_secondary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                        </div>
-                                    ) : (
-                                        <span className="tracked-value school-entry">
-                                            {p.school_secondary ?? '—'}
-                                            {p.school_secondary_rating != null && <span className="school-rating">{p.school_secondary_rating.toFixed(1)}</span>}
-                                        </span>
+                                    {(p.ac != null || editMode) && (
+                                        <Field label="Air Conditioning" viewVal={boolLabel(p.ac)}
+                                            editEl={<BoolSelect label="Air Conditioning" value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
                                     )}
                                 </div>
                             </div>
-                        </div>
+                        )}
+
+                        {(editMode || p.school_elementary != null || p.school_middle != null || p.school_secondary != null) && (
+                            <div className="tracked-group">
+                                <h4>Nearby Schools <span className="school-source-note">(Fraser Institute rating /10)</span></h4>
+                                <div className="tracked-fields">
+                                    {(p.school_elementary != null || editMode) && (
+                                        <div className="tracked-field">
+                                            <label>Elementary</label>
+                                            {editMode ? (
+                                                <div className="school-edit-row">
+                                                    <input className="edit-input" value={draft?.school_elementary ?? ''} onChange={e => setDraftField('school_elementary', e.target.value || null)} placeholder="School name" />
+                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_elementary_rating ?? ''} onChange={e => setDraftField('school_elementary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                </div>
+                                            ) : (
+                                                <span className="tracked-value school-entry">
+                                                    {p.school_elementary ?? '—'}
+                                                    {p.school_elementary_rating != null && <span className="school-rating">{p.school_elementary_rating.toFixed(1)}</span>}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {(p.school_middle != null || editMode) && (
+                                        <div className="tracked-field">
+                                            <label>Middle</label>
+                                            {editMode ? (
+                                                <div className="school-edit-row">
+                                                    <input className="edit-input" value={draft?.school_middle ?? ''} onChange={e => setDraftField('school_middle', e.target.value || null)} placeholder="School name" />
+                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_middle_rating ?? ''} onChange={e => setDraftField('school_middle_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                </div>
+                                            ) : (
+                                                <span className="tracked-value school-entry">
+                                                    {p.school_middle ?? '—'}
+                                                    {p.school_middle_rating != null && <span className="school-rating">{p.school_middle_rating.toFixed(1)}</span>}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {(p.school_secondary != null || editMode) && (
+                                        <div className="tracked-field">
+                                            <label>Secondary</label>
+                                            {editMode ? (
+                                                <div className="school-edit-row">
+                                                    <input className="edit-input" value={draft?.school_secondary ?? ''} onChange={e => setDraftField('school_secondary', e.target.value || null)} placeholder="School name" />
+                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_secondary_rating ?? ''} onChange={e => setDraftField('school_secondary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                </div>
+                                            ) : (
+                                                <span className="tracked-value school-entry">
+                                                    {p.school_secondary ?? '—'}
+                                                    {p.school_secondary_rating != null && <span className="school-rating">{p.school_secondary_rating.toFixed(1)}</span>}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                     </div>
 
                     <div className="location-card">
-                        <h3>Location</h3>
+                        <div className="tracked-details-header">
+                            <h3>Location</h3>
+                            {!locationEditMode ? (
+                                <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
+                            ) : (
+                                <div className="detail-edit-actions">
+                                    <button className="save-btn" onClick={saveLocationEdits} disabled={locationSaving}>
+                                        {locationSaving ? 'Saving…' : 'Save'}
+                                    </button>
+                                    <button className="cancel-btn" onClick={cancelLocationEdit} disabled={locationSaving}>Cancel</button>
+                                </div>
+                            )}
+                        </div>
                         <div className="tracked-fields location-fields">
-                            <Field label="Street Address" viewVal={p.street_address ?? '—'}
-                                editEl={<TextInput label="Street Address" value={draft?.street_address ?? null} onChange={v => setDraftField('street_address', v)} />} />
-                            <Field label="City" viewVal={p.city ?? '—'}
-                                editEl={<TextInput label="City" value={draft?.city ?? null} onChange={v => setDraftField('city', v)} />} />
-                            <Field label="Region / Province" viewVal={p.region ?? '—'}
-                                editEl={<TextInput label="Region / Province" value={draft?.region ?? null} onChange={v => setDraftField('region', v)} />} />
-                            <Field label="Postal Code" viewVal={p.postal_code ?? '—'}
-                                editEl={<TextInput label="Postal Code" value={draft?.postal_code ?? null} onChange={v => setDraftField('postal_code', v)} />} />
+                            <div className="tracked-field"><label>Street Address</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>City</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>Region / Province</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>Postal Code</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
+                        </div>
+
+                        <div className="location-subsection">
+                            <h4>Transit</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field">
+                                    <label>Closest Skytrain Station</label>
+                                    {locationEditMode ? (
+                                        <input className="edit-input" value={locationDraft?.skytrain_station ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_station: e.target.value || null } : d)} />
+                                    ) : (
+                                        <span className="tracked-value">{property.skytrain_station ?? '—'}</span>
+                                    )}
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Walk Time (Min)</label>
+                                    {locationEditMode ? (
+                                        <input className="edit-input" type="number" value={locationDraft?.skytrain_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
+                                    ) : (
+                                        <span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         {property.lat != null && property.lon != null && (
@@ -1087,14 +1133,16 @@ export function PropertyDetail() {
                     </div>
 
                     <div className="offer-finance-card">
-                        <div className="offer-finance-header">
-                            <h3>Offer &amp; Finance</h3>
-                            {financeEditMode && (
-                                <div className="offer-finance-actions">
-                                    <button className="cancel-btn" onClick={cancelFinanceEdit} disabled={financeSaving}>Cancel</button>
+                        <div className="tracked-details-header">
+                            <h3>Offer, Cost &amp; Finance</h3>
+                            {!financeEditMode ? (
+                                <button className="edit-btn" onClick={enterFinanceEdit}>Edit</button>
+                            ) : (
+                                <div className="detail-edit-actions">
                                     <button className="save-btn" onClick={saveFinanceEdits} disabled={financeSaving}>
                                         {financeSaving ? 'Saving…' : 'Save'}
                                     </button>
+                                    <button className="cancel-btn" onClick={cancelFinanceEdit} disabled={financeSaving}>Cancel</button>
                                 </div>
                             )}
                         </div>
@@ -1175,7 +1223,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>Amortization (years)</label>
+                                <label>Amortization (Years)</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1213,7 +1261,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>HOA / Strata (monthly)</label>
+                                <label>HOA / Strata (Monthly)</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1244,6 +1292,34 @@ export function PropertyDetail() {
                             <div className="tracked-field">
                                 <label>Monthly Cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
                                 <span className="tracked-value">{moneyLabel(monthlyCost)}</span>
+                            </div>
+                        </div>
+
+                        <div className="offer-finance-rental">
+                            <h4>Rental</h4>
+                            <div className="tracked-fields">
+                                <div className="tracked-field">
+                                    <label>Has Rental Suite</label>
+                                    {financeEditMode ? (
+                                        <select className="edit-input" value={financeDraft?.has_rental_suite === null ? '' : financeDraft?.has_rental_suite ? 'true' : 'false'} onChange={e => setFinanceDraft(d => d ? { ...d, has_rental_suite: e.target.value === '' ? null : e.target.value === 'true' } : d)}>
+                                            <option value="">—</option>
+                                            <option value="true">Yes</option>
+                                            <option value="false">No</option>
+                                        </select>
+                                    ) : (
+                                        <span className="tracked-value">{boolLabel(finance.has_rental_suite)}</span>
+                                    )}
+                                </div>
+                                {(financeEditMode || finance.has_rental_suite !== false) && (
+                                    <div className="tracked-field">
+                                        <label>Rental Income (Monthly)</label>
+                                        {financeEditMode ? (
+                                            <input className="edit-input" type="number" value={financeDraft?.rental_income ?? ''} onChange={e => setFinanceDraft(d => d ? { ...d, rental_income: e.target.value ? Number(e.target.value) : null } : d)} />
+                                        ) : (
+                                            <span className="tracked-value">{moneyLabel(finance.rental_income)}</span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

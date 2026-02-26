@@ -39,11 +39,10 @@ fn strip_noscript(html: &str) -> String {
     re.replace_all(html, "").to_string()
 }
 
-/// Keywords that indicate a script block contains property data needed by parsers.
+/// Keywords that parsers extract from script blocks via regex on raw HTML.
+/// Scripts containing these keywords (or JSON-LD / __NEXT_DATA__) are kept.
+/// All other scripts are removed.
 const DATA_KEYWORDS: &[&str] = &[
-    "application/ld+json",
-    "__NEXT_DATA__",
-    // Redfin embedded JSON fields:
     "lotSize",
     "hoaFee",
     "maintenanceFee",
@@ -55,18 +54,23 @@ const DATA_KEYWORDS: &[&str] = &[
     "carport",
     "Carport",
     "assignedSchools",
+    "nearbySchools",
     "schoolName",
     "greatSchoolsRating",
+    "Tax Annual Amount",
 ];
 
-/// Remove tracking/analytics script tags but preserve JSON-LD, __NEXT_DATA__,
-/// and scripts containing property data keywords used by parsers.
-fn strip_tracking_scripts(html: &str) -> String {
+/// Remove scripts that parsers don't need.
+/// Keep: JSON-LD, __NEXT_DATA__, and scripts containing DATA_KEYWORDS.
+fn strip_scripts(html: &str) -> String {
     let re = Regex::new(r"(?si)<script[^>]*>.*?</script>").unwrap();
     re.replace_all(html, |caps: &regex::Captures| {
-        let tag = caps.get(0).unwrap().as_str();
-        if DATA_KEYWORDS.iter().any(|kw| tag.contains(kw)) {
-            return tag.to_string();
+        let full = caps.get(0).unwrap().as_str();
+        if full.contains("application/ld+json")
+            || full.contains("__NEXT_DATA__")
+            || DATA_KEYWORDS.iter().any(|kw| full.contains(kw))
+        {
+            return full.to_string();
         }
         String::new()
     })
@@ -117,7 +121,7 @@ fn strip_html(html: &str) -> String {
     let html = strip_styles(&html);
     let html = strip_svgs(&html);
     let html = strip_noscript(&html);
-    let html = strip_tracking_scripts(&html);
+    let html = strip_scripts(&html);
     let html = strip_inline_styles(&html);
     let html = strip_data_uris(&html);
     let html = strip_srcsets(&html);

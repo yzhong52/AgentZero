@@ -6,7 +6,7 @@
 //!
 //! Once we have the HTML, data is extracted from:
 //!
-//!   1. **JSON-LD `Product` block** — price, currency, description, images, SKU.
+//!   1. **JSON-LD `Product` block** — price, currency, description, SKU.
 //!   2. **JSON-LD `Event` blocks** — address and coordinates (from open-house events).
 //!   3. **CSS selectors** on `#propertyDetailsSectionContentSubCon_*` elements —
 //!      sqft, year built, land size, parking, property tax.
@@ -158,7 +158,6 @@ struct ProductInfo {
     price: Option<i64>,
     currency: Option<String>,
     description: Option<String>,
-    images: Vec<String>,
     property_type: Option<String>,
 }
 
@@ -195,23 +194,10 @@ fn extract_product(json_ld: &[JsonValue]) -> ProductInfo {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        // Images: prefer highres URLs.
-        let mut images = Vec::new();
-        if let Some(arr) = block.get("image").and_then(|v| v.as_array()) {
-            for img in arr {
-                if let Some(url) = img.as_str() {
-                    if url.contains("highres") {
-                        images.push(url.to_string());
-                    }
-                }
-            }
-        }
-
         return ProductInfo {
             price,
             currency,
             description,
-            images,
             property_type: category,
         };
     }
@@ -220,7 +206,6 @@ fn extract_product(json_ld: &[JsonValue]) -> ProductInfo {
         price: None,
         currency: None,
         description: None,
-        images: vec![],
         property_type: None,
     }
 }

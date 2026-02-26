@@ -437,33 +437,4 @@ mod tests {
         assert_eq!(property.parking_garage, None, "parking_garage");
         insta::assert_json_snapshot!("rew_3545_w_king_edward_carport", property);
     }
-
-    #[test]
-    #[ignore = "requires a locally fetched page: curl -s -A 'Mozilla/5.0' https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc > /tmp/rew_page.html"]
-    fn test_parse_909_w18th() {
-        let html = std::fs::read_to_string("/tmp/rew_page.html").expect("file not found");
-        let result = parse(
-            "https://www.rew.ca/properties/909-w-18th-avenue-vancouver-bc",
-            &html,
-        )
-        .expect("Parser returned None");
-
-        let p = &result.property;
-        assert_eq!(p.property_tax, Some(12125), "property_tax");
-        assert_eq!(p.price, Some(2_488_800), "price");
-        assert_eq!(p.bedrooms, Some(5), "bedrooms");
-        assert_eq!(p.bathrooms, Some(3), "bathrooms");
-        assert_eq!(p.year_built, Some(1927), "year_built");
-        assert_eq!(p.land_sqft, Some(4026), "land_sqft");
-        assert_eq!(
-            p.street_address.as_deref(),
-            Some("909 W 18th Avenue"),
-            "street_address"
-        );
-        assert_eq!(p.region.as_deref(), Some("BC"), "region");
-        assert!(!result.image_urls.is_empty(), "images");
-        println!("property_tax = {:?}", p.property_tax);
-        println!("price        = {:?}", p.price);
-        println!("images       = {}", result.image_urls.len());
-    }
 }

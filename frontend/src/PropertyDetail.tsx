@@ -265,9 +265,9 @@ const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
     { key: 'postal_code', label: 'Postal code' },
     { key: 'bedrooms', label: 'Bedrooms' },
     { key: 'bathrooms', label: 'Bathrooms' },
-    { key: 'sqft', label: 'Living Area (sqft)' },
+    { key: 'sqft', label: 'Living Area' },
     { key: 'year_built', label: 'Year built' },
-    { key: 'land_sqft', label: 'Lot Size (sqft)' },
+    { key: 'land_sqft', label: 'Lot Size' },
     { key: 'parking_garage', label: 'Garage' },
     { key: 'ac', label: 'Air conditioning' },
     { key: 'radiant_floor_heating', label: 'Radiant heating' },
@@ -972,12 +972,12 @@ export function PropertyDetail() {
                                         editEl={<NumInput label="Year Built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
                                 )}
                                 {(p.sqft != null || editMode) && (
-                                    <Field label="Living Area (sqft)" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
-                                        editEl={<NumInput label="Living Area (sqft)" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
+                                    <Field label="Living Area" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
+                                        editEl={<NumInput label="Living Area" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
                                 )}
                                 {(p.land_sqft != null || editMode) && (
-                                    <Field label="Lot Size (sqft)" viewVal={numLabel(p.land_sqft, ' sqft')}
-                                        editEl={<NumInput label="Lot Size (sqft)" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
+                                    <Field label="Lot Size" viewVal={numLabel(p.land_sqft, ' sqft')}
+                                        editEl={<NumInput label="Lot Size" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
                                 )}
                             </div>
                         </div>

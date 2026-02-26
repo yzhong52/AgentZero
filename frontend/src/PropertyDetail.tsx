@@ -1,3 +1,5 @@
+import { LABELS } from './labels'
+
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
@@ -257,25 +259,25 @@ function str(v: unknown): string {
 }
 
 const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
-    { key: 'title', label: 'Title' },
-    { key: 'price', label: 'Price' },
-    { key: 'street_address', label: 'Address' },
-    { key: 'city', label: 'City' },
-    { key: 'region', label: 'Region' },
-    { key: 'postal_code', label: 'Postal code' },
-    { key: 'bedrooms', label: 'Bedrooms' },
-    { key: 'bathrooms', label: 'Bathrooms' },
-    { key: 'sqft', label: 'Living Area' },
-    { key: 'year_built', label: 'Year built' },
-    { key: 'land_sqft', label: 'Lot Size' },
-    { key: 'parking_garage', label: 'Garage' },
-    { key: 'ac', label: 'Air conditioning' },
-    { key: 'radiant_floor_heating', label: 'Radiant heating' },
-    { key: 'property_tax', label: 'Property tax (annual)' },
-    { key: 'hoa_monthly', label: 'HOA / Strata (Monthly)' },
-    { key: 'school_elementary', label: 'Elementary school' },
-    { key: 'school_middle', label: 'Middle school' },
-    { key: 'school_secondary', label: 'Secondary school' },
+    { key: 'title', label: LABELS.TITLE },
+    { key: 'price', label: LABELS.PRICE },
+    { key: 'street_address', label: LABELS.ADDRESS },
+    { key: 'city', label: LABELS.CITY },
+    { key: 'region', label: LABELS.REGION },
+    { key: 'postal_code', label: LABELS.POSTAL_CODE },
+    { key: 'bedrooms', label: LABELS.BEDROOMS },
+    { key: 'bathrooms', label: LABELS.BATHROOMS },
+    { key: 'sqft', label: LABELS.LIVING_AREA },
+    { key: 'year_built', label: LABELS.YEAR_BUILT },
+    { key: 'land_sqft', label: LABELS.LOT_SIZE },
+    { key: 'parking_garage', label: LABELS.GARAGE },
+    { key: 'ac', label: LABELS.AIR_CONDITIONING },
+    { key: 'radiant_floor_heating', label: LABELS.RADIANT_FLOOR_HEATING },
+    { key: 'property_tax', label: LABELS.PROPERTY_TAX },
+    { key: 'hoa_monthly', label: LABELS.HOA_MONTHLY },
+    { key: 'school_elementary', label: LABELS.SCHOOL_ELEMENTARY },
+    { key: 'school_middle', label: LABELS.SCHOOL_MIDDLE },
+    { key: 'school_secondary', label: LABELS.SCHOOL_SECONDARY },
 ]
 
 function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
@@ -822,6 +824,7 @@ export function PropertyDetail() {
 
             <div className="detail-nav">
                 <button className="back-btn" onClick={() => navigate('/')}>← Back</button>
+                <span className="detail-nav-title">Agent Zero</span>
                 <button
                     className="delete-btn"
                     onClick={handleDelete}
@@ -960,24 +963,24 @@ export function PropertyDetail() {
                             <h4>Property</h4>
                             <div className="tracked-fields">
                                 {(p.bedrooms != null || editMode) && (
-                                    <Field label="Bedrooms" viewVal={numLabel(p.bedrooms)}
-                                        editEl={<NumInput label="Bedrooms" value={draft?.bedrooms ?? null} onChange={v => setDraftField('bedrooms', v)} />} />
+                                    <Field label={LABELS.BEDROOMS} viewVal={numLabel(p.bedrooms)}
+                                        editEl={<NumInput label={LABELS.BEDROOMS} value={draft?.bedrooms ?? null} onChange={v => setDraftField('bedrooms', v)} />} />
                                 )}
                                 {(p.bathrooms != null || editMode) && (
-                                    <Field label="Bathrooms" viewVal={numLabel(p.bathrooms)}
-                                        editEl={<NumInput label="Bathrooms" value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
+                                    <Field label={LABELS.BATHROOMS} viewVal={numLabel(p.bathrooms)}
+                                        editEl={<NumInput label={LABELS.BATHROOMS} value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
                                 )}
                                 {(p.year_built != null || editMode) && (
-                                    <Field label="Year Built" viewVal={numLabel(p.year_built)}
-                                        editEl={<NumInput label="Year Built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
+                                    <Field label={LABELS.YEAR_BUILT} viewVal={numLabel(p.year_built)}
+                                        editEl={<NumInput label={LABELS.YEAR_BUILT} value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
                                 )}
                                 {(p.sqft != null || editMode) && (
-                                    <Field label="Living Area" viewVal={numLabel(p.sqft, ' sqft')}
-                                        editEl={<NumInput label="Living Area" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
+                                    <Field label={LABELS.LIVING_AREA} viewVal={numLabel(p.sqft, ' sqft')}
+                                        editEl={<NumInput label={LABELS.LIVING_AREA} value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
                                 )}
                                 {(p.land_sqft != null || editMode) && (
-                                    <Field label="Lot Size" viewVal={numLabel(p.land_sqft, ' sqft')}
-                                        editEl={<NumInput label="Lot Size" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
+                                    <Field label={LABELS.LOT_SIZE} viewVal={numLabel(p.land_sqft, ' sqft')}
+                                        editEl={<NumInput label={LABELS.LOT_SIZE} value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
                                 )}
                             </div>
                         </div>
@@ -985,16 +988,16 @@ export function PropertyDetail() {
                         <div className="tracked-group">
                             <h4>Parking</h4>
                             <div className="tracked-fields">
-                                <Field label="Total Parking Space" viewVal={numLabel(totalParkingSpace)} />
-                                <Field label="Garage" viewVal={numLabel(p.parking_garage)}
-                                    editEl={<NumInput label="Garage" value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
+                                <Field label={LABELS.TOTAL_PARKING} viewVal={numLabel(totalParkingSpace)} />
+                                <Field label={LABELS.GARAGE} viewVal={numLabel(p.parking_garage)}
+                                    editEl={<NumInput label={LABELS.GARAGE} value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
                                 {(p.parking_carport != null || editMode) && (
-                                    <Field label="Carport" viewVal={numLabel(p.parking_carport)}
-                                        editEl={<NumInput label="Carport" value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
+                                    <Field label={LABELS.CARPORT} viewVal={numLabel(p.parking_carport)}
+                                        editEl={<NumInput label={LABELS.CARPORT} value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
                                 )}
                                 {(p.parking_pad != null || editMode) && (
-                                    <Field label="Parking Pad" viewVal={numLabel(p.parking_pad)}
-                                        editEl={<NumInput label="Parking Pad" value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
+                                    <Field label={LABELS.PARKING_PAD} viewVal={numLabel(p.parking_pad)}
+                                        editEl={<NumInput label={LABELS.PARKING_PAD} value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
                                 )}
                             </div>
                         </div>
@@ -1006,12 +1009,12 @@ export function PropertyDetail() {
                                 <h4>Features</h4>
                                 <div className="tracked-fields">
                                     {(p.radiant_floor_heating != null || editMode) && (
-                                        <Field label="Radiant Floor Heating" viewVal={boolLabel(p.radiant_floor_heating)}
-                                            editEl={<BoolSelect label="Radiant Floor Heating" value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
+                                        <Field label={LABELS.RADIANT_FLOOR_HEATING} viewVal={boolLabel(p.radiant_floor_heating)}
+                                            editEl={<BoolSelect label={LABELS.RADIANT_FLOOR_HEATING} value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
                                     )}
                                     {(p.ac != null || editMode) && (
-                                        <Field label="Air Conditioning" viewVal={boolLabel(p.ac)}
-                                            editEl={<BoolSelect label="Air Conditioning" value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
+                                        <Field label={LABELS.AIR_CONDITIONING} viewVal={boolLabel(p.ac)}
+                                            editEl={<BoolSelect label={LABELS.AIR_CONDITIONING} value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
                                     )}
                                 </div>
                             </div>
@@ -1023,7 +1026,7 @@ export function PropertyDetail() {
                                 <div className="tracked-fields">
                                     {(p.school_elementary != null || editMode) && (
                                         <div className="tracked-field">
-                                            <label>Elementary</label>
+                                            <label>{LABELS.SCHOOL_ELEMENTARY}</label>
                                             {editMode ? (
                                                 <div className="school-edit-row">
                                                     <input className="edit-input" value={draft?.school_elementary ?? ''} onChange={e => setDraftField('school_elementary', e.target.value || null)} placeholder="School name" />
@@ -1039,7 +1042,7 @@ export function PropertyDetail() {
                                     )}
                                     {(p.school_middle != null || editMode) && (
                                         <div className="tracked-field">
-                                            <label>Middle</label>
+                                            <label>{LABELS.SCHOOL_MIDDLE}</label>
                                             {editMode ? (
                                                 <div className="school-edit-row">
                                                     <input className="edit-input" value={draft?.school_middle ?? ''} onChange={e => setDraftField('school_middle', e.target.value || null)} placeholder="School name" />
@@ -1055,7 +1058,7 @@ export function PropertyDetail() {
                                     )}
                                     {(p.school_secondary != null || editMode) && (
                                         <div className="tracked-field">
-                                            <label>Secondary</label>
+                                            <label>{LABELS.SCHOOL_SECONDARY}</label>
                                             {editMode ? (
                                                 <div className="school-edit-row">
                                                     <input className="edit-input" value={draft?.school_secondary ?? ''} onChange={e => setDraftField('school_secondary', e.target.value || null)} placeholder="School name" />
@@ -1090,17 +1093,17 @@ export function PropertyDetail() {
                             )}
                         </div>
                         <div className="tracked-fields location-fields">
-                            <div className="tracked-field"><label>Street Address</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>City</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>Region / Province</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>Postal Code</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>{LABELS.STREET_ADDRESS}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>{LABELS.CITY}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>{LABELS.REGION_PROVINCE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
+                            <div className="tracked-field"><label>{LABELS.POSTAL_CODE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
                         </div>
 
                         <div className="location-subsection">
                             <h4>Transit</h4>
                             <div className="tracked-fields">
                                 <div className="tracked-field">
-                                    <label>Closest Skytrain Station</label>
+                                    <label>{LABELS.SKYTRAIN_STATION}</label>
                                     {locationEditMode ? (
                                         <input className="edit-input" value={locationDraft?.skytrain_station ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_station: e.target.value || null } : d)} />
                                     ) : (
@@ -1108,7 +1111,7 @@ export function PropertyDetail() {
                                     )}
                                 </div>
                                 <div className="tracked-field">
-                                    <label>Walk Time (Min)</label>
+                                    <label>{LABELS.WALK_TIME}</label>
                                     {locationEditMode ? (
                                         <input className="edit-input" type="number" value={locationDraft?.skytrain_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
                                     ) : (
@@ -1183,7 +1186,7 @@ export function PropertyDetail() {
 
                         <div className="offer-finance-row offer-finance-row-3">
                             <div className="tracked-field">
-                                <label>Down Payment %</label>
+                                <label>{LABELS.DOWN_PAYMENT_PCT}</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1202,7 +1205,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>Mortgage Rate %</label>
+                                <label>{LABELS.MORTGAGE_RATE}</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1221,7 +1224,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>Amortization (Years)</label>
+                                <label>{LABELS.AMORTIZATION_YEARS}</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1242,7 +1245,7 @@ export function PropertyDetail() {
 
                         <div className="offer-finance-row offer-finance-row-3">
                             <div className="tracked-field">
-                                <label>Property Tax (Annual)</label>
+                                <label>{LABELS.PROPERTY_TAX}</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"
@@ -1259,7 +1262,7 @@ export function PropertyDetail() {
                             </div>
 
                             <div className="tracked-field">
-                                <label>HOA / Strata (Monthly)</label>
+                                <label>{LABELS.HOA_MONTHLY}</label>
                                 {financeEditMode ? (
                                     <input
                                         className="edit-input"

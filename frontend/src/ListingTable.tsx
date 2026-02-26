@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property } from './types'
+import { LABELS } from './labels'
 import { STATUS_OPTIONS } from './constants'
 
 export type ColKey =
@@ -26,11 +27,11 @@ export const ALL_COLUMNS: ColDef[] = [
   { key: 'address', label: 'Address', render: p => [p.street_address, p.city].filter(Boolean).join(', ') || '—' },
   { key: 'bedrooms', label: 'Beds', render: p => p.bedrooms ?? '—' },
   { key: 'bathrooms', label: 'Baths', render: p => p.bathrooms ?? '—' },
-  { key: 'sqft', label: 'Living Area', render: p => p.sqft?.toLocaleString() ?? '—' },
-  { key: 'year_built', label: 'Year Built', render: p => p.year_built ?? '—' },
-  { key: 'land_sqft', label: 'Lot Size', render: p => p.land_sqft?.toLocaleString() ?? '—' },
-  { key: 'parking_garage', label: 'Garage', render: p => p.parking_garage ?? '—' },
-  { key: 'ac', label: 'Air Conditioning', render: p => p.ac === null ? '—' : p.ac ? 'Yes' : 'No' },
+  { key: 'sqft', label: LABELS.LIVING_AREA, render: p => p.sqft?.toLocaleString() ?? '—' },
+  { key: 'year_built', label: LABELS.YEAR_BUILT, render: p => p.year_built ?? '—' },
+  { key: 'land_sqft', label: LABELS.LOT_SIZE, render: p => p.land_sqft?.toLocaleString() ?? '—' },
+  { key: 'parking_garage', label: LABELS.GARAGE, render: p => p.parking_garage ?? '—' },
+  { key: 'ac', label: LABELS.AIR_CONDITIONING, render: p => p.ac === null ? '—' : p.ac ? 'Yes' : 'No' },
   { key: 'monthly_total', label: 'Monthly Total', render: p => p.monthly_total ? `$${p.monthly_total.toLocaleString()}` : '—' },
   { key: 'hoa_monthly', label: 'HOA', render: p => p.hoa_monthly ? `$${p.hoa_monthly.toLocaleString()}` : '—' },
   { key: 'property_tax', label: 'Tax/yr', render: p => p.property_tax ? `$${p.property_tax.toLocaleString()}` : '—' },

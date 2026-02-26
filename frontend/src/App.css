@@ -319,14 +319,25 @@
 
 .detail-nav {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 10;
   background: #f5f4f0;
   padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  user-select: none;
 }
 
 .back-btn,
@@ -851,13 +862,45 @@
   font-style: italic;
 }
 
-.notes-display p { margin: 0 0 0.5em; }
-.notes-display p:last-child { margin-bottom: 0; }
-.notes-display ul, .notes-display ol { margin: 0 0 0.5em; padding-left: 1.4em; }
-.notes-display h1, .notes-display h2, .notes-display h3 { margin: 0.5em 0 0.25em; font-size: 0.95em; }
-.notes-display code { background: #f0efeb; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.85em; }
-.notes-display pre { background: #f0efeb; border-radius: 5px; padding: 0.5em; overflow-x: auto; }
-.notes-display pre code { background: none; padding: 0; }
+.notes-display p {
+  margin: 0 0 0.5em;
+}
+
+.notes-display p:last-child {
+  margin-bottom: 0;
+}
+
+.notes-display ul,
+.notes-display ol {
+  margin: 0 0 0.5em;
+  padding-left: 1.4em;
+}
+
+.notes-display h1,
+.notes-display h2,
+.notes-display h3 {
+  margin: 0.5em 0 0.25em;
+  font-size: 0.95em;
+}
+
+.notes-display code {
+  background: #f0efeb;
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  font-size: 0.85em;
+}
+
+.notes-display pre {
+  background: #f0efeb;
+  border-radius: 5px;
+  padding: 0.5em;
+  overflow-x: auto;
+}
+
+.notes-display pre code {
+  background: none;
+  padding: 0;
+}
 
 .notes-saving {
   font-size: 0.8rem;

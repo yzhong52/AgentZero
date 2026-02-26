@@ -265,9 +265,9 @@ const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
     { key: 'postal_code', label: 'Postal code' },
     { key: 'bedrooms', label: 'Bedrooms' },
     { key: 'bathrooms', label: 'Bathrooms' },
-    { key: 'sqft', label: 'Sqft' },
+    { key: 'sqft', label: 'Living Area (sqft)' },
     { key: 'year_built', label: 'Year built' },
-    { key: 'land_sqft', label: 'Land sqft' },
+    { key: 'land_sqft', label: 'Lot Size (sqft)' },
     { key: 'parking_garage', label: 'Garage' },
     { key: 'ac', label: 'Air conditioning' },
     { key: 'radiant_floor_heating', label: 'Radiant heating' },
@@ -967,13 +967,17 @@ export function PropertyDetail() {
                                     <Field label="Bathrooms" viewVal={numLabel(p.bathrooms)}
                                         editEl={<NumInput label="Bathrooms" value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
                                 )}
-                                {(p.sqft != null || editMode) && (
-                                    <Field label="Square Feet" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
-                                        editEl={<NumInput label="Square Feet" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
-                                )}
                                 {(p.year_built != null || editMode) && (
                                     <Field label="Year Built" viewVal={numLabel(p.year_built)}
                                         editEl={<NumInput label="Year Built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
+                                )}
+                                {(p.sqft != null || editMode) && (
+                                    <Field label="Living Area (sqft)" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
+                                        editEl={<NumInput label="Living Area (sqft)" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
+                                )}
+                                {(p.land_sqft != null || editMode) && (
+                                    <Field label="Lot Size (sqft)" viewVal={numLabel(p.land_sqft, ' sqft')}
+                                        editEl={<NumInput label="Lot Size (sqft)" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
                                 )}
                             </div>
                         </div>
@@ -995,13 +999,7 @@ export function PropertyDetail() {
                             </div>
                         </div>
 
-                        <div className="tracked-group">
-                            <h4>Land</h4>
-                            <div className="tracked-fields">
-                                <Field label="Land Size (Sqft)" viewVal={numLabel(p.land_sqft, ' sqft')}
-                                    editEl={<NumInput label="Land Size (Sqft)" value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
-                            </div>
-                        </div>
+
 
                         {(editMode || p.radiant_floor_heating != null || p.ac != null) && (
                             <div className="tracked-group">

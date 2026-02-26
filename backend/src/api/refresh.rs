@@ -51,20 +51,23 @@ pub async fn refresh_listing(
             StatusCode::BAD_REQUEST,
             format!("Invalid stored URL: {url}"),
         ))?;
-        let html = fetch_html(&state.client, &parsed_url).await.map_err(|e| {
-            (
-                StatusCode::BAD_GATEWAY,
-                format!("Failed to fetch {url}: {e}"),
-            )
-        })?;
-        tracing::info!(
-            "refresh_listing: fetched source url={}",
-            parsed_url.as_str()
-        );
-        sources.push(parsers::SourceInput {
-            url: parsed_url.to_string(),
-            html,
-        });
+        match fetch_html(&state.client, &parsed_url).await {
+            Ok(html) => {
+                tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html,
+                });
+            }
+            Err(e) => {
+                tracing::warn!("refresh_listing: failed to fetch {}: {}", url, e);
+                // Skip this source but continue with others.
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html: String::new(),
+                });
+            }
+        }
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
@@ -211,16 +214,21 @@ pub async fn preview_refresh(
             StatusCode::BAD_REQUEST,
             format!("Invalid stored URL: {url}"),
         ))?;
-        let html = fetch_html(&state.client, &parsed_url).await.map_err(|e| {
-            (
-                StatusCode::BAD_GATEWAY,
-                format!("Failed to fetch {url}: {e}"),
-            )
-        })?;
-        sources.push(parsers::SourceInput {
-            url: parsed_url.to_string(),
-            html,
-        });
+        match fetch_html(&state.client, &parsed_url).await {
+            Ok(html) => {
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html,
+                });
+            }
+            Err(e) => {
+                tracing::warn!("preview_refresh: failed to fetch {}: {}", url, e);
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html: String::new(),
+                });
+            }
+        }
     }
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────

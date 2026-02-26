@@ -91,10 +91,23 @@ cd backend
 cargo test
 ```
 
-Snapshots live in `backend/src/snapshots/`. To update them after intentional changes:
+Snapshots live in `backend/src/parsers/snapshots/`. To update them after intentional changes:
 ```bash
 cargo insta review
 ```
+
+### Stripping HTML fixtures
+
+Parser test fixtures live in `backend/src/parsers/fixtures/`. Raw saved pages can be large (700 KB–1.8 MB). Use the strip tool to remove styles, SVGs, tracking scripts, and other bloat while preserving the elements parsers rely on (JSON-LD, `__NEXT_DATA__`, meta tags, property data scripts, DOM elements used by CSS selectors):
+
+```bash
+cd backend
+cargo run --bin strip                            # strip all fixtures in-place
+cargo run --bin strip -- path/to/file.html       # strip a single file in-place
+cargo run --bin strip -- input.html output.html  # strip to a separate file
+```
+
+Always run `cargo test` after stripping to verify no parser-relevant content was removed.
 
 ## Coding Conventions
 

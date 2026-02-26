@@ -1,0 +1,267 @@
+---
+source: src/parsers/realtor.rs
+expression: prop
+---
+{
+  "id": 0,
+  "title": "3545 W King Edward Avenue, Vancouver - 5 beds/3 baths",
+  "description": "Charming 5 bed 2.5 bath located in the heart of Dunbar. Lord Byng &amp; Lord Kitchner School catchment. Spanning 2,424 sqft, this partially renovated solid residence offers a blank canvas for your design ideas. The bright and spacious main floor features large living and dining areas with a 1 bed and powder room. Surrounded by windows the updated kitchen features newer appliances, centre island, plenty of cabinet space, and access to the back deck. Upstairs find access to balcony overlooking backyard, and 2 bedrooms including spacious principal. Basement features 2 additional bedrooms, laundry facilities and access to lower back deck. Home features newer paint, hardwood floors, updated bathrooms and light fixtures. Close to Dunbar shops, parks, and top schools.  Open house Sat. Feb 28th 12-2.",
+  "price": 2098000,
+  "price_currency": "CAD",
+  "street_address": "3545 W King Edward Avenue",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V6S 1M4",
+  "country": "CA",
+  "lat": 49.25036,
+  "lon": -123.183331,
+  "property_type": "Single Family > House",
+  "bedrooms": 5,
+  "bathrooms": 3,
+  "sqft": 2424,
+  "land_sqft": 4026,
+  "year_built": 1930,
+  "parking_total": null,
+  "parking_garage": null,
+  "parking_carport": null,
+  "parking_pad": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "laundry_in_unit": null,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "offer_price": null,
+  "property_tax": 9584,
+  "hoa_monthly": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "monthly_total": null,
+  "monthly_cost": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null,
+  "redfin_url": null,
+  "realtor_url": "https://www.realtor.ca/real-estate/29391064/3545-w-king-edward-avenue-vancouver",
+  "rew_url": null,
+  "zillow_url": null,
+  "mls_number": "R3092688",
+  "listed_date": null,
+  "status": "Interested",
+  "notes": null,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_1.jpg?w=512&amp;h=256&amp;ts=1",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_1.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_2.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_3.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_4.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_5.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_6.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_7.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_8.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_9.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_10.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_11.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_12.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_13.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_14.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_15.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_16.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_17.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_18.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_19.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_20.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_21.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_22.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_23.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_24.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_25.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_26.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_27.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_28.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_29.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_30.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_31.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_32.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_33.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_34.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_35.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_36.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 37,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_37.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 38,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_38.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 39,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_39.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 40,
+      "url": "https://cdn.realtor.ca/listing/TS639074665081400000/reb89/highres/8/R3092688_40.jpg",
+      "created_at": ""
+    }
+  ],
+  "created_at": "",
+  "updated_at": null
+}

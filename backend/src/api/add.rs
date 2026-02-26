@@ -58,11 +58,10 @@ pub async fn add_listing(
         .collect::<Result<_, _>>()?;
 
     // Fetch HTML for each URL.
-    // Zillow (PerimeterX / CloudFront) and Realtor.ca (Imperva Incapsula)
-    // block all programmatic HTTP requests regardless of headers.  On any
-    // fetch error for a known-blocked host we fall through with empty HTML;
-    // the stub path below saves the listing so the user can fill in details
-    // manually.  Non-blocked hosts still return 502 on fetch failure.
+    // `fetch_html` tries a direct HTTP request first.  For bot-protected
+    // hosts (Zillow, Realtor.ca)
+    // it automatically falls back to Safari via AppleScript.  If even that
+    // fails, we save an empty stub so the user can fill in details manually.
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &parsed_urls {
         match fetch_html(&state.client, url).await {
@@ -72,9 +71,9 @@ pub async fn add_listing(
             }),
             Err(e) if is_blocked_host(url) => {
                 tracing::info!(
-                    "add_listing: fetch blocked ({}), will save stub for {}",
-                    e,
-                    url
+                    "add_listing: fetch failed for {} ({}), saving stub",
+                    url,
+                    e
                 );
                 sources.push(parsers::SourceInput {
                     url: url.to_string(),

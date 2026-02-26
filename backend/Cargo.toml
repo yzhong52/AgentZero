@@ -7,7 +7,7 @@ edition = "2021"
 axum = { version = "0.7", features = ["macros"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }
 tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
-rquest = { version = "1", features = ["json", "gzip", "brotli", "deflate"] }
+reqwest = { version = "0.12", features = ["json", "gzip", "brotli", "deflate", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 scraper = "0.19"

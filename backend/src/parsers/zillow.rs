@@ -1,8 +1,7 @@
 //! Zillow listing parser.
 //!
 //! Zillow uses PerimeterX bot protection (served via CloudFront).  The backend
-//! uses browser TLS impersonation (rquest) and falls back to Safari via
-//! AppleScript to obtain the rendered DOM.
+//! falls back to Safari via AppleScript to obtain the rendered DOM.
 //!
 //! Once we have the HTML, data is extracted from:
 //!

@@ -11,10 +11,10 @@ use axum::{
     Router,
 };
 use object_store::local::LocalFileSystem;
-use rquest::header::{
+use reqwest::header::{
     HeaderMap, HeaderValue, ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, REFERER, USER_AGENT,
 };
-use rquest::{Client, Impersonate};
+use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
@@ -90,8 +90,8 @@ pub(crate) fn safe_url(input: &str) -> Option<Url> {
     }
 }
 
-/// Fetch HTML using the rquest HTTP client (with browser TLS impersonation).
-async fn fetch_html_direct(client: &Client, url: &Url) -> Result<String, rquest::Error> {
+/// Fetch HTML using the reqwest HTTP client.
+async fn fetch_html_direct(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
@@ -178,7 +178,7 @@ fn is_bot_protected_host(url: &Url) -> bool {
 /// Fetch HTML for a listing URL.
 ///
 /// Strategy:
-/// 1. Try the fast `rquest` HTTP client (with Chrome TLS impersonation).
+/// 1. Try the reqwest HTTP client.
 /// 2. If that fails with a 403 or returns a bot-challenge page for a known
 ///    protected host, fall back to Safari via AppleScript.
 pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, String> {
@@ -222,7 +222,6 @@ async fn main() {
     );
 
     let client = Client::builder()
-        .impersonate(Impersonate::Chrome130)
         .timeout(Duration::from_secs(15))
         .build()
         .unwrap();

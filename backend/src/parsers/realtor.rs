@@ -1,8 +1,8 @@
 //! Realtor.ca listing parser.
 //!
 //! Realtor.ca uses Imperva Incapsula bot protection that blocks plain HTTP
-//! clients.  The backend uses browser TLS impersonation (rquest) and falls
-//! back to Safari via AppleScript to obtain the rendered DOM.
+//! clients.  The backend falls back to Safari via AppleScript to obtain the
+//! rendered DOM.
 //!
 //! Once we have the HTML, data is extracted from:
 //!

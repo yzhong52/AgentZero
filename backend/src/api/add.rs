@@ -58,8 +58,8 @@ pub async fn add_listing(
         .collect::<Result<_, _>>()?;
 
     // Fetch HTML for each URL.
-    // `fetch_html` tries a direct HTTP request first (with browser TLS
-    // impersonation via rquest).  For bot-protected hosts (Zillow, Realtor.ca)
+    // `fetch_html` tries a direct HTTP request first.  For bot-protected
+    // hosts (Zillow, Realtor.ca)
     // it automatically falls back to Safari via AppleScript.  If even that
     // fails, we save an empty stub so the user can fill in details manually.
     let mut sources: Vec<parsers::SourceInput> = Vec::new();

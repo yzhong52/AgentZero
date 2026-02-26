@@ -972,7 +972,7 @@ export function PropertyDetail() {
                                         editEl={<NumInput label="Year Built" value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
                                 )}
                                 {(p.sqft != null || editMode) && (
-                                    <Field label="Living Area" viewVal={p.sqft != null ? p.sqft.toLocaleString() : '—'}
+                                    <Field label="Living Area" viewVal={numLabel(p.sqft, ' sqft')}
                                         editEl={<NumInput label="Living Area" value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
                                 )}
                                 {(p.land_sqft != null || editMode) && (

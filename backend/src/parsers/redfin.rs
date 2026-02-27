@@ -411,6 +411,40 @@ pub fn extract_image_urls(json_ld: &[JsonValue]) -> Vec<String> {
         .unwrap_or_default()
 }
 
+// ── MLS number extraction ────────────────────────────────────────────────────
+
+/// Extracts the MLS listing number from the Redfin page.
+///
+/// Redfin surfaces MLS in two places:
+///   1. `<span class="ListingSource--mlsId">#R3090427</span>`
+///   2. Page title: `"… MLS# R3090427 | Redfin"`
+fn extract_mls_number(document: &Html) -> Option<String> {
+    // 1. Try the dedicated CSS selector first.
+    if let Ok(sel) = scraper::Selector::parse(".ListingSource--mlsId") {
+        if let Some(el) = document.select(&sel).next() {
+            let text: String = el.text().collect::<String>().trim().to_string();
+            let cleaned = text.strip_prefix('#').unwrap_or(&text);
+            if !cleaned.is_empty() {
+                return Some(cleaned.to_string());
+            }
+        }
+    }
+    // 2. Fall back to the page title pattern: "MLS# R3090427"
+    if let Ok(title_sel) = scraper::Selector::parse("title") {
+        let title_text: String = document
+            .select(&title_sel)
+            .next()?
+            .text()
+            .collect::<String>();
+        let re = Regex::new(r"MLS#?\s*([A-Z]\d+)").ok()?;
+        return re
+            .captures(&title_text)
+            .and_then(|c| c.get(1))
+            .map(|m| m.as_str().to_string());
+    }
+    None
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /// Parses a Redfin listing page into a `ParsedListing`.
@@ -421,6 +455,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let title = extract_title(&document);
 
     let mut property = extract_property(url, &title, &json_ld)?;
+    property.mls_number = extract_mls_number(&document);
 
     property.land_sqft = extract_lot_size(html);
     property.property_tax = extract_property_tax(html);

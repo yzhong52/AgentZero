@@ -51,7 +51,7 @@ expression: listing_to_property(listing)
   "realtor_url": null,
   "rew_url": null,
   "zillow_url": null,
-  "mls_number": null,
+  "mls_number": "R3090427",
   "listed_date": "2026-02-17",
   "status": "Interested",
   "notes": null,

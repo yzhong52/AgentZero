@@ -51,7 +51,7 @@ expression: property
   "realtor_url": null,
   "rew_url": null,
   "zillow_url": null,
-  "mls_number": null,
+  "mls_number": "R3092688",
   "listed_date": "2026-02-23",
   "status": "Interested",
   "notes": null,

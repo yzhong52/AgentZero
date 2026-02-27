@@ -15,5 +15,5 @@ pub use crate::store::image_store::{
     list_cached_images, list_images_with_meta, list_pending_image_urls, update_cached_image,
 };
 pub use crate::store::property_store::{
-    add_listing, delete, get_by_id, init, list, update_by_id, update_notes,
+    add_listing, delete, find_by_mls, get_by_id, init, list, update_by_id, update_notes,
 };

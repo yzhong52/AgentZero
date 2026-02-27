@@ -292,6 +292,17 @@ pub async fn update_notes(
     Ok(())
 }
 
+/// Find a listing by MLS number. Returns `None` if no match.
+pub async fn find_by_mls(pool: &SqlitePool, mls: &str) -> Result<Option<Property>, sqlx::Error> {
+    let row = sqlx::query(&format!(
+        "SELECT {COLS} FROM listings WHERE mls_number = ?"
+    ))
+    .bind(mls)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.as_ref().map(row_to_property))
+}
+
 /// Delete a listing and all associated records (images cascade via FK).
 pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
     sqlx::query("DELETE FROM listings WHERE id = ?")

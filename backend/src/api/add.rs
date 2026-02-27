@@ -142,6 +142,19 @@ pub async fn add_listing(
         property.hoa_monthly,
     );
 
+    // Check for duplicate MLS number before inserting.
+    if let Some(ref mls) = property.mls_number {
+        if let Ok(Some(existing)) = db::find_by_mls(&state.db, mls).await {
+            let body = serde_json::json!({
+                "duplicate": true,
+                "existing_id": existing.id,
+                "existing_title": existing.title,
+                "mls_number": mls,
+            });
+            return Err((StatusCode::CONFLICT, body.to_string()));
+        }
+    }
+
     let saved = db::add_listing(&state.db, &property).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,

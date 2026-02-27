@@ -47,6 +47,16 @@
   color: #16a34a;
 }
 
+.message.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.message.warning a {
+  color: #92400e;
+  font-weight: 600;
+}
+
 /* ── listings ── */
 .listings-section {
   margin-top: 2.5rem;

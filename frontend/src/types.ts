@@ -56,4 +56,5 @@ export type Property = {
   school_middle_rating: number | null
   school_secondary: string | null
   school_secondary_rating: number | null
+  mls_number: string | null
 }

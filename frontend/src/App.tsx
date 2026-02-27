@@ -40,10 +40,13 @@ function App() {
     })
   }
 
+  const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string } | null>(null)
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setSavedMsg(null)
+    setDupInfo(null)
     if (!url.trim()) return setError('Please enter a URL')
     setSaving(true)
     try {
@@ -52,7 +55,19 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ urls: [url.trim()] }),
       })
-      if (!resp.ok) throw new Error(await resp.text())
+      if (!resp.ok) {
+        const text = await resp.text()
+        if (resp.status === 409) {
+          try {
+            const body = JSON.parse(text)
+            if (body.duplicate) {
+              setDupInfo({ id: body.existing_id, title: body.existing_title, mls: body.mls_number })
+              return
+            }
+          } catch { /* fall through to generic error */ }
+        }
+        throw new Error(text)
+      }
       const saved: Property = await resp.json()
       setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url}`)
       setUrl('')
@@ -83,6 +98,11 @@ function App() {
       </form>
 
       {error && <div className="message error">{error}</div>}
+      {dupInfo && (
+        <div className="message warning">
+          A listing with MLS {dupInfo.mls} already exists: <a href={`/listing/${dupInfo.id}`}>{dupInfo.title || `Listing #${dupInfo.id}`}</a>
+        </div>
+      )}
       {savedMsg && <div className="message success">{savedMsg}</div>}
 
       {listings.length > 0 && (

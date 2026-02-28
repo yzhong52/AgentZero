@@ -432,10 +432,10 @@ export function PropertyDetail() {
     // ── Searches (for move-to-search) ─────────────────────────────────────────
     const [searches, setSearches] = useState<Search[]>([])
     useEffect(() => {
-        fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => {})
+        fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
     }, [])
 
-    async function handleMoveToSearch(searchId: number | null) {
+    async function handleMoveToSearch(searchId: number) {
         if (!property) return
         try {
             const resp = await fetch(`/api/listings/${property.id}/search`, {
@@ -446,7 +446,7 @@ export function PropertyDetail() {
             if (resp.ok) {
                 setProperty(prev => prev ? { ...prev, search_id: searchId } : prev)
                 // refresh search counts
-                fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => {})
+                fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
             }
         } catch { /* non-fatal */ }
     }
@@ -1382,13 +1382,12 @@ export function PropertyDetail() {
                             <h3 className="notes-heading">Search</h3>
                             <select
                                 className="search-picker-select"
-                                value={property.search_id ?? ''}
+                                value={property.search_id}
                                 onChange={e => {
-                                    const val = e.target.value
-                                    handleMoveToSearch(val ? Number(val) : null)
+                                    const val = Number(e.target.value)
+                                    if (val) handleMoveToSearch(val)
                                 }}
                             >
-                                <option value="">— No search —</option>
                                 {searches.map(s => (
                                     <option key={s.id} value={s.id}>{s.title}</option>
                                 ))}

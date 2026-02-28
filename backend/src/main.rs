@@ -246,6 +246,10 @@ async fn main() {
             post(api::searches::create_search).get(api::searches::list_searches),
         )
         .route(
+            "/api/searches/reorder",
+            put(api::searches::reorder_searches),
+        )
+        .route(
             "/api/searches/:id",
             get(api::searches::get_search)
                 .patch(api::searches::update_search)

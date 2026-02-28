@@ -24,6 +24,8 @@ function App() {
   const [newSearchTitle, setNewSearchTitle] = useState('')
   const [newSearchDesc, setNewSearchDesc] = useState('')
   const [creatingSrch, setCreatingSrch] = useState(false)
+  const [dragSrcId, setDragSrcId] = useState<number | null>(null)
+  const [dragOverId, setDragOverId] = useState<number | null>(null)
 
   async function fetchSearches() {
     try {
@@ -141,27 +143,48 @@ function App() {
         <p className="app-tagline">Your private property shortlist</p>
       </header>
 
-      {/* ── Search tabs ── */}
+      {/* ── Search tabs (drag to reorder) ── */}
       <nav className="search-tabs">
         {searches.map(s => (
           <button
             key={s.id}
-            className={`search-tab${s.id === activeSearchId ? ' active' : ''}`}
+            className={`search-tab${s.id === activeSearchId ? ' active' : ''}${dragOverId === s.id ? ' drag-over' : ''}`}
             onClick={() => setActiveSearchId(s.id)}
             title={s.description || s.title}
+            draggable
+            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragSrcId(s.id) }}
+            onDragOver={e => { e.preventDefault(); setDragOverId(s.id) }}
+            onDragLeave={() => setDragOverId(null)}
+            onDrop={async e => {
+              e.preventDefault()
+              setDragOverId(null)
+              if (dragSrcId === null || dragSrcId === s.id) return
+              const ids = searches.map(x => x.id)
+              const fromIdx = ids.indexOf(dragSrcId)
+              const toIdx = ids.indexOf(s.id)
+              if (fromIdx < 0 || toIdx < 0) return
+              ids.splice(fromIdx, 1)
+              ids.splice(toIdx, 0, dragSrcId)
+              // Optimistic reorder
+              const reordered = ids.map((id, i) => {
+                const orig = searches.find(x => x.id === id)!
+                return { ...orig, position: i }
+              })
+              setSearches(reordered)
+              setDragSrcId(null)
+              await fetch('/api/searches/reorder', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids }),
+              })
+              await fetchSearches()
+            }}
+            onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
           >
             {s.title}
             <span className="search-tab-count">{s.listing_count}</span>
           </button>
         ))}
-        {searches.length > 0 && (
-          <button
-            className={`search-tab search-tab-all${activeSearchId === null ? ' active' : ''}`}
-            onClick={() => setActiveSearchId(null)}
-          >
-            All
-          </button>
-        )}
         <button
           className={`search-tab search-tab-new${newSearchOpen ? ' active' : ''}`}
           onClick={() => setNewSearchOpen(o => !o)}

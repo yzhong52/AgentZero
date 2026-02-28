@@ -30,6 +30,12 @@ pub struct UpdateSearchRequest {
     pub description: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct ReorderRequest {
+    /// Search IDs in the desired display order.
+    pub ids: Vec<i64>,
+}
+
 /// GET /api/searches
 pub async fn list_searches(
     State(state): State<AppState>,
@@ -80,6 +86,20 @@ pub async fn update_search(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
     Ok(Json(search))
+}
+
+/// PUT /api/searches/reorder
+pub async fn reorder_searches(
+    State(state): State<AppState>,
+    Json(body): Json<ReorderRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    if body.ids.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "ids must not be empty".to_string()));
+    }
+    search_store::reorder(&state.db, &body.ids)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// DELETE /api/searches/:id

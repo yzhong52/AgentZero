@@ -7,3 +7,4 @@
 pub mod history_store;
 pub mod image_store;
 pub mod property_store;
+pub mod search_store;

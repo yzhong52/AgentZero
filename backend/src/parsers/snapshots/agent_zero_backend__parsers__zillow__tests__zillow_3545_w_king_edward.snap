@@ -4,6 +4,7 @@ expression: prop
 ---
 {
   "id": 0,
+  "search_id": null,
   "title": "3545 King Edward Ave W, Vancouver - 5 beds/3 baths",
   "description": "",
   "price": 2098000,

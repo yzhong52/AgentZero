@@ -32,6 +32,8 @@ use crate::{
 pub struct AddRequest {
     /// One or more listing URLs for the same property (e.g. redfin + rew).
     pub urls: Vec<String>,
+    /// Optional search/project to assign this listing to.
+    pub search_id: Option<i64>,
 }
 
 pub async fn add_listing(
@@ -168,6 +170,9 @@ pub async fn add_listing(
         }
     }
 
+    // Assign to search if requested.
+    property.search_id = body.search_id;
+
     let saved = db::add_listing(&state.db, &property).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -214,6 +219,7 @@ fn is_blocked_host(url: &Url) -> bool {
 fn blank_stub() -> db::Property {
     db::Property {
         id: 0,
+        search_id: None,
         redfin_url: None,
         realtor_url: None,
         rew_url: None,

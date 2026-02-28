@@ -22,11 +22,13 @@ pub struct ListingsQuery {
     /// Comma-separated status values to include, e.g. `status=Interested,Buyable`.
     /// Omit to return all listings.
     pub status: Option<String>,
+    /// Filter by search (project) id.
+    pub search_id: Option<i64>,
 }
 
-/// GET /api/listings[?status=Interested,Buyable]
+/// GET /api/listings[?status=Interested,Buyable&search_id=1]
 ///
-/// Returns saved properties, newest first. Optionally filtered by status.
+/// Returns saved properties, newest first. Optionally filtered by status and/or search.
 /// Each record includes cached image metadata (id, local_path, position).
 pub async fn list_listings(
     State(state): State<AppState>,
@@ -38,7 +40,7 @@ pub async fn list_listings(
         Some(s) => s.split(',').filter_map(|v| v.parse().ok()).collect(),
     };
 
-    let listings = db::list(&state.db, &statuses).await.map_err(|e| {
+    let listings = db::list(&state.db, &statuses, params.search_id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),

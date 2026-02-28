@@ -318,6 +318,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     Some(ParsedListing {
         property: db::Property {
             id: 0,
+            search_id: None,
             title,
             description: product.description.unwrap_or_default(),
             price: product.price,

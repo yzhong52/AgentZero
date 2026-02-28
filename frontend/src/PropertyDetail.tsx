@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
-import type { Property } from './types'
+import type { Property, Search } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
 type HistoryEntry = {
@@ -428,6 +428,28 @@ export function PropertyDetail() {
     }
 
     useEffect(() => { loadProperty() }, [id])
+
+    // ── Searches (for move-to-search) ─────────────────────────────────────────
+    const [searches, setSearches] = useState<Search[]>([])
+    useEffect(() => {
+        fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => {})
+    }, [])
+
+    async function handleMoveToSearch(searchId: number | null) {
+        if (!property) return
+        try {
+            const resp = await fetch(`/api/listings/${property.id}/search`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ search_id: searchId }),
+            })
+            if (resp.ok) {
+                setProperty(prev => prev ? { ...prev, search_id: searchId } : prev)
+                // refresh search counts
+                fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => {})
+            }
+        } catch { /* non-fatal */ }
+    }
 
     // ── Edit mode ─────────────────────────────────────────────────────────────
 
@@ -1354,6 +1376,25 @@ export function PropertyDetail() {
                             ))}
                         </div>
                     </div>
+
+                    {searches.length > 0 && (
+                        <div className="search-picker right-panel-section">
+                            <h3 className="notes-heading">Search</h3>
+                            <select
+                                className="search-picker-select"
+                                value={property.search_id ?? ''}
+                                onChange={e => {
+                                    const val = e.target.value
+                                    handleMoveToSearch(val ? Number(val) : null)
+                                }}
+                            >
+                                <option value="">— No search —</option>
+                                {searches.map(s => (
+                                    <option key={s.id} value={s.id}>{s.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="right-panel-section">
                         <h3 className="notes-heading">My Notes</h3>

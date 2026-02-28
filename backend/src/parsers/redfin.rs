@@ -339,6 +339,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     Some(db::Property {
         id: 0,
+        search_id: None,
         redfin_url: Some(url.to_string()),
         realtor_url: None,
         rew_url: None,

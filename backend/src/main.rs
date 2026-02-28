@@ -240,6 +240,17 @@ async fn main() {
     let app = Router::new()
         // Utility
         .route("/api/parse", get(api::parse::parse))
+        // Searches
+        .route(
+            "/api/searches",
+            post(api::searches::create_search).get(api::searches::list_searches),
+        )
+        .route(
+            "/api/searches/:id",
+            get(api::searches::get_search)
+                .patch(api::searches::update_search)
+                .delete(api::searches::delete_search),
+        )
         // Listings collection
         .route(
             "/api/listings",
@@ -260,6 +271,10 @@ async fn main() {
             get(api::refresh::preview_refresh),
         )
         .route("/api/listings/:id/notes", patch(api::details::patch_notes))
+        .route(
+            "/api/listings/:id/search",
+            patch(api::details::patch_search),
+        )
         .route(
             "/api/listings/:id/details",
             patch(api::details::patch_details),

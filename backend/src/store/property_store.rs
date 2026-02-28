@@ -16,7 +16,8 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     school_elementary, school_elementary_rating,
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating,
-                    property_type, listed_date, mls_number, laundry_in_unit";
+                    property_type, listed_date, mls_number, laundry_in_unit,
+                    search_id";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -56,10 +57,12 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 property_type, listed_date, mls_number, laundry_in_unit,
+                search_id,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               datetime('now'), datetime('now'))
            RETURNING id"#,
     )
     .bind(&p.redfin_url)
@@ -112,6 +115,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(&p.listed_date)
     .bind(&p.mls_number)
     .bind(p.laundry_in_unit)
+    .bind(p.search_id)
     .fetch_one(pool)
     .await?;
 
@@ -177,6 +181,7 @@ pub async fn update_by_id(
                has_rental_suite         = ?,
                rental_income            = ?,
                status                   = ?,
+               search_id                = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -230,6 +235,7 @@ pub async fn update_by_id(
     .bind(p.has_rental_suite)
     .bind(p.rental_income)
     .bind(&p.status)
+    .bind(p.search_id)
     .bind(id)
     .execute(pool)
     .await?;
@@ -238,21 +244,33 @@ pub async fn update_by_id(
 }
 
 /// Retrieve all properties ordered by created_at (newest first).
-/// List properties, optionally filtered by status values.
+/// List properties, optionally filtered by status values and/or search_id.
 ///
 /// - `statuses`: if empty, returns all properties.
 /// - `statuses`: if non-empty, returns only rows whose `status` is in the given list.
+/// - `search_id`: if Some, restricts to listings in that search.
 pub async fn list(
     pool: &SqlitePool,
     statuses: &[ListingStatus],
+    search_id: Option<i64>,
 ) -> Result<Vec<Property>, sqlx::Error> {
-    let sql = if statuses.is_empty() {
+    let mut conditions: Vec<String> = Vec::new();
+
+    if !statuses.is_empty() {
+        let placeholders: Vec<String> = statuses.iter().map(|s| format!("'{s}'")).collect();
+        conditions.push(format!("status IN ({})", placeholders.join(",")));
+    }
+
+    if let Some(sid) = search_id {
+        conditions.push(format!("search_id = {sid}"));
+    }
+
+    let sql = if conditions.is_empty() {
         format!("SELECT {COLS} FROM listings ORDER BY created_at DESC")
     } else {
-        let placeholders: Vec<String> = statuses.iter().map(|s| format!("'{s}'")).collect();
         format!(
-            "SELECT {COLS} FROM listings WHERE status IN ({}) ORDER BY created_at DESC",
-            placeholders.join(",")
+            "SELECT {COLS} FROM listings WHERE {} ORDER BY created_at DESC",
+            conditions.join(" AND ")
         )
     };
 
@@ -286,6 +304,20 @@ pub async fn update_notes(
 ) -> Result<(), sqlx::Error> {
     sqlx::query("UPDATE listings SET notes = ? WHERE id = ?")
         .bind(notes)
+        .bind(id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+/// Move a property to a different search (or detach from any search).
+pub async fn update_search_id(
+    pool: &SqlitePool,
+    id: i64,
+    search_id: Option<i64>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE listings SET search_id = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(search_id)
         .bind(id)
         .execute(pool)
         .await?;
@@ -343,6 +375,7 @@ async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::E
 fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
     Property {
         id: row.get("id"),
+        search_id: row.get("search_id"),
         redfin_url: row.get("redfin_url"),
         realtor_url: row.get("realtor_url"),
         rew_url: row.get("rew_url"),
@@ -418,6 +451,7 @@ mod tests {
 
         let p = Property {
             id: 0,
+            search_id: None,
             redfin_url: Some("https://example.com/add".to_string()),
             realtor_url: Some("https://realtor.example/add".to_string()),
             rew_url: Some("https://rew.example/add".to_string()),
@@ -501,6 +535,7 @@ mod tests {
         // Construct a minimal property to save.
         let p = Property {
             id: 0,
+            search_id: None,
             redfin_url: Some("https://example.com/1".to_string()),
             realtor_url: None,
             rew_url: None,
@@ -568,7 +603,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[])
+        let saved = list(&pool, &[], None)
             .await
             .expect("list failed")
             .into_iter()
@@ -614,7 +649,7 @@ mod tests {
             .await
             .expect("insert failed");
 
-        let saved = list(&pool, &[])
+        let saved = list(&pool, &[], None)
             .await
             .expect("list failed")
             .into_iter()

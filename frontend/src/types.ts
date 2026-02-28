@@ -4,8 +4,18 @@ export type ImageEntry = {
   created_at: string
 }
 
+export type Search = {
+  id: number
+  title: string
+  description: string
+  created_at: string
+  updated_at: string | null
+  listing_count: number
+}
+
 export type Property = {
   id: number
+  search_id: number | null
   redfin_url: string | null
   realtor_url: string | null
   rew_url: string | null

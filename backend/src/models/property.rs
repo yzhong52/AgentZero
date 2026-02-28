@@ -79,7 +79,8 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
 #[derive(Serialize, Clone)]
 pub struct Property {
     // ── System ──────────────────────────────────────────────────────────────
-    pub id: i64, // system
+    pub id: i64,                // system
+    pub search_id: Option<i64>, // system — FK to searches.id
 
     // ── Header ──────────────────────────────────────────────────────────────
     pub title: String,       // parsed; editable (inline header, via PATCH /details)

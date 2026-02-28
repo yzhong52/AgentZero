@@ -4,6 +4,7 @@ expression: property
 ---
 {
   "id": 0,
+  "search_id": null,
   "title": "For Sale: 3545 W King Edward Avenue, Vancouver, BC",
   "description": "Browse 40 photos of this House in Dunbar, Vancouver listed for $2,098,000. This property features 5 beds, 3 baths and is 2424 Sqft. MLS® # R3092688",
   "price": 2098000,

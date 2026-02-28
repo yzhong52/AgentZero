@@ -5,7 +5,7 @@ import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 import type { StatusOption } from './constants'
-import type { Property } from './types'
+import type { Property, Search } from './types'
 
 function App() {
   const [url, setUrl] = useState('')
@@ -17,9 +17,37 @@ function App() {
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
-  async function fetchListings(filter?: Set<StatusOption>) {
+  // ── Searches ──────────────────────────────────────────────────────────────
+  const [searches, setSearches] = useState<Search[]>([])
+  const [activeSearchId, setActiveSearchId] = useState<number | null>(null)
+  const [newSearchOpen, setNewSearchOpen] = useState(false)
+  const [newSearchTitle, setNewSearchTitle] = useState('')
+  const [newSearchDesc, setNewSearchDesc] = useState('')
+  const [creatingSrch, setCreatingSrch] = useState(false)
+
+  async function fetchSearches() {
+    try {
+      const resp = await fetch('/api/searches')
+      if (resp.ok) {
+        const data: Search[] = await resp.json()
+        setSearches(data)
+        // Auto-select first search if none selected
+        if (data.length > 0 && activeSearchId === null) {
+          setActiveSearchId(data[0].id)
+        }
+      }
+    } catch {
+      // non-fatal
+    }
+  }
+
+  async function fetchListings(filter?: Set<StatusOption>, searchId?: number | null) {
     const active = filter ?? statusFilter
-    const qs = active.size > 0 ? '?status=' + [...active].join(',') : ''
+    const sid = searchId !== undefined ? searchId : activeSearchId
+    const params = new URLSearchParams()
+    if (active.size > 0) params.set('status', [...active].join(','))
+    if (sid !== null && sid !== undefined) params.set('search_id', String(sid))
+    const qs = params.toString() ? '?' + params.toString() : ''
     try {
       const resp = await fetch(`/api/listings${qs}`)
       if (resp.ok) setListings(await resp.json())
@@ -28,13 +56,37 @@ function App() {
     }
   }
 
-  useEffect(() => { fetchListings() }, [])
+  useEffect(() => { fetchSearches() }, [])
+  useEffect(() => { if (activeSearchId !== null) fetchListings(undefined, activeSearchId) }, [activeSearchId])
+
+  async function handleCreateSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newSearchTitle.trim()) return
+    setCreatingSrch(true)
+    try {
+      const resp = await fetch('/api/searches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newSearchTitle.trim(), description: newSearchDesc.trim() }),
+      })
+      if (resp.ok) {
+        const created: Search = await resp.json()
+        setNewSearchTitle('')
+        setNewSearchDesc('')
+        setNewSearchOpen(false)
+        await fetchSearches()
+        setActiveSearchId(created.id)
+      }
+    } catch { /* non-fatal */ } finally {
+      setCreatingSrch(false)
+    }
+  }
 
   function toggleStatus(s: StatusOption) {
     setStatusFilter(prev => {
       const next = new Set(prev)
       next.has(s) ? next.delete(s) : next.add(s)
-      fetchListings(next)
+      fetchListings(next, activeSearchId)
       return next
     })
   }
@@ -53,7 +105,7 @@ function App() {
       const resp = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: [url.trim()] }),
+        body: JSON.stringify({ urls: [url.trim()], search_id: activeSearchId }),
       })
       if (!resp.ok) {
         const text = await resp.text()
@@ -72,6 +124,7 @@ function App() {
       setSavedInfo({ id: saved.id, title: saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url || `Listing #${saved.id}` })
       setUrl('')
       await fetchListings()
+      await fetchSearches()
     } catch (err: any) {
       setError(err?.message || String(err))
     } finally {
@@ -79,12 +132,72 @@ function App() {
     }
   }
 
+  const activeSearch = searches.find(s => s.id === activeSearchId) ?? null
+
   return (
     <div className="app-root">
       <header className="app-header">
         <h1>Agent Zero</h1>
         <p className="app-tagline">Your private property shortlist</p>
       </header>
+
+      {/* ── Search tabs ── */}
+      <nav className="search-tabs">
+        {searches.map(s => (
+          <button
+            key={s.id}
+            className={`search-tab${s.id === activeSearchId ? ' active' : ''}`}
+            onClick={() => setActiveSearchId(s.id)}
+            title={s.description || s.title}
+          >
+            {s.title}
+            <span className="search-tab-count">{s.listing_count}</span>
+          </button>
+        ))}
+        {searches.length > 0 && (
+          <button
+            className={`search-tab search-tab-all${activeSearchId === null ? ' active' : ''}`}
+            onClick={() => setActiveSearchId(null)}
+          >
+            All
+          </button>
+        )}
+        <button
+          className={`search-tab search-tab-new${newSearchOpen ? ' active' : ''}`}
+          onClick={() => setNewSearchOpen(o => !o)}
+        >
+          + New
+        </button>
+      </nav>
+
+      {newSearchOpen && (
+        <form className="new-search-form" onSubmit={handleCreateSearch}>
+          <input
+            className="new-search-title"
+            placeholder="Search title (e.g. East Van House)"
+            value={newSearchTitle}
+            onChange={e => setNewSearchTitle(e.target.value)}
+            autoFocus
+          />
+          <textarea
+            className="new-search-desc"
+            placeholder="Describe what you're looking for… (optional)"
+            value={newSearchDesc}
+            onChange={e => setNewSearchDesc(e.target.value)}
+            rows={3}
+          />
+          <div className="new-search-actions">
+            <button type="submit" disabled={creatingSrch || !newSearchTitle.trim()}>
+              {creatingSrch ? 'Creating…' : 'Create Search'}
+            </button>
+            <button type="button" className="cancel-btn" onClick={() => setNewSearchOpen(false)}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {activeSearch && activeSearch.description && (
+        <div className="search-desc">{activeSearch.description}</div>
+      )}
 
       <form className="form-wrap">
         <div className="input-row">

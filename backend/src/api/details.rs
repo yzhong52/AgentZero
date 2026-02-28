@@ -20,6 +20,11 @@ pub struct NotesRequest {
     pub notes: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct SearchIdRequest {
+    pub search_id: Option<i64>,
+}
+
 /// PATCH /api/listings/:id/notes
 ///
 /// Updates the personal notes for a listing. `id` is the property/listing ID.
@@ -29,6 +34,25 @@ pub async fn patch_notes(
     Json(body): Json<NotesRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     db::update_notes(&state.db, id, body.notes.as_deref())
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("DB error: {}", e),
+            )
+        })?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// PATCH /api/listings/:id/search
+///
+/// Move a listing to a different search (or detach it by passing `null`).
+pub async fn patch_search(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(body): Json<SearchIdRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    db::update_search_id(&state.db, id, body.search_id)
         .await
         .map_err(|e| {
             (

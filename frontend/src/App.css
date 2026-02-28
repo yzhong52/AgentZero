@@ -1,3 +1,33 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   App.css — AgentZero frontend styles
+   ════════════════════════════════════════════════════════════════════════════
+
+   TABLE OF CONTENTS
+   ─────────────────
+    1.  App shell          (layout, header, branding)
+    2.  Hamburger menu
+    3.  Manage Searches page
+    4.  Search tabs        (tab bar, description, new-search form, search picker)
+    5.  Add-listing form & messages
+    6.  Listings header    (filter pills, view-toggle, column picker)
+    7.  Listing card       (grid view)
+    8.  Listing table      (table view)
+    9.  Property detail — navigation bar
+   10.  Property detail — image grid & lightbox
+   11.  Property detail — layout, header & description
+   12.  Property detail — right panel
+        (status, search picker, notes, emoji suggest,
+         source URLs, open houses, change history)
+   13.  Property detail — tracked details & cards
+   14.  Property detail — offer & finance card
+   15.  Utilities          (loading, empty, error, title toast)
+   16.  Edit mode          (buttons, inputs, refresh-diff modal)
+
+   ════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ─── 1. App shell ─────────────────────────────────────────────────────────── */
+
 .app-root {
   max-width: 1100px;
   margin: 0 auto;
@@ -34,7 +64,8 @@
   letter-spacing: 0.01em;
 }
 
-/* ── hamburger menu ── */
+/* ─── 2. Hamburger menu ───────────────────────────────────────────────────── */
+
 .app-menu-wrap {
   position: relative;
   flex-shrink: 0;
@@ -104,7 +135,8 @@
   background: #f5f4f0;
 }
 
-/* ── manage searches page ── */
+/* ─── 3. Manage Searches page ─────────────────────────────────────────────── */
+
 .manage-page {
   min-height: 100vh;
   display: flex;
@@ -282,6 +314,8 @@
   cursor: not-allowed;
 }
 
+/* ─── 4. Search tabs ──────────────────────────────────────────────────────── */
+
 .search-tabs-wrap {
   display: flex;
   align-items: center;
@@ -391,7 +425,7 @@
   text-align: left;
 }
 
-/* ── new search form ── */
+/* ── New search form ── */
 
 .new-search-form {
   max-width: 640px;
@@ -458,7 +492,8 @@
   color: var(--text-secondary);
 }
 
-/* ── move-to-search (property detail sidebar) ── */
+/* ── Search picker (property detail sidebar) ── */
+
 .search-picker {
   margin-top: 0;
 }
@@ -480,7 +515,8 @@
   border-color: #999;
 }
 
-/* ── form ── */
+/* ─── 5. Add-listing form & messages ──────────────────────────────────────── */
+
 .form-wrap {
   margin: 0 auto 1.5rem;
   max-width: 640px;
@@ -513,7 +549,8 @@
   border-color: var(--accent);
 }
 
-/* ── messages ── */
+/* ── Messages ── */
+
 .message {
   margin: 0.75rem auto;
   max-width: 640px;
@@ -543,7 +580,8 @@
   font-weight: 600;
 }
 
-/* ── listings ── */
+/* ─── 6. Listings header, filter & view controls ────────────────────────── */
+
 .listings-section {
   margin-top: 2.5rem;
   text-align: left;
@@ -555,7 +593,8 @@
   gap: 1rem;
 }
 
-/* ── card ── */
+/* ─── 7. Listing card ─────────────────────────────────────────────────────── */
+
 .listing-card {
   display: flex;
   flex-direction: column;
@@ -616,7 +655,8 @@
   text-overflow: ellipsis;
 }
 
-/* ── status badge ── */
+/* ── Status badge ── */
+
 .status-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -633,7 +673,8 @@
   gap: 0.5rem;
 }
 
-/* ── listings header with filter ── */
+/* ── Listings header & status filter ── */
+
 .listings-header {
   display: flex;
   align-items: center;
@@ -679,7 +720,8 @@
   border-color: var(--accent);
 }
 
-/* ── status picker (detail panel) ── */
+/* ── Status picker (detail right panel) ── */
+
 .status-picker-buttons {
   display: flex;
   gap: 0.35rem;
@@ -701,7 +743,8 @@
   border-color: var(--accent);
 }
 
-/* ── view toggle & column picker ── */
+/* ── View toggle & column picker ── */
+
 .view-controls {
   display: flex;
   gap: 0.35rem;
@@ -768,7 +811,8 @@
   background: #f5f4f0;
 }
 
-/* ── listings table ── */
+/* ─── 8. Listing table ────────────────────────────────────────────────────── */
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -806,13 +850,15 @@
   background: #f5f4f0;
 }
 
-/* ── empty state ── */
+/* ── Empty state ── */
+
 .empty {
   color: var(--text-muted);
   margin-top: 3rem;
 }
 
-/* ── property detail ── */
+/* ─── 9. Property detail — navigation bar ──────────────────────────────── */
+
 .property-detail {
   max-width: 1000px;
   margin: 0 auto;
@@ -915,7 +961,8 @@
   padding: 0 1rem;
 }
 
-/* ── image grid (3-up) ── */
+/* ─── 10. Property detail — image grid & lightbox ──────────────────────────── */
+
 .image-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -972,7 +1019,8 @@
   font-size: 1.1rem;
 }
 
-/* ── lightbox ── */
+/* ── Lightbox ── */
+
 .lightbox-panel {
   background: #f0efeb;
   border-radius: 12px;
@@ -1141,6 +1189,8 @@
   color: #fff;
 }
 
+/* ─── 11. Property detail — layout, header & description ───────────────────── */
+
 .detail-body {
   display: flex;
   gap: 1.5rem;
@@ -1157,7 +1207,10 @@
   border: 1px solid #e0dfd8;
 }
 
-/* ── notes panel ── */
+/* ─── 12. Property detail — right panel ────────────────────────────────────── */
+
+/* ── Notes panel ── */
+
 .notes-panel {
   width: 260px;
   flex-shrink: 0;
@@ -1168,7 +1221,8 @@
   top: 1rem;
 }
 
-/* ── source URLs panel (inside notes-panel) ── */
+/* ── Source URLs panel ── */
+
 .source-urls-panel {
   display: flex;
   flex-direction: column;
@@ -1420,8 +1474,8 @@
   color: var(--text-muted);
 }
 
-/* ── change history ── */
 /* ── Open houses ── */
+
 .open-houses-list {
   list-style: none;
   margin: 0;
@@ -1494,6 +1548,8 @@
   border-color: var(--accent-dark);
 }
 
+/* ── Change history ── */
+
 .history-panel {
   margin-top: 1.25rem;
   display: flex;
@@ -1551,7 +1607,10 @@
   font-size: 0.75rem;
 }
 
-/* ── school entries ── */
+/* ─── 13. Property detail — tracked details & cards ───────────────────────── */
+
+/* ── School entries ── */
+
 .school-source-note {
   font-size: 0.7rem;
   font-weight: 400;
@@ -1576,7 +1635,8 @@
   border-radius: 10px;
 }
 
-/* ── tracked details ── */
+/* ── Tracked details ── */
+
 .tracked-details {
   margin-top: 2rem;
   padding-top: 1.5rem;
@@ -1777,7 +1837,8 @@
   color: var(--text-muted);
 }
 
-/* ── map preview ── */
+/* ── Map preview ── */
+
 .map-preview {
   margin-top: 1.5rem;
   border-radius: 10px;
@@ -1828,6 +1889,8 @@
 .location-card .map-preview {
   margin-top: 0.9rem;
 }
+
+/* ─── 14. Property detail — offer & finance card ──────────────────────────── */
 
 .offer-finance-card {
   margin-top: 1.5rem;
@@ -1978,6 +2041,8 @@
   }
 }
 
+/* ─── 15. Utilities ───────────────────────────────────────────────────────── */
+
 .loading,
 .error-msg {
   max-width: 1000px;
@@ -1997,13 +2062,12 @@
   color: #dc2626;
 }
 
-/** Listing card button reset **/
+/* Listing card button reset */
 button.listing-card {
   cursor: pointer;
 }
 
-
-/* ── Edit mode ── */
+/* ─── 16. Edit mode ───────────────────────────────────────────────────────── */
 .edit-btn {
   padding: 0.4em 1em;
   border-radius: 6px;
@@ -2144,6 +2208,7 @@ button.listing-card {
 }
 
 /* ── Refresh diff modal ── */
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -2215,7 +2280,8 @@ button.listing-card {
   justify-content: flex-end;
 }
 
-/* Android-style snackbar toast */
+/* ── Title toast (snackbar) ── */
+
 .title-toast {
   position: fixed;
   bottom: 1.75rem;

@@ -405,10 +405,7 @@ export function PropertyDetail() {
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
 
-    // Open houses
-    const [openHouses, setOpenHouses] = useState<OpenHouse[]>([])
-
-    // ── Data loading ──────────────────────────────────────────────────────────
+    // ── Data loading ──────────────────────────────────────────────────────────────
 
     async function loadProperty() {
         try {
@@ -423,9 +420,6 @@ export function PropertyDetail() {
 
             const histResp = await fetch(`/api/listings/${id}/history`)
             if (histResp.ok) setHistory(await histResp.json())
-
-            const ohResp = await fetch(`/api/listings/${id}/open-houses`)
-            if (ohResp.ok) setOpenHouses(await ohResp.json())
         } catch (err: any) {
             setError(err?.message || String(err))
         } finally {

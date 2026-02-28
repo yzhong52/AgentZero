@@ -34,7 +34,7 @@ function ListingCard({ p }: { p: Property }) {
       type="button"
     >
       {img && <img src={img} alt={p.title} className="listing-img" />}
-      <div className="listing-body">
+      <div className="listing-body" style={{ borderTop: `3px solid ${STATUS_COLORS[p.status] ?? '#e0dfd8'}` }}>
         <div className="listing-price-row">
           <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
           <StatusBadge status={p.status} />

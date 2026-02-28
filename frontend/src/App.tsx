@@ -81,7 +81,10 @@ function App() {
 
   return (
     <div className="app-root">
-      <h1>Agent Zero</h1>
+      <header className="app-header">
+        <h1>Agent Zero</h1>
+        <p className="app-tagline">Your private property shortlist</p>
+      </header>
 
       <form className="form-wrap">
         <div className="input-row">
@@ -112,7 +115,7 @@ function App() {
       {listings.length > 0 && (
         <section className="listings-section">
           <div className="listings-header">
-            <h2>Saved Listings ({listings.length})</h2>
+            <span className="listings-count">{listings.length} {listings.length === 1 ? 'property' : 'properties'}</span>
 
             <div className="status-filter">
               {STATUS_OPTIONS.map((s) => (

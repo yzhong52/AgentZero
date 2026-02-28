@@ -1,5 +1,10 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* ── Accent palette ─────────────────────────────────────── */
+  --accent: #1e4535;
+  --accent-dark: #163829;
+  --accent-light: rgba(30, 69, 53, 0.12);
+
+  font-family: 'DM Sans', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -13,13 +18,17 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+h1, h2, h3 {
+  font-family: 'Fraunces', Georgia, serif;
+}
+
 a {
   font-weight: 500;
-  color: #4f46e5;
+  color: var(--accent);
   text-decoration: inherit;
 }
 a:hover {
-  color: #4338ca;
+  color: var(--accent-dark);
 }
 
 body {
@@ -45,7 +54,7 @@ button {
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #4f46e5;
+  border-color: var(--accent);
 }
 button:focus,
 button:focus-visible {

@@ -11,7 +11,6 @@ function App() {
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
   const [statusFilter, setStatusFilter] = useState<Set<StatusOption>>(new Set(['Interested', 'Buyable']))
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
@@ -40,12 +39,13 @@ function App() {
     })
   }
 
-  const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string } | null>(null)
+  const [savedInfo, setSavedInfo] = useState<{ id: number; title: string } | null>(null)
+  const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string | null } | null>(null)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setSavedMsg(null)
+    setSavedInfo(null)
     setDupInfo(null)
     if (!url.trim()) return setError('Please enter a URL')
     setSaving(true)
@@ -69,7 +69,7 @@ function App() {
         throw new Error(text)
       }
       const saved: Property = await resp.json()
-      setSavedMsg(`Saved: ${saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url}`)
+      setSavedInfo({ id: saved.id, title: saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url || `Listing #${saved.id}` })
       setUrl('')
       await fetchListings()
     } catch (err: any) {
@@ -99,11 +99,15 @@ function App() {
 
       {error && <div className="message error">{error}</div>}
       {dupInfo && (
-        <div className="message warning">
-          A listing with MLS {dupInfo.mls} already exists: <a href={`/listing/${dupInfo.id}`}>{dupInfo.title || `Listing #${dupInfo.id}`}</a>
+        <div className="message success">
+          Already saved{dupInfo.mls ? ` (MLS ${dupInfo.mls})` : ''}: <a href={`/property/${dupInfo.id}`}>{dupInfo.title || `Listing #${dupInfo.id}`}</a>
         </div>
       )}
-      {savedMsg && <div className="message success">{savedMsg}</div>}
+      {savedInfo && (
+        <div className="message success">
+          Saved: <a href={`/property/${savedInfo.id}`}>{savedInfo.title}</a>
+        </div>
+      )}
 
       {listings.length > 0 && (
         <section className="listings-section">

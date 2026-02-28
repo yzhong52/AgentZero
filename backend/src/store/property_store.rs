@@ -292,6 +292,23 @@ pub async fn update_notes(
     Ok(())
 }
 
+/// Find a listing by any of its source URLs. Returns `None` if no match.
+pub async fn find_by_source_url(
+    pool: &SqlitePool,
+    url: &str,
+) -> Result<Option<Property>, sqlx::Error> {
+    let row = sqlx::query(&format!(
+        "SELECT {COLS} FROM listings WHERE redfin_url = ? OR realtor_url = ? OR rew_url = ? OR zillow_url = ?"
+    ))
+    .bind(url)
+    .bind(url)
+    .bind(url)
+    .bind(url)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.as_ref().map(row_to_property))
+}
+
 /// Find a listing by MLS number. Returns `None` if no match.
 pub async fn find_by_mls(pool: &SqlitePool, mls: &str) -> Result<Option<Property>, sqlx::Error> {
     let row = sqlx::query(&format!(

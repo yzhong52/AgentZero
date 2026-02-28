@@ -57,6 +57,19 @@ pub async fn add_listing(
         })
         .collect::<Result<_, _>>()?;
 
+    // Check for duplicate source URLs before fetching.
+    for url in &parsed_urls {
+        if let Ok(Some(existing)) = db::find_by_source_url(&state.db, url.as_str()).await {
+            let body = serde_json::json!({
+                "duplicate": true,
+                "existing_id": existing.id,
+                "existing_title": existing.title,
+                "mls_number": existing.mls_number,
+            });
+            return Err((StatusCode::CONFLICT, body.to_string()));
+        }
+    }
+
     // Fetch HTML for each URL.
     // `fetch_html` tries a direct HTTP request first.  For bot-protected
     // hosts (Zillow, Realtor.ca)

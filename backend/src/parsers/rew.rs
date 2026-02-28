@@ -81,6 +81,36 @@ fn find_residence(json_ld: &[JsonValue]) -> Option<&JsonValue> {
 // ── Image extraction ──────────────────────────────────────────────────────────
 
 fn extract_image_urls(document: &Html) -> Vec<String> {
+    // Primary: parse the `data-photos` JSON attribute on the gallery container.
+    // REW embeds the canonical listing photo list as:
+    //   data-photos='[{"url":"https://assets-listings.rew.ca/…"},…]'
+    // This is authoritative and excludes ads / similar-listing carousels that
+    // also use the assets-listings.rew.ca domain.
+    let photos_sel = Selector::parse("[data-photos]").unwrap();
+    if let Some(el) = document.select(&photos_sel).next() {
+        if let Some(raw_json) = el.value().attr("data-photos") {
+            if let Ok(serde_json::Value::Array(arr)) =
+                serde_json::from_str::<serde_json::Value>(raw_json)
+            {
+                let mut seen = std::collections::HashSet::new();
+                let mut out = Vec::new();
+                for entry in &arr {
+                    if let Some(url) = entry["url"].as_str() {
+                        // Strip Imgix query params to get the full-resolution original.
+                        let clean = url.split('?').next().unwrap_or(url);
+                        if !clean.is_empty() && seen.insert(clean.to_string()) {
+                            out.push(clean.to_string());
+                        }
+                    }
+                }
+                if !out.is_empty() {
+                    return out;
+                }
+            }
+        }
+    }
+
+    // Fallback: scan img tags (used when data-photos is absent).
     // rew.ca images appear in two forms depending on how the page was captured:
     //   - Lazy-loaded (browser save): `data-src="https://assets-listings.rew.ca/…?fill=blur&w=753…"`
     //   - Directly served (curl): `src="https://assets-listings.rew.ca/…?w=750…"`

@@ -27,6 +27,24 @@ function App() {
   const [dragSrcId, setDragSrcId] = useState<number | null>(null)
   const [dragOverId, setDragOverId] = useState<number | null>(null)
 
+  // ── Menu & manage searches ─────────────────────────────────────────────────
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  async function handleDeleteSearch(id: number) {
+    setDeletingId(id)
+    try {
+      await fetch(`/api/searches/${id}`, { method: 'DELETE' })
+      if (activeSearchId === id) setActiveSearchId(null)
+      await fetchSearches()
+      setConfirmDeleteId(null)
+    } catch { /* non-fatal */ } finally {
+      setDeletingId(null)
+    }
+  }
+
   async function fetchSearches() {
     try {
       const resp = await fetch('/api/searches')
@@ -141,7 +159,74 @@ function App() {
       <header className="app-header">
         <h1>Agent Zero</h1>
         <p className="app-tagline">Your private property shortlist</p>
+        {/* ── Hamburger menu ── */}
+        <div className="app-menu-wrap">
+          <button
+            className="app-menu-btn"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Menu"
+          >
+            <span /><span /><span />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
+              <ul className="app-menu-dropdown">
+                <li>
+                  <button onClick={() => { setMenuOpen(false); setManageOpen(true) }}>
+                    Manage Searches
+                  </button>
+                </li>
+              </ul>
+            </>
+          )}
+        </div>
       </header>
+
+      {/* ── Manage Searches modal ── */}
+      {manageOpen && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setManageOpen(false); setConfirmDeleteId(null) } }}>
+          <div className="modal manage-searches-modal">
+            <div className="manage-searches-header">
+              <h3>Manage Searches</h3>
+              <button className="modal-close-btn" onClick={() => { setManageOpen(false); setConfirmDeleteId(null) }}>✕</button>
+            </div>
+            <ul className="manage-searches-list">
+              {searches.map(s => (
+                <li key={s.id} className="manage-search-row">
+                  <div className="manage-search-info">
+                    <span className="manage-search-title">{s.title}</span>
+                    {s.description && <span className="manage-search-desc">{s.description}</span>}
+                  </div>
+                  <span className="manage-search-count">{s.listing_count} {s.listing_count === 1 ? 'listing' : 'listings'}</span>
+                  {confirmDeleteId === s.id ? (
+                    <div className="manage-search-confirm">
+                      <span>Move its listings to another search and delete?</span>
+                      <button
+                        className="confirm-delete-btn"
+                        disabled={deletingId === s.id}
+                        onClick={() => handleDeleteSearch(s.id)}
+                      >
+                        {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                      <button className="cancel-btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button
+                      className="manage-search-delete-btn"
+                      title={searches.length <= 1 ? 'Cannot delete the only search' : `Delete "${s.title}"`}
+                      disabled={searches.length <= 1}
+                      onClick={() => setConfirmDeleteId(s.id)}
+                    >
+                      🗑
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* ── Search tabs (drag to reorder) ── */}
       <nav className="search-tabs">

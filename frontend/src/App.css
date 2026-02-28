@@ -27,7 +27,217 @@
   letter-spacing: 0.01em;
 }
 
-/* ── search tabs ── */
+/* ── hamburger menu ── */
+.app-header {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.app-menu-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.app-menu-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.app-menu-btn:hover {
+  background: #f5f4f0;
+  border-color: #e0dfd8;
+}
+
+.app-menu-btn span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #666;
+  border-radius: 2px;
+}
+
+.app-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.app-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 0.3rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e0dfd8;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  min-width: 180px;
+  white-space: nowrap;
+}
+
+.app-menu-dropdown li button {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.app-menu-dropdown li button:hover {
+  background: #f5f4f0;
+}
+
+/* ── manage searches modal ── */
+.manage-searches-modal {
+  width: 540px;
+  max-width: 95vw;
+  padding: 0;
+  overflow: hidden;
+}
+
+.manage-searches-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid #f0efea;
+}
+
+.manage-searches-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  background: #f0efea;
+  color: #333;
+}
+
+.manage-searches-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.manage-search-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  border-bottom: 1px solid #f5f4f0;
+}
+
+.manage-search-row:last-child {
+  border-bottom: none;
+}
+
+.manage-search-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.manage-search-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.manage-search-desc {
+  font-size: 0.78rem;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manage-search-count {
+  font-size: 0.78rem;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.manage-search-delete-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #bbb;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.manage-search-delete-btn:hover:not(:disabled) {
+  background: #fff0ef;
+  border-color: #ffd0cc;
+  color: #c0392b;
+}
+
+.manage-search-delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.manage-search-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.manage-search-confirm span {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.confirm-delete-btn {
+  padding: 0.3em 0.8em;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.confirm-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .search-tabs {
   display: flex;
   gap: 0.4rem;

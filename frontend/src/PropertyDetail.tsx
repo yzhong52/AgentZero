@@ -258,8 +258,10 @@ function str(v: unknown): string {
     return String(v)
 }
 
+const TITLE_KEY: keyof Property = 'title'
+
 const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
-    { key: 'title', label: LABELS.TITLE },
+    { key: TITLE_KEY, label: LABELS.TITLE },
     { key: 'price', label: LABELS.PRICE },
     { key: 'street_address', label: LABELS.ADDRESS },
     { key: 'city', label: LABELS.CITY },
@@ -280,9 +282,15 @@ const DIFF_FIELDS: { key: keyof Property; label: string }[] = [
     { key: 'school_secondary', label: LABELS.SCHOOL_SECONDARY },
 ]
 
+/** Mirror of `is_title_exist` in backend/src/api/refresh.rs — keep in sync. */
+function isTitleExist(title: string): boolean {
+    return title.length > 0
+}
+
 function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
     return DIFF_FIELDS
         .filter(f => str(stored[f.key]) !== str(fresh[f.key]))
+        .filter(f => f.key !== TITLE_KEY || !isTitleExist(stored.title))
         .map(f => ({ field: f.label, old: str(stored[f.key]), fresh: str(fresh[f.key]) }))
 }
 
@@ -353,6 +361,7 @@ export function PropertyDetail() {
 
     // Title (inline header)
     const [titleDraft, setTitleDraft] = useState<string>('')
+    const [titleToast, setTitleToast] = useState(false)
 
     // Edit mode
     const [editMode, setEditMode] = useState(false)
@@ -685,6 +694,7 @@ export function PropertyDetail() {
     async function handleTitleSave() {
         if (!property || !titleDraft.trim()) return
         const newTitle = titleDraft.trim()
+        if (newTitle === property.title) return
         setProperty({ ...property, title: newTitle })
         try {
             const resp = await fetch(`/api/listings/${property.id}/details`, {
@@ -693,6 +703,8 @@ export function PropertyDetail() {
                 body: JSON.stringify({ title: newTitle }),
             })
             if (!resp.ok) throw new Error(await resp.text())
+            setTitleToast(true)
+            setTimeout(() => setTitleToast(false), 4000)
         } catch (err: any) {
             setError(err?.message || String(err))
         }
@@ -1560,6 +1572,10 @@ export function PropertyDetail() {
                     </div>
                 </div>
             </div>
+
+            {titleToast && (
+                <div className="title-toast">Title updated</div>
+            )}
         </div>
     )
 }

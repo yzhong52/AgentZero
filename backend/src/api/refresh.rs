@@ -11,6 +11,13 @@ use axum::{
     Json,
 };
 
+/// Returns `true` when the stored title has been set by the user and should be
+/// preserved during a refresh. An empty string means the user never set one (or
+/// cleared it), so the parser title is allowed through.
+fn is_title_exist(title: &str) -> bool {
+    !title.is_empty()
+}
+
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
@@ -113,6 +120,12 @@ pub async fn refresh_listing(
 
     // Preserve the user's offer price — parser never sets this.
     updated.offer_price = stored.offer_price;
+
+    // Preserve a user-edited title; only let the parser title through when the
+    // stored title is blank (i.e. the user never set one, or cleared it).
+    if is_title_exist(&stored.title) {
+        updated.title = stored.title.clone();
+    }
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     // Carry forward the user's saved mortgage parameters and recompute the monthly
@@ -258,6 +271,11 @@ pub async fn preview_refresh(
 
     // Preserve the user's offer price — the parser never sets this.
     preview.offer_price = stored.offer_price;
+
+    // Preserve a user-edited title (same rule as refresh_listing).
+    if is_title_exist(&stored.title) {
+        preview.title = stored.title.clone();
+    }
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     let down_pct = stored.down_payment_pct.unwrap_or(0.20);

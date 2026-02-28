@@ -1421,6 +1421,79 @@
 }
 
 /* ── change history ── */
+/* ── Open houses ── */
+.open-houses-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.open-house-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  background: #fafaf8;
+  border: 1px solid #e0dfd8;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.open-house-entry.visited {
+  background: #f0f7f3;
+  border-color: rgba(30, 69, 53, 0.2);
+}
+
+.open-house-times {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.open-house-date {
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.open-house-time {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.open-house-visited-btn {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 20px;
+  border: 1px solid #d1d5db;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.open-house-visited-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.open-house-visited-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.open-house-visited-btn.active:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+}
+
 .history-panel {
   margin-top: 1.25rem;
   display: flex;

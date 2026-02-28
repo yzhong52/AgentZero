@@ -491,6 +491,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     Some(ParsedListing {
         property,
         image_urls,
+        open_houses: vec![],
     })
 }
 
@@ -543,5 +544,19 @@ mod tests {
         assert_eq!(property.parking_total, Some(1), "parking_total");
         assert_eq!(property.parking_garage, None, "parking_garage");
         insta::assert_json_snapshot!("redfin_3545_w_king_edward_carport", property);
+    }
+
+    #[test]
+    fn redfin_2748_e23rd() {
+        let html = std::fs::read_to_string(fixture(
+            "2748 E 23rd Ave, Vancouver, BC V5R 1A7 _ MLS# R3088944 _ Redfin.html",
+        ))
+        .expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/2748-E-23rd-Ave-V5R-1A7/home/154849597",
+            &html,
+        )
+        .expect("parse failed");
+        insta::assert_json_snapshot!("redfin_2748_e23rd", listing_to_property(listing));
     }
 }

@@ -427,6 +427,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     Some(ParsedListing {
         property,
         image_urls,
+        open_houses: vec![],
     })
 }
 

@@ -23,9 +23,6 @@ function StatusBadge({ status }: { status: string | null }) {
 function ListingCard({ p }: { p: Property }) {
   const navigate = useNavigate()
   const img = p.images[0]?.url
-  const address = [p.street_address, p.city, p.region, p.postal_code]
-    .filter(Boolean)
-    .join(', ')
 
   return (
     <button
@@ -39,7 +36,6 @@ function ListingCard({ p }: { p: Property }) {
           <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
           <StatusBadge status={p.status} />
         </div>
-        <div className="listing-address">{address || p.redfin_url || p.realtor_url}</div>
         <div className="listing-stats">
           {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
           {p.bathrooms != null && <span>{p.bathrooms} ba</span>}

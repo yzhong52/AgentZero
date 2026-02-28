@@ -84,6 +84,7 @@ pub async fn refresh_listing(
     ))?;
     let mut updated = listing.property;
     let image_urls = listing.image_urls;
+    let open_houses = listing.open_houses;
     tracing::info!(
         "refresh_listing: parse result property_tax={:?}, price={:?}",
         updated.property_tax,
@@ -174,14 +175,21 @@ pub async fn refresh_listing(
         saved.price
     );
 
-    // ── 8. Refresh image cache ────────────────────────────────────────────────
+    // ── 8. Upsert open house events ───────────────────────────────────────────
+    if !open_houses.is_empty() {
+        if let Err(e) = db::upsert_open_houses(&state.db, id, &open_houses).await {
+            tracing::warn!("refresh_listing: failed to save open houses for id={}: {}", id, e);
+        }
+    }
+
+    // ── 9. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
     }
     images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
 
-    // ── 9. Return the refreshed record with image metadata ────────────────────
+    // ── 10. Return the refreshed record with image metadata ───────────────────
     let images = db::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;

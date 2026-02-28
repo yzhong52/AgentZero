@@ -285,6 +285,14 @@ async fn main() {
         )
         .route("/api/listings/:id/history", get(api::details::get_history))
         .route(
+            "/api/listings/:id/open-houses",
+            get(api::open_houses::get_open_houses),
+        )
+        .route(
+            "/api/listings/:id/open-houses/:oh_id",
+            patch(api::open_houses::patch_open_house),
+        )
+        .route(
             "/api/listings/:id/images/:image_id",
             delete(api::images::delete_image),
         )

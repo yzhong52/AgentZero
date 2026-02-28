@@ -17,7 +17,7 @@ use regex::Regex;
 use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;
 
-use super::{extract_json_ld, ParsedListing};
+use super::{extract_json_ld, OpenHouseEvent, ParsedListing};
 use crate::db;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +108,26 @@ fn extract_address(json_ld: &[JsonValue]) -> AddressInfo {
         lat: None,
         lon: None,
     }
+}
+
+/// Extract open house events (startDate / endDate) from all Event JSON-LD blocks.
+fn extract_open_houses(json_ld: &[JsonValue]) -> Vec<OpenHouseEvent> {
+    let mut events = Vec::new();
+    for block in json_ld {
+        if block.get("@type").and_then(|t| t.as_str()) != Some("Event") {
+            continue;
+        }
+        if let Some(start) = block.get("startDate").and_then(|v| v.as_str()) {
+            events.push(OpenHouseEvent {
+                start_time: start.to_string(),
+                end_time: block
+                    .get("endDate")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+            });
+        }
+    }
+    events
 }
 
 /// Convert "BRITISH COLUMBIA" → "BC", etc.  Pass through short forms.
@@ -278,6 +298,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let json_ld = extract_json_ld(&document);
 
     let addr = extract_address(&json_ld);
+    let open_houses = extract_open_houses(&json_ld);
     let product = extract_product(&json_ld);
     let (beds, baths) = extract_quick_stats(&document);
     let mls = extract_mls(&document);
@@ -316,6 +337,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     }
 
     Some(ParsedListing {
+        open_houses,
         property: db::Property {
             id: 0,
             search_id: None,
@@ -383,7 +405,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parsers::test_support::{fixture, listing_to_property};
+    use crate::parsers::test_support::{fixture, listing_to_snapshot};
 
     #[test]
     fn realtor_3545_w_king_edward() {
@@ -394,7 +416,6 @@ mod tests {
             &html,
         )
         .expect("should parse realtor.ca listing");
-        let prop = listing_to_property(listing);
-        insta::assert_json_snapshot!(prop);
+        insta::assert_json_snapshot!(listing_to_snapshot(listing));
     }
 }

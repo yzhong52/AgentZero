@@ -106,8 +106,8 @@ pub async fn add_listing(
 
     let listing_opt = parsers::parse_multi(&sources);
 
-    let (mut property, image_urls) = match listing_opt {
-        Some(listing) => (listing.property, listing.image_urls),
+    let (mut property, image_urls, open_houses) = match listing_opt {
+        Some(listing) => (listing.property, listing.image_urls, listing.open_houses),
         None => {
             // Parsing yielded nothing.  Only save a stub when ALL URLs are
             // from known-blocked hosts — for unrecognised URLs return 422.
@@ -130,7 +130,7 @@ pub async fn add_listing(
                     _ => {}
                 }
             }
-            (stub, vec![])
+            (stub, vec![], vec![])
         }
     };
 
@@ -179,6 +179,13 @@ pub async fn add_listing(
             format!("DB error: {}", e),
         )
     })?;
+
+    // Save any parsed open house events (upsert — ignore duplicates).
+    if !open_houses.is_empty() {
+        if let Err(e) = db::upsert_open_houses(&state.db, saved.id, &open_houses).await {
+            tracing::warn!("add_listing: failed to save open houses for id={}: {}", saved.id, e);
+        }
+    }
 
     // Register image URLs in images_cache, preserving parser ordering.
     for (position, url) in image_urls.iter().enumerate() {

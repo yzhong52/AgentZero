@@ -1,3 +1,12 @@
+export type OpenHouse = {
+  id: number
+  listing_id: number
+  start_time: string
+  end_time: string | null
+  visited: boolean
+  created_at: string
+}
+
 export type ImageEntry = {
   id: number
   url: string

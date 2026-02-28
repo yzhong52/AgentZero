@@ -6,10 +6,12 @@
 
 pub mod history;
 pub mod image;
+pub mod open_house;
 pub mod property;
 pub mod search;
 
 pub use history::HistoryEntry;
 pub use image::{CachedImage, ImageEntry};
+pub use open_house::{OpenHouse, OpenHouseEvent};
 pub use property::{Property, UserDetails};
 pub use search::Search;

@@ -22,11 +22,14 @@ use std::fmt::Debug;
 
 // ── Shared output types ───────────────────────────────────────────────────────
 
-/// The normalised result of parsing a listing page: structured property data
-/// and the ordered list of image source URLs.
+pub use crate::models::OpenHouseEvent;
+
+/// The normalised result of parsing a listing page: structured property data,
+/// the ordered list of image source URLs, and any open house events.
 pub struct ParsedListing {
     pub property: db::Property,
     pub image_urls: Vec<String>,
+    pub open_houses: Vec<OpenHouseEvent>,
 }
 
 /// A (url, html) pair handed to `parse_multi`.
@@ -569,6 +572,13 @@ fn merge_listing(
         }
     }
 
+    let mut open_houses = primary.open_houses;
+    for oh in fallback.open_houses {
+        if !open_houses.iter().any(|e| e.start_time == oh.start_time) {
+            open_houses.push(oh);
+        }
+    }
+
     ParsedListing {
         property: merge_property(
             primary.property,
@@ -577,6 +587,7 @@ fn merge_listing(
             fallback_source,
         ),
         image_urls,
+        open_houses,
     }
 }
 

@@ -448,6 +448,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
             updated_at: None,
         },
         image_urls,
+        open_houses: vec![],
     })
 }
 

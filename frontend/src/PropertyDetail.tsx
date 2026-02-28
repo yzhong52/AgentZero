@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
-import type { Property, Search } from './types'
+import type { OpenHouse, Property, Search } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
 type HistoryEntry = {
@@ -405,6 +405,9 @@ export function PropertyDetail() {
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
 
+    // Open houses
+    const [openHouses, setOpenHouses] = useState<OpenHouse[]>([])
+
     // ── Data loading ──────────────────────────────────────────────────────────
 
     async function loadProperty() {
@@ -420,6 +423,9 @@ export function PropertyDetail() {
 
             const histResp = await fetch(`/api/listings/${id}/history`)
             if (histResp.ok) setHistory(await histResp.json())
+
+            const ohResp = await fetch(`/api/listings/${id}/open-houses`)
+            if (ohResp.ok) setOpenHouses(await ohResp.json())
         } catch (err: any) {
             setError(err?.message || String(err))
         } finally {
@@ -1583,6 +1589,47 @@ export function PropertyDetail() {
                             </button>
                         )}
                     </div>
+
+                    {openHouses.length > 0 && (
+                        <div className="open-houses-panel right-panel-section">
+                            <h3 className="notes-heading">Open Houses</h3>
+                            <ul className="open-houses-list">
+                                {openHouses.map(oh => (
+                                    <li key={oh.id} className={`open-house-entry${oh.visited ? ' visited' : ''}`}>
+                                        <div className="open-house-times">
+                                            <span className="open-house-date">
+                                                {new Date(oh.start_time).toLocaleDateString('en-CA', {
+                                                    weekday: 'short', month: 'short', day: 'numeric',
+                                                })}
+                                            </span>
+                                            <span className="open-house-time">
+                                                {new Date(oh.start_time).toLocaleTimeString('en-CA', {
+                                                    hour: 'numeric', minute: '2-digit',
+                                                })}
+                                                {oh.end_time && ` – ${new Date(oh.end_time).toLocaleTimeString('en-CA', {
+                                                    hour: 'numeric', minute: '2-digit',
+                                                })}`}
+                                            </span>
+                                        </div>
+                                        <button
+                                            className={`open-house-visited-btn${oh.visited ? ' active' : ''}`}
+                                            onClick={async () => {
+                                                const next = !oh.visited
+                                                await fetch(`/api/listings/${property!.id}/open-houses/${oh.id}`, {
+                                                    method: 'PATCH',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ visited: next }),
+                                                })
+                                                setOpenHouses(prev => prev.map(x => x.id === oh.id ? { ...x, visited: next } : x))
+                                            }}
+                                        >
+                                            {oh.visited ? 'Visited' : 'Mark visited'}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     {history.length > 0 && (
                         <div className="history-panel right-panel-section">

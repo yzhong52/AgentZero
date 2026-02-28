@@ -32,6 +32,26 @@ function App() {
   const [manageOpen, setManageOpen] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [editDraft, setEditDraft] = useState<Record<number, { title: string; desc: string }>>({})
+  const [savingId, setSavingId] = useState<number | null>(null)
+
+  async function handleSaveSearch(id: number, draft: { title: string; desc: string }) {
+    setSavingId(id)
+    try {
+      const resp = await fetch(`/api/searches/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: draft.title.trim(), description: draft.desc.trim() }),
+      })
+      if (resp.ok) {
+        const updated: Search = await resp.json()
+        setSearches(prev => prev.map(s => s.id === id ? updated : s))
+        setEditDraft(prev => ({ ...prev, [id]: { title: updated.title, desc: updated.description ?? '' } }))
+      }
+    } catch { /* non-fatal */ } finally {
+      setSavingId(null)
+    }
+  }
 
   async function handleDeleteSearch(id: number) {
     setDeletingId(id)
@@ -173,7 +193,13 @@ function App() {
               <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
               <ul className="app-menu-dropdown">
                 <li>
-                  <button onClick={() => { setMenuOpen(false); setManageOpen(true) }}>
+                  <button onClick={() => {
+                    const drafts: Record<number, { title: string; desc: string }> = {}
+                    searches.forEach(s => { drafts[s.id] = { title: s.title, desc: s.description ?? '' } })
+                    setEditDraft(drafts)
+                    setMenuOpen(false)
+                    setManageOpen(true)
+                  }}>
                     Manage Searches
                   </button>
                 </li>
@@ -183,47 +209,73 @@ function App() {
         </div>
       </header>
 
-      {/* ── Manage Searches modal ── */}
+      {/* ── Manage Searches full-screen page ── */}
       {manageOpen && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setManageOpen(false); setConfirmDeleteId(null) } }}>
-          <div className="modal manage-searches-modal">
-            <div className="manage-searches-header">
-              <h3>Manage Searches</h3>
-              <button className="modal-close-btn" onClick={() => { setManageOpen(false); setConfirmDeleteId(null) }}>✕</button>
-            </div>
-            <ul className="manage-searches-list">
-              {searches.map(s => (
-                <li key={s.id} className="manage-search-row">
-                  <div className="manage-search-info">
-                    <span className="manage-search-title">{s.title}</span>
-                    {s.description && <span className="manage-search-desc">{s.description}</span>}
+        <div className="manage-page">
+          <div className="manage-page-header">
+            <button className="manage-page-back" onClick={() => { setManageOpen(false); setConfirmDeleteId(null) }}>
+              ← Back
+            </button>
+            <h2>Manage Searches</h2>
+          </div>
+          <div className="manage-page-content">
+            {searches.map(s => {
+              const draft = editDraft[s.id] ?? { title: s.title, desc: s.description ?? '' }
+              const isDirty = draft.title !== s.title || draft.desc !== (s.description ?? '')
+              return (
+                <div key={s.id} className="manage-search-card">
+                  <div className="manage-search-card-fields">
+                    <input
+                      className="manage-search-edit-title"
+                      value={draft.title}
+                      onChange={e => setEditDraft(prev => ({ ...prev, [s.id]: { ...draft, title: e.target.value } }))}
+                      placeholder="Search title"
+                    />
+                    <textarea
+                      className="manage-search-edit-desc"
+                      value={draft.desc}
+                      onChange={e => setEditDraft(prev => ({ ...prev, [s.id]: { ...draft, desc: e.target.value } }))}
+                      placeholder="Description (optional)"
+                      rows={3}
+                    />
                   </div>
-                  <span className="manage-search-count">{s.listing_count} {s.listing_count === 1 ? 'listing' : 'listings'}</span>
-                  {confirmDeleteId === s.id ? (
-                    <div className="manage-search-confirm">
-                      <span>Move its listings to another search and delete?</span>
+                  <div className="manage-search-card-footer">
+                    <span className="manage-search-count">{s.listing_count} {s.listing_count === 1 ? 'listing' : 'listings'}</span>
+                    <div className="manage-search-card-actions">
                       <button
-                        className="confirm-delete-btn"
-                        disabled={deletingId === s.id}
-                        onClick={() => handleDeleteSearch(s.id)}
+                        className="manage-search-save-btn"
+                        disabled={savingId === s.id || !isDirty || !draft.title.trim()}
+                        onClick={() => handleSaveSearch(s.id, draft)}
                       >
-                        {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                        {savingId === s.id ? 'Saving…' : 'Save'}
                       </button>
-                      <button className="cancel-btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                      {confirmDeleteId === s.id ? (
+                        <div className="manage-search-confirm">
+                          <span>Move listings to another search and delete?</span>
+                          <button
+                            className="confirm-delete-btn"
+                            disabled={deletingId === s.id}
+                            onClick={() => handleDeleteSearch(s.id)}
+                          >
+                            {deletingId === s.id ? 'Deleting…' : 'Delete'}
+                          </button>
+                          <button className="cancel-btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                        </div>
+                      ) : (
+                        <button
+                          className="manage-search-delete-btn"
+                          title={searches.length <= 1 ? 'Cannot delete the only search' : `Delete "${s.title}"`}
+                          disabled={searches.length <= 1}
+                          onClick={() => setConfirmDeleteId(s.id)}
+                        >
+                          🗑
+                        </button>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      className="manage-search-delete-btn"
-                      title={searches.length <= 1 ? 'Cannot delete the only search' : `Delete "${s.title}"`}
-                      disabled={searches.length <= 1}
-                      onClick={() => setConfirmDeleteId(s.id)}
-                    >
-                      🗑
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

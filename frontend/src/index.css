@@ -4,6 +4,15 @@
   --accent-dark: #163829;
   --accent-light: rgba(30, 69, 53, 0.12);
 
+  /* ── Text scale ─────────────────────────────────────────── */
+  --text-secondary: #555;
+  --text-muted: #999;
+  --text-disabled: #bbb;
+
+  /* ── Borders ────────────────────────────────────────────── */
+  --border: #e0dfd8;
+  --border-subtle: #eee;
+
   font-family: 'DM Sans', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;

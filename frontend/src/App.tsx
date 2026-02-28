@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
@@ -27,43 +28,9 @@ function App() {
   const [dragSrcId, setDragSrcId] = useState<number | null>(null)
   const [dragOverId, setDragOverId] = useState<number | null>(null)
 
-  // ── Menu & manage searches ─────────────────────────────────────────────────
+  // ── Menu ──────────────────────────────────────────────────────────────────
   const [menuOpen, setMenuOpen] = useState(false)
-  const [manageOpen, setManageOpen] = useState(false)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [editDraft, setEditDraft] = useState<Record<number, { title: string; desc: string }>>({})
-  const [savingId, setSavingId] = useState<number | null>(null)
-
-  async function handleSaveSearch(id: number, draft: { title: string; desc: string }) {
-    setSavingId(id)
-    try {
-      const resp = await fetch(`/api/searches/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: draft.title.trim(), description: draft.desc.trim() }),
-      })
-      if (resp.ok) {
-        const updated: Search = await resp.json()
-        setSearches(prev => prev.map(s => s.id === id ? updated : s))
-        setEditDraft(prev => ({ ...prev, [id]: { title: updated.title, desc: updated.description ?? '' } }))
-      }
-    } catch { /* non-fatal */ } finally {
-      setSavingId(null)
-    }
-  }
-
-  async function handleDeleteSearch(id: number) {
-    setDeletingId(id)
-    try {
-      await fetch(`/api/searches/${id}`, { method: 'DELETE' })
-      if (activeSearchId === id) setActiveSearchId(null)
-      await fetchSearches()
-      setConfirmDeleteId(null)
-    } catch { /* non-fatal */ } finally {
-      setDeletingId(null)
-    }
-  }
+  const navigate = useNavigate()
 
   async function fetchSearches() {
     try {
@@ -177,8 +144,10 @@ function App() {
   return (
     <div className="app-root">
       <header className="app-header">
-        <h1>Agent Zero</h1>
-        <p className="app-tagline">Your private property shortlist</p>
+        <div className="app-header-brand">
+          <h1>Agent Zero</h1>
+          <p className="app-tagline">Your private property shortlist</p>
+        </div>
         {/* ── Hamburger menu ── */}
         <div className="app-menu-wrap">
           <button
@@ -193,13 +162,7 @@ function App() {
               <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
               <ul className="app-menu-dropdown">
                 <li>
-                  <button onClick={() => {
-                    const drafts: Record<number, { title: string; desc: string }> = {}
-                    searches.forEach(s => { drafts[s.id] = { title: s.title, desc: s.description ?? '' } })
-                    setEditDraft(drafts)
-                    setMenuOpen(false)
-                    setManageOpen(true)
-                  }}>
+                  <button onClick={() => { setMenuOpen(false); navigate('/searches') }}>
                     Manage Searches
                   </button>
                 </li>
@@ -209,126 +172,61 @@ function App() {
         </div>
       </header>
 
-      {/* ── Manage Searches full-screen page ── */}
-      {manageOpen && (
-        <div className="manage-page">
-          <div className="manage-page-header">
-            <button className="manage-page-back" onClick={() => { setManageOpen(false); setConfirmDeleteId(null) }}>
-              ← Back
-            </button>
-            <h2>Manage Searches</h2>
-          </div>
-          <div className="manage-page-content">
-            {searches.map(s => {
-              const draft = editDraft[s.id] ?? { title: s.title, desc: s.description ?? '' }
-              const isDirty = draft.title !== s.title || draft.desc !== (s.description ?? '')
-              return (
-                <div key={s.id} className="manage-search-card">
-                  <div className="manage-search-card-fields">
-                    <input
-                      className="manage-search-edit-title"
-                      value={draft.title}
-                      onChange={e => setEditDraft(prev => ({ ...prev, [s.id]: { ...draft, title: e.target.value } }))}
-                      placeholder="Search title"
-                    />
-                    <textarea
-                      className="manage-search-edit-desc"
-                      value={draft.desc}
-                      onChange={e => setEditDraft(prev => ({ ...prev, [s.id]: { ...draft, desc: e.target.value } }))}
-                      placeholder="Description (optional)"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="manage-search-card-footer">
-                    <span className="manage-search-count">{s.listing_count} {s.listing_count === 1 ? 'listing' : 'listings'}</span>
-                    <div className="manage-search-card-actions">
-                      <button
-                        className="manage-search-save-btn"
-                        disabled={savingId === s.id || !isDirty || !draft.title.trim()}
-                        onClick={() => handleSaveSearch(s.id, draft)}
-                      >
-                        {savingId === s.id ? 'Saving…' : 'Save'}
-                      </button>
-                      {confirmDeleteId === s.id ? (
-                        <div className="manage-search-confirm">
-                          <span>Move listings to another search and delete?</span>
-                          <button
-                            className="confirm-delete-btn"
-                            disabled={deletingId === s.id}
-                            onClick={() => handleDeleteSearch(s.id)}
-                          >
-                            {deletingId === s.id ? 'Deleting…' : 'Delete'}
-                          </button>
-                          <button className="cancel-btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-                        </div>
-                      ) : (
-                        <button
-                          className="manage-search-delete-btn"
-                          title={searches.length <= 1 ? 'Cannot delete the only search' : `Delete "${s.title}"`}
-                          disabled={searches.length <= 1}
-                          onClick={() => setConfirmDeleteId(s.id)}
-                        >
-                          🗑
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* ── Search tabs (drag to reorder) ── */}
-      <nav className="search-tabs">
-        {searches.map(s => (
-          <button
-            key={s.id}
-            className={`search-tab${s.id === activeSearchId ? ' active' : ''}${dragOverId === s.id ? ' drag-over' : ''}`}
-            onClick={() => setActiveSearchId(s.id)}
-            title={s.description || s.title}
-            draggable
-            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragSrcId(s.id) }}
-            onDragOver={e => { e.preventDefault(); setDragOverId(s.id) }}
-            onDragLeave={() => setDragOverId(null)}
-            onDrop={async e => {
-              e.preventDefault()
-              setDragOverId(null)
-              if (dragSrcId === null || dragSrcId === s.id) return
-              const ids = searches.map(x => x.id)
-              const fromIdx = ids.indexOf(dragSrcId)
-              const toIdx = ids.indexOf(s.id)
-              if (fromIdx < 0 || toIdx < 0) return
-              ids.splice(fromIdx, 1)
-              ids.splice(toIdx, 0, dragSrcId)
-              // Optimistic reorder
-              const reordered = ids.map((id, i) => {
-                const orig = searches.find(x => x.id === id)!
-                return { ...orig, position: i }
-              })
-              setSearches(reordered)
-              setDragSrcId(null)
-              await fetch('/api/searches/reorder', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids }),
-              })
-              await fetchSearches()
-            }}
-            onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
-          >
-            {s.title}
-            <span className="search-tab-count">{s.listing_count}</span>
-          </button>
-        ))}
+      <div className="search-tabs-wrap">
+        <nav className="search-tabs">
+          {searches.map(s => (
+            <button
+              key={s.id}
+              className={`search-tab${s.id === activeSearchId ? ' active' : ''}${dragOverId === s.id ? ' drag-over' : ''}`}
+              onClick={() => setActiveSearchId(s.id)}
+              title={s.description || s.title}
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragSrcId(s.id) }}
+              onDragOver={e => { e.preventDefault(); setDragOverId(s.id) }}
+              onDragLeave={() => setDragOverId(null)}
+              onDrop={async e => {
+                e.preventDefault()
+                setDragOverId(null)
+                if (dragSrcId === null || dragSrcId === s.id) return
+                const ids = searches.map(x => x.id)
+                const fromIdx = ids.indexOf(dragSrcId)
+                const toIdx = ids.indexOf(s.id)
+                if (fromIdx < 0 || toIdx < 0) return
+                ids.splice(fromIdx, 1)
+                ids.splice(toIdx, 0, dragSrcId)
+                // Optimistic reorder
+                const reordered = ids.map((id, i) => {
+                  const orig = searches.find(x => x.id === id)!
+                  return { ...orig, position: i }
+                })
+                setSearches(reordered)
+                setDragSrcId(null)
+                await fetch('/api/searches/reorder', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ids }),
+                })
+                await fetchSearches()
+              }}
+              onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
+            >
+              {s.title}
+              <span className="search-tab-count">{s.listing_count}</span>
+            </button>
+          ))}
+        </nav>
         <button
-          className={`search-tab search-tab-new${newSearchOpen ? ' active' : ''}`}
+          className={`search-tabs-add${newSearchOpen ? ' active' : ''}`}
           onClick={() => setNewSearchOpen(o => !o)}
+          title="New search"
+          aria-label="New search"
         >
-          + New
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
         </button>
-      </nav>
+      </div>
 
       {newSearchOpen && (
         <form className="new-search-form" onSubmit={handleCreateSearch}>

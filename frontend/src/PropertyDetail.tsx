@@ -846,19 +846,13 @@ export function PropertyDetail() {
     }
 
     return (
-        <div className="property-detail">
-            {diffModal !== null && (
-                <RefreshDiffModal
-                    diffs={diffModal}
-                    onApply={applyRefresh}
-                    onCancel={() => setDiffModal(null)}
-                    applying={applying}
-                />
-            )}
-
+        <>
             <div className="detail-nav">
-                <button className="back-btn" onClick={() => navigate('/')}>← Back</button>
-                <span className="detail-nav-title">Agent Zero</span>
+                <button className="back-btn" onClick={() => navigate('/')}>
+                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Back
+                </button>
+                <span className="detail-nav-title" title={property.title}>{property.title}</span>
                 <button
                     className="delete-btn"
                     onClick={handleDelete}
@@ -868,6 +862,16 @@ export function PropertyDetail() {
                     {deleting ? 'Deleting…' : 'Delete'}
                 </button>
             </div>
+
+            <div className="property-detail">
+            {diffModal !== null && (
+                <RefreshDiffModal
+                    diffs={diffModal}
+                    onApply={applyRefresh}
+                    onCancel={() => setDiffModal(null)}
+                    applying={applying}
+                />
+            )}
 
             {error && <div className="message error">{error}</div>}
             {refreshMsg && <div className="message success">{refreshMsg}</div>}
@@ -1617,5 +1621,6 @@ export function PropertyDetail() {
                 <div className="title-toast">Title updated</div>
             )}
         </div>
+        </>
     )
 }

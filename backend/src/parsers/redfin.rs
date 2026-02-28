@@ -306,9 +306,14 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     let description = listing["description"].as_str().unwrap_or("").to_string();
     let price = listing["offers"]["price"].as_i64();
-    let price_currency = listing["offers"]["priceCurrency"]
-        .as_str()
-        .map(str::to_string);
+    // Redfin embeds "priceCurrency":"USD" even for non-US listings — a known
+    // data bug on their side. Derive the correct currency from addressCountry
+    // instead: "CA" → CAD, "US" → USD, anything else falls back to the field.
+    let price_currency = match addr["addressCountry"].as_str() {
+        Some("CA") => Some("CAD".to_string()),
+        Some("US") => Some("USD".to_string()),
+        _ => listing["offers"]["priceCurrency"].as_str().map(str::to_string),
+    };
     let street_address = addr["streetAddress"].as_str().map(str::to_string);
     let city = addr["addressLocality"].as_str().map(str::to_string);
     let region = addr["addressRegion"].as_str().map(str::to_string);

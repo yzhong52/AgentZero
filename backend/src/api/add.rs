@@ -197,13 +197,11 @@ pub async fn add_listing(
 
     let images = db::list_images_with_meta(&state.db, saved.id)
         .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("DB error: {}", e),
-            )
-        })?;
-    Ok(Json(db::Property { images, ..saved }))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
+    let open_houses = db::list_open_houses(&state.db, saved.id)
+        .await
+        .unwrap_or_default();
+    Ok(Json(db::Property { images, open_houses, ..saved }))
 }
 
 /// Returns `true` for hosts that are known to block programmatic HTTP
@@ -248,6 +246,7 @@ fn blank_stub() -> db::Property {
         lat: None,
         lon: None,
         images: vec![],
+        open_houses: vec![],
         created_at: String::new(),
         updated_at: None,
         notes: None,

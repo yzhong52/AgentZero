@@ -1,0 +1,255 @@
+---
+source: src/parsers/redfin.rs
+expression: listing_to_snapshot(listing)
+---
+{
+  "id": 0,
+  "search_id": null,
+  "title": "3206 E 25th Ave, Vancouver - 5 beds/3 baths",
+  "description": "VIEW! VIEW! VIEW! Welcome to this well-maintained custom-built 5 Bed, 3 Bath family home offering over 2,200 sq.ft of living space on a desirable CORNER LOT. The spacious main floor features bright living and family areas, with dining opening to a west-facing patio showcasing beautiful city and mountain views. Upstairs offers 3 beds, 2 baths, and a balcony to enjoy the mountain scenery. Includes a 2-bedroom unauthorized suite with separate entrance&mdash;an excellent mortgage helper. Plenty of parking w/ a 2-car garage + additional lane and front street parking. Just a short walk to Renfrew Ravine Park, Renfrew Community Centre, 29th Ave Station, Windermere Secondary and Renfrew Community Elementary. A fantastic opportunity in a convenient, family-friendly location! OH on Feb 28(SAT), 2-4pm ",
+  "price": 1799000,
+  "price_currency": "CAD",
+  "street_address": "3206 E 25th Ave",
+  "city": "Vancouver",
+  "region": "BC",
+  "postal_code": "V5R 1J6",
+  "country": "CA",
+  "lat": 49.2476547,
+  "lon": -123.0363932,
+  "property_type": "Single Family Residential",
+  "bedrooms": 5,
+  "bathrooms": 3,
+  "sqft": 2225,
+  "land_sqft": 3432,
+  "year_built": 1986,
+  "parking_total": 2,
+  "parking_garage": 2,
+  "parking_carport": null,
+  "parking_pad": null,
+  "radiant_floor_heating": null,
+  "ac": null,
+  "laundry_in_unit": true,
+  "skytrain_station": null,
+  "skytrain_walk_min": null,
+  "offer_price": null,
+  "property_tax": 7814,
+  "hoa_monthly": null,
+  "down_payment_pct": null,
+  "mortgage_interest_rate": null,
+  "amortization_years": null,
+  "mortgage_monthly": null,
+  "monthly_total": null,
+  "monthly_cost": null,
+  "has_rental_suite": null,
+  "rental_income": null,
+  "school_elementary": null,
+  "school_elementary_rating": null,
+  "school_middle": null,
+  "school_middle_rating": null,
+  "school_secondary": null,
+  "school_secondary_rating": null,
+  "redfin_url": "https://www.redfin.ca/bc/vancouver/3206-E-25th-Ave-V5R-1J6/home/154634866",
+  "realtor_url": null,
+  "rew_url": null,
+  "zillow_url": null,
+  "mls_number": "R3093182",
+  "listed_date": "2026-02-24",
+  "status": "Interested",
+  "notes": null,
+  "images": [
+    {
+      "id": 0,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 1,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_1_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 2,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_2_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 3,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_3_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 4,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_4_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 5,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_5_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 6,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_6_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 7,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_7_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 8,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_8_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 9,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_9_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 10,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_10_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 11,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_11_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 12,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_12_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 13,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_13_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 14,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_14_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 15,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_15_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 16,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_16_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 17,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_17_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 18,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_18_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 19,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_19_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 20,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_20_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 21,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_21_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 22,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_22_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 23,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_23_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 24,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_24_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 25,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_25_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 26,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_26_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 27,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_27_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 28,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_28_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 29,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_29_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 30,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_30_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 31,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_31_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 32,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_32_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 33,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_33_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 34,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_34_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 35,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_35_0.jpg",
+      "created_at": ""
+    },
+    {
+      "id": 36,
+      "url": "https://ssl.cdn-redfin.com/photo/256/bigphoto/182/R3093182_36_0.jpg",
+      "created_at": ""
+    }
+  ],
+  "open_houses": [],
+  "created_at": "",
+  "updated_at": null,
+  "open_houses": [
+    {
+      "start_time": "2026-02-28T14:00:00",
+      "end_time": "2026-02-28T16:00:00"
+    }
+  ]
+}

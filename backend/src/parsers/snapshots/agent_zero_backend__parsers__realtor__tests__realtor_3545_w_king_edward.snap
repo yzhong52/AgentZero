@@ -263,6 +263,7 @@ expression: listing_to_snapshot(listing)
       "created_at": ""
     }
   ],
+  "open_houses": [],
   "created_at": "",
   "updated_at": null,
   "open_houses": [

@@ -1,4 +1,5 @@
 use crate::models::image::ImageEntry;
+use crate::models::open_house::OpenHouse;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -164,6 +165,8 @@ pub struct Property {
     // ── System metadata ──────────────────────────────────────────────────────
     /// Populated from images_cache, not stored directly in listings.
     pub images: Vec<ImageEntry>, // system
+    /// Populated from open_houses table, not stored directly in listings.
+    pub open_houses: Vec<OpenHouse>, // system
     pub created_at: String,         // system
     pub updated_at: Option<String>, // system
 }

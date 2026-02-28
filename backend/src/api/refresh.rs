@@ -193,8 +193,11 @@ pub async fn refresh_listing(
     let images = db::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+    let open_houses = db::list_open_houses(&state.db, saved.id)
+        .await
+        .unwrap_or_default();
 
-    Ok(Json(db::Property { images, ..saved }))
+    Ok(Json(db::Property { images, open_houses, ..saved }))
 }
 
 /// GET /api/listings/:id/preview

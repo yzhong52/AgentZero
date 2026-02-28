@@ -47,6 +47,7 @@ export type Property = {
   lat: number | null
   lon: number | null
   images: ImageEntry[]
+  open_houses: OpenHouse[]
   created_at: string
   updated_at: string | null
   notes: string | null

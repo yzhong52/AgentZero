@@ -556,6 +556,7 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
+        open_houses: vec![],
     }
 }
 

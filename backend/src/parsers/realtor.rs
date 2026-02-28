@@ -393,6 +393,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
             zillow_url: None,
             notes: None,
             images: vec![],
+            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
         },

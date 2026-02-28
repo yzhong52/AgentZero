@@ -258,6 +258,7 @@ expression: listing_to_property(listing)
       "created_at": ""
     }
   ],
+  "open_houses": [],
   "created_at": "",
   "updated_at": null
 }

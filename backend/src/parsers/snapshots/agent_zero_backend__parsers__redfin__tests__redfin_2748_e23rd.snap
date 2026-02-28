@@ -1,6 +1,6 @@
 ---
 source: src/parsers/redfin.rs
-expression: listing_to_property(listing)
+expression: listing_to_snapshot(listing)
 ---
 {
   "id": 0,
@@ -213,6 +213,13 @@ expression: listing_to_property(listing)
       "created_at": ""
     }
   ],
+  "open_houses": [],
   "created_at": "",
-  "updated_at": null
+  "updated_at": null,
+  "open_houses": [
+    {
+      "start_time": "2026-03-01T14:00:00",
+      "end_time": "2026-03-01T16:00:00"
+    }
+  ]
 }

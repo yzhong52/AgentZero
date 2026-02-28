@@ -9,7 +9,7 @@ use scraper::Html;
 use serde_json::Value as JsonValue;
 use std::sync::OnceLock;
 
-use super::{extract_json_ld, extract_title, ParsedListing};
+use super::{extract_json_ld, extract_title, OpenHouseEvent, ParsedListing};
 use crate::db;
 
 // ── Static regexes ────────────────────────────────────────────────────────────
@@ -21,6 +21,8 @@ static TAX_ANNUAL_RE: OnceLock<Regex> = OnceLock::new();
 static HOA_FEE_RE: OnceLock<Regex> = OnceLock::new();
 static PARKING_COUNT_RE: OnceLock<Regex> = OnceLock::new();
 static CARPORT_SPACES_RE: OnceLock<Regex> = OnceLock::new();
+static OH_DATE_RE: OnceLock<Regex> = OnceLock::new();
+static OH_TIME_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -32,6 +34,16 @@ fn parking_count_re() -> &'static Regex {
 
 fn carport_spaces_re() -> &'static Regex {
     CARPORT_SPACES_RE.get_or_init(|| Regex::new(r"(?i)Carport\s+Spaces\s*:?\s*(\d+)").unwrap())
+}
+
+/// Matches the month+day portion of an oh-date string like "Saturday, Feb 28" or "Feb 28".
+fn oh_date_re() -> &'static Regex {
+    OH_DATE_RE.get_or_init(|| Regex::new(r"([A-Za-z]{3,})\s+(\d{1,2})\s*$").unwrap())
+}
+
+/// Matches a 12-hour time like "2:00pm" or "10:30am".
+fn oh_time_re() -> &'static Regex {
+    OH_TIME_RE.get_or_init(|| Regex::new(r"(\d{1,2}):(\d{2})\s*(am|pm)").unwrap())
 }
 
 fn lot_size_re() -> &'static Regex {
@@ -56,6 +68,106 @@ fn hoa_fee_re() -> &'static Regex {
         Regex::new(r"(?i)(?:hoa\s*dues|hoa\s*fee|maintenance\s*fee)[s]?\s*:?\s*\$?([\d,]+)")
             .unwrap()
     })
+}
+
+// ── Open house extraction ────────────────────────────────────────────────────
+
+fn month_abbrev_num(abbrev: &str) -> Option<u32> {
+    match abbrev.to_lowercase().as_str() {
+        "jan" | "january"   => Some(1),
+        "feb" | "february"  => Some(2),
+        "mar" | "march"     => Some(3),
+        "apr" | "april"     => Some(4),
+        "may"               => Some(5),
+        "jun" | "june"      => Some(6),
+        "jul" | "july"      => Some(7),
+        "aug" | "august"    => Some(8),
+        "sep" | "september" => Some(9),
+        "oct" | "october"   => Some(10),
+        "nov" | "november"  => Some(11),
+        "dec" | "december"  => Some(12),
+        _ => None,
+    }
+}
+
+/// Parse a 12-hour time string like "2:00pm" into (hour24, minute).
+fn parse_12h_time(s: &str) -> Option<(u32, u32)> {
+    let caps = oh_time_re().captures(s)?;
+    let mut hour: u32 = caps[1].parse().ok()?;
+    let min: u32 = caps[2].parse().ok()?;
+    let ampm = &caps[3];
+    if ampm == "pm" && hour != 12 {
+        hour += 12;
+    } else if ampm == "am" && hour == 12 {
+        hour = 0;
+    }
+    Some((hour, min))
+}
+
+/// Extract open house events from Redfin's `.OpenHouseCard` DOM components.
+///
+/// Each card contains:
+/// - `.oh-date` → e.g. "Saturday, Feb 28"
+/// - `.oh-time` → e.g. "2:00pm - 4:00pm"
+///
+/// `year` is derived from the listing's `listed_date` (fallback: 2026) so that
+/// month/day strings are resolved to the correct calendar year.
+pub fn extract_open_houses(document: &Html, year: i32) -> Vec<OpenHouseEvent> {
+    let (Ok(card_sel), Ok(date_sel), Ok(time_sel)) = (
+        scraper::Selector::parse(".OpenHouseCard"),
+        scraper::Selector::parse(".oh-date"),
+        scraper::Selector::parse(".oh-time"),
+    ) else {
+        return vec![];
+    };
+
+    let mut events = Vec::new();
+    for card in document.select(&card_sel) {
+        let date_text: String = card
+            .select(&date_sel)
+            .next()
+            .map(|el| el.text().collect())
+            .unwrap_or_default();
+        let time_text: String = card
+            .select(&time_sel)
+            .next()
+            .map(|el| el.text().collect())
+            .unwrap_or_default();
+
+        // Parse month + day from e.g. "Saturday, Feb 28".
+        let caps = match oh_date_re().captures(date_text.trim()) {
+            Some(c) => c,
+            None => continue,
+        };
+        let month = match month_abbrev_num(&caps[1]) {
+            Some(m) => m,
+            None => continue,
+        };
+        let day: u32 = match caps[2].parse() {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+
+        // Parse start + optional end from e.g. "2:00pm - 4:00pm".
+        let parts: Vec<&str> = time_text.trim().splitn(2, " - ").collect();
+        let (start_h, start_m) = match parts.first().and_then(|t| parse_12h_time(t)) {
+            Some(t) => t,
+            None => continue,
+        };
+        let end_time = parts
+            .get(1)
+            .and_then(|t| parse_12h_time(t))
+            .map(|(h, m)| format!("{:04}-{:02}-{:02}T{:02}:{:02}:00", year, month, day, h, m));
+
+        events.push(OpenHouseEvent {
+            start_time: format!(
+                "{:04}-{:02}-{:02}T{:02}:{:02}:00",
+                year, month, day, start_h, start_m
+            ),
+            end_time,
+        });
+    }
+    events
 }
 
 // ── School extraction ─────────────────────────────────────────────────────────
@@ -395,6 +507,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         property_type,
         listed_date,
         mls_number: None,
+        open_houses: vec![],
     })
 }
 
@@ -488,10 +601,20 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     }
 
     let image_urls = extract_image_urls(&json_ld);
+
+    // Derive year from listed_date ("2026-02-24" → 2026) for date resolution.
+    let year = property
+        .listed_date
+        .as_deref()
+        .and_then(|d| d.split('-').next())
+        .and_then(|y| y.parse::<i32>().ok())
+        .unwrap_or(2026);
+    let open_houses = extract_open_houses(&document, year);
+
     Some(ParsedListing {
         property,
         image_urls,
-        open_houses: vec![],
+        open_houses,
     })
 }
 
@@ -500,7 +623,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parsers::test_support::{fixture, listing_to_property};
+    use crate::parsers::test_support::{fixture, listing_to_property, listing_to_snapshot};
 
     #[test]
     fn redfin_829_e14th() {
@@ -557,6 +680,20 @@ mod tests {
             &html,
         )
         .expect("parse failed");
-        insta::assert_json_snapshot!("redfin_2748_e23rd", listing_to_property(listing));
+        insta::assert_json_snapshot!("redfin_2748_e23rd", listing_to_snapshot(listing));
+    }
+
+    #[test]
+    fn redfin_3206_e25th() {
+        let html = std::fs::read_to_string(fixture(
+            "3206 E 25th Ave, Vancouver, BC V5R 1J6 _ MLS# R3093182 _ Redfin.html",
+        ))
+        .expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/3206-E-25th-Ave-V5R-1J6/home/154634866",
+            &html,
+        )
+        .expect("parse failed");
+        insta::assert_json_snapshot!("redfin_3206_e25th", listing_to_snapshot(listing));
     }
 }

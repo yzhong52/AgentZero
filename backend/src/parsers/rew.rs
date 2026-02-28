@@ -422,6 +422,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         school_secondary_rating: None,
         listed_date: None,
         mls_number,
+        open_houses: vec![],
     };
 
     Some(ParsedListing {

@@ -1,5 +1,5 @@
 use crate::models::property::{ListingStatus, Property};
-use crate::store::image_store;
+use crate::store::{image_store, open_house_store};
 use sqlx::{sqlite::SqliteConnectOptions, Row, SqlitePool};
 use std::str::FromStr;
 
@@ -285,10 +285,13 @@ pub async fn list(
     Ok(properties)
 }
 
-/// Fetch a single property by ID (with images).
+/// Fetch a single property by ID (with images and open houses).
 pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
     let mut p = fetch_one_by_id(pool, id).await?;
     p.images = image_store::list_images_with_meta(pool, p.id)
+        .await
+        .unwrap_or_default();
+    p.open_houses = open_house_store::list_open_houses(pool, p.id)
         .await
         .unwrap_or_default();
     Ok(p)
@@ -397,6 +400,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         lat: row.get("lat"),
         lon: row.get("lon"),
         images: vec![],
+        open_houses: vec![],
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
@@ -473,6 +477,7 @@ mod tests {
             lat: Some(49.28),
             lon: Some(-123.12),
             images: vec![],
+            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
             notes: None,
@@ -557,6 +562,7 @@ mod tests {
             lat: None,
             lon: None,
             images: vec![],
+            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
             notes: None,

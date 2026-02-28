@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
-import type { OpenHouse, Property, Search } from './types'
+import type { Property, Search } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 
 type HistoryEntry = {
@@ -855,7 +855,7 @@ export function PropertyDetail() {
         <>
             <div className="detail-nav">
                 <button className="back-btn" onClick={() => navigate('/')}>
-                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     Back
                 </button>
                 <span className="detail-nav-title" title={property.title}>{property.title}</span>
@@ -870,804 +870,807 @@ export function PropertyDetail() {
             </div>
 
             <div className="property-detail">
-            {diffModal !== null && (
-                <RefreshDiffModal
-                    diffs={diffModal}
-                    onApply={applyRefresh}
-                    onCancel={() => setDiffModal(null)}
-                    applying={applying}
-                />
-            )}
-
-            {error && <div className="message error">{error}</div>}
-            {refreshMsg && <div className="message success">{refreshMsg}</div>}
-
-            {lightboxOpen && property.images.length > 0 && (
-                <div className="modal-overlay" onClick={() => setLightboxOpen(false)}>
-                    <div className="lightbox-panel" onClick={e => e.stopPropagation()}>
-                        <div className="lightbox-header">
-                            <button className="lightbox-close" onClick={() => setLightboxOpen(false)}>✕</button>
-                            <span className="lightbox-title">{property.title}</span>
-                            <span className="lightbox-count">{property.images.length} photos</span>
-                        </div>
-                        <div className="lightbox-body">
-                            <div className="lightbox-thumbs" ref={thumbsRef}>
-                                {property.images.map((img, i) => (
-                                    <img
-                                        key={img.id}
-                                        src={img.url}
-                                        alt={`${i + 1}`}
-                                        className={`lightbox-thumb${activeIdx === i ? ' active' : ''}`}
-                                        onClick={() => {
-                                            setActiveIdx(i)
-                                            scrollRef.current
-                                                ?.querySelectorAll<HTMLElement>('.lightbox-item')
-                                            [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                            <div
-                                className="lightbox-scroll"
-                                ref={scrollRef}
-                                onScroll={() => {
-                                    const container = scrollRef.current
-                                    if (!container) return
-                                    const items = container.querySelectorAll<HTMLElement>('.lightbox-item')
-                                    let closest = 0
-                                    let minDist = Infinity
-                                    items.forEach((el, i) => {
-                                        const dist = Math.abs(el.getBoundingClientRect().top - container.getBoundingClientRect().top)
-                                        if (dist < minDist) { minDist = dist; closest = i }
-                                    })
-                                    if (closest !== activeIdx) {
-                                        setActiveIdx(closest)
-                                        const thumb = thumbsRef.current?.querySelectorAll<HTMLElement>('.lightbox-thumb')[closest]
-                                        thumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                                    }
-                                }}
-                            >
-                                {property.images.map((img, i) => (
-                                    <div key={img.id} className="lightbox-item">
-                                        <img src={img.url} alt={`${property.title} — ${i + 1}`} className="lightbox-img" />
-                                        <span className="lightbox-caption">{i + 1} / {property.images.length}</span>
-                                        <span className="lightbox-date">{formatImgDate(img.created_at)}</span>
-                                        <button
-                                            className="lightbox-delete-btn"
-                                            title="Delete image"
-                                            onClick={e => { e.stopPropagation(); handleDeleteImage(img.id) }}
-                                        >✕</button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className="detail-images">
-                {property.images.length > 0 ? (
-                    <div className="image-grid" onClick={() => setLightboxOpen(true)}>
-                        {property.images.slice(0, 3).map((img, i) => (
-                            <div
-                                key={img.id}
-                                className={`image-grid-cell${i === 0 ? ' image-grid-main' : ''}`}
-                            >
-                                <img src={img.url} alt={property.title} className="image-grid-img" />
-                                {i === 2 && property.images.length > 3 && (
-                                    <div className="image-grid-more">+{property.images.length - 3}</div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="no-image">No images available</div>
+                {diffModal !== null && (
+                    <RefreshDiffModal
+                        diffs={diffModal}
+                        onApply={applyRefresh}
+                        onCancel={() => setDiffModal(null)}
+                        applying={applying}
+                    />
                 )}
-            </div>
 
-            <div className="detail-body">
-                <div className="detail-content">
-                    <div className="detail-header">
-                        <input
-                            className="title-input"
-                            value={titleDraft}
-                            onChange={e => setTitleDraft(e.target.value)}
-                            onBlur={handleTitleSave}
-                            placeholder="(no title)"
-                            aria-label="Property title"
-                        />
-                        <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
-                    </div>
+                {error && <div className="message error">{error}</div>}
+                {refreshMsg && <div className="message success">{refreshMsg}</div>}
 
-                    {address && <div className="detail-address">{address}</div>}
-
-                    {property.description && (
-                        <div className="detail-description">
-                            <h3>Description</h3>
-                            <p>{property.description}</p>
-                        </div>
-                    )}
-
-                    <div className="tracked-details">
-                        <div className="tracked-details-header">
-                            <h3>Details</h3>
-                            {!editMode ? (
-                                <button className="edit-btn" onClick={enterEdit}>Edit</button>
-                            ) : (
-                                <div className="detail-edit-actions">
-                                    <button className="save-btn" onClick={handleSaveEdits} disabled={saving}>
-                                        {saving ? 'Saving…' : 'Save'}
-                                    </button>
-                                    <button className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="tracked-group">
-                            <h4>Property</h4>
-                            <div className="tracked-fields">
-                                {(p.bedrooms != null || editMode) && (
-                                    <Field label={LABELS.BEDROOMS} viewVal={numLabel(p.bedrooms)}
-                                        editEl={<NumInput label={LABELS.BEDROOMS} value={draft?.bedrooms ?? null} onChange={v => setDraftField('bedrooms', v)} />} />
-                                )}
-                                {(p.bathrooms != null || editMode) && (
-                                    <Field label={LABELS.BATHROOMS} viewVal={numLabel(p.bathrooms)}
-                                        editEl={<NumInput label={LABELS.BATHROOMS} value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
-                                )}
-                                {(p.year_built != null || editMode) && (
-                                    <Field label={LABELS.YEAR_BUILT} viewVal={numLabel(p.year_built)}
-                                        editEl={<NumInput label={LABELS.YEAR_BUILT} value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
-                                )}
-                                {(p.sqft != null || editMode) && (
-                                    <Field label={LABELS.LIVING_AREA} viewVal={numLabel(p.sqft, ' sqft')}
-                                        editEl={<NumInput label={LABELS.LIVING_AREA} value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
-                                )}
-                                {(p.land_sqft != null || editMode) && (
-                                    <Field label={LABELS.LOT_SIZE} viewVal={numLabel(p.land_sqft, ' sqft')}
-                                        editEl={<NumInput label={LABELS.LOT_SIZE} value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
-                                )}
+                {lightboxOpen && property.images.length > 0 && (
+                    <div className="modal-overlay" onClick={() => setLightboxOpen(false)}>
+                        <div className="lightbox-panel" onClick={e => e.stopPropagation()}>
+                            <div className="lightbox-header">
+                                <button className="lightbox-close" onClick={() => setLightboxOpen(false)}>✕</button>
+                                <span className="lightbox-title">{property.title}</span>
+                                <span className="lightbox-count">{property.images.length} photos</span>
                             </div>
-                        </div>
-
-                        <div className="tracked-group">
-                            <h4>Parking</h4>
-                            <div className="tracked-fields">
-                                <Field label={LABELS.TOTAL_PARKING} viewVal={numLabel(totalParkingSpace)} />
-                                <Field label={LABELS.GARAGE} viewVal={numLabel(p.parking_garage)}
-                                    editEl={<NumInput label={LABELS.GARAGE} value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
-                                {(p.parking_carport != null || editMode) && (
-                                    <Field label={LABELS.CARPORT} viewVal={numLabel(p.parking_carport)}
-                                        editEl={<NumInput label={LABELS.CARPORT} value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
-                                )}
-                                {(p.parking_pad != null || editMode) && (
-                                    <Field label={LABELS.PARKING_PAD} viewVal={numLabel(p.parking_pad)}
-                                        editEl={<NumInput label={LABELS.PARKING_PAD} value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
-                                )}
-                            </div>
-                        </div>
-
-
-
-                        {(editMode || p.radiant_floor_heating != null || p.ac != null) && (
-                            <div className="tracked-group">
-                                <h4>Features</h4>
-                                <div className="tracked-fields">
-                                    {(p.radiant_floor_heating != null || editMode) && (
-                                        <Field label={LABELS.RADIANT_FLOOR_HEATING} viewVal={boolLabel(p.radiant_floor_heating)}
-                                            editEl={<BoolSelect label={LABELS.RADIANT_FLOOR_HEATING} value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
-                                    )}
-                                    {(p.ac != null || editMode) && (
-                                        <Field label={LABELS.AIR_CONDITIONING} viewVal={boolLabel(p.ac)}
-                                            editEl={<BoolSelect label={LABELS.AIR_CONDITIONING} value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {(editMode || p.school_elementary != null || p.school_middle != null || p.school_secondary != null) && (
-                            <div className="tracked-group">
-                                <h4>Nearby Schools <span className="school-source-note">(Fraser Institute rating /10)</span></h4>
-                                <div className="tracked-fields">
-                                    {(p.school_elementary != null || editMode) && (
-                                        <div className="tracked-field">
-                                            <label>{LABELS.SCHOOL_ELEMENTARY}</label>
-                                            {editMode ? (
-                                                <div className="school-edit-row">
-                                                    <input className="edit-input" value={draft?.school_elementary ?? ''} onChange={e => setDraftField('school_elementary', e.target.value || null)} placeholder="School name" />
-                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_elementary_rating ?? ''} onChange={e => setDraftField('school_elementary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                                </div>
-                                            ) : (
-                                                <span className="tracked-value school-entry">
-                                                    {p.school_elementary ?? '—'}
-                                                    {p.school_elementary_rating != null && <span className="school-rating">{p.school_elementary_rating.toFixed(1)}</span>}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                    {(p.school_middle != null || editMode) && (
-                                        <div className="tracked-field">
-                                            <label>{LABELS.SCHOOL_MIDDLE}</label>
-                                            {editMode ? (
-                                                <div className="school-edit-row">
-                                                    <input className="edit-input" value={draft?.school_middle ?? ''} onChange={e => setDraftField('school_middle', e.target.value || null)} placeholder="School name" />
-                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_middle_rating ?? ''} onChange={e => setDraftField('school_middle_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                                </div>
-                                            ) : (
-                                                <span className="tracked-value school-entry">
-                                                    {p.school_middle ?? '—'}
-                                                    {p.school_middle_rating != null && <span className="school-rating">{p.school_middle_rating.toFixed(1)}</span>}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                    {(p.school_secondary != null || editMode) && (
-                                        <div className="tracked-field">
-                                            <label>{LABELS.SCHOOL_SECONDARY}</label>
-                                            {editMode ? (
-                                                <div className="school-edit-row">
-                                                    <input className="edit-input" value={draft?.school_secondary ?? ''} onChange={e => setDraftField('school_secondary', e.target.value || null)} placeholder="School name" />
-                                                    <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_secondary_rating ?? ''} onChange={e => setDraftField('school_secondary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
-                                                </div>
-                                            ) : (
-                                                <span className="tracked-value school-entry">
-                                                    {p.school_secondary ?? '—'}
-                                                    {p.school_secondary_rating != null && <span className="school-rating">{p.school_secondary_rating.toFixed(1)}</span>}
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                    </div>
-
-                    <div className="location-card">
-                        <div className="tracked-details-header">
-                            <h3>Location</h3>
-                            {!locationEditMode ? (
-                                <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
-                            ) : (
-                                <div className="detail-edit-actions">
-                                    <button className="save-btn" onClick={saveLocationEdits} disabled={locationSaving}>
-                                        {locationSaving ? 'Saving…' : 'Save'}
-                                    </button>
-                                    <button className="cancel-btn" onClick={cancelLocationEdit} disabled={locationSaving}>Cancel</button>
-                                </div>
-                            )}
-                        </div>
-                        <div className="tracked-fields location-fields">
-                            <div className="tracked-field"><label>{LABELS.STREET_ADDRESS}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>{LABELS.CITY}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>{LABELS.REGION_PROVINCE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
-                            <div className="tracked-field"><label>{LABELS.POSTAL_CODE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
-                        </div>
-
-                        <div className="location-subsection">
-                            <h4>Transit</h4>
-                            <div className="tracked-fields">
-                                <div className="tracked-field">
-                                    <label>{LABELS.SKYTRAIN_STATION}</label>
-                                    {locationEditMode ? (
-                                        <input className="edit-input" value={locationDraft?.skytrain_station ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_station: e.target.value || null } : d)} />
-                                    ) : (
-                                        <span className="tracked-value">{property.skytrain_station ?? '—'}</span>
-                                    )}
-                                </div>
-                                <div className="tracked-field">
-                                    <label>{LABELS.WALK_TIME}</label>
-                                    {locationEditMode ? (
-                                        <input className="edit-input" type="number" value={locationDraft?.skytrain_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
-                                    ) : (
-                                        <span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {property.lat != null && property.lon != null && (
-                            <div className="map-preview">
-                                <iframe
-                                    title="Property Location"
-                                    src={`https://maps.google.com/maps?q=${property.lat},${property.lon}&z=15&output=embed`}
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="offer-finance-card">
-                        <div className="tracked-details-header">
-                            <h3>Offer, Cost &amp; Finance</h3>
-                            {!financeEditMode ? (
-                                <button className="edit-btn" onClick={enterFinanceEdit}>Edit</button>
-                            ) : (
-                                <div className="detail-edit-actions">
-                                    <button className="save-btn" onClick={saveFinanceEdits} disabled={financeSaving}>
-                                        {financeSaving ? 'Saving…' : 'Save'}
-                                    </button>
-                                    <button className="cancel-btn" onClick={cancelFinanceEdit} disabled={financeSaving}>Cancel</button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="offer-finance-row offer-finance-row-1">
-                            <div className="tracked-field">
-                                <label>Target Offer Price <span className="info-icon">ⓘ<span className="info-tooltip">Used as the base for mortgage calculations. Leave blank to use the listing price.</span></span></label>
-                                {financeEditMode ? (
-                                    <div className="target-offer-edit-row">
-                                        <input
-                                            className="edit-input target-offer-input"
-                                            type="number"
-                                            value={financeDraft?.offer_price ?? ''}
-                                            onChange={e => {
-                                                const updated = recalcMortgage({ ...financeDraft!, offer_price: e.target.value ? Number(e.target.value) : null })
-                                                setFinanceDraft(updated)
+                            <div className="lightbox-body">
+                                <div className="lightbox-thumbs" ref={thumbsRef}>
+                                    {property.images.map((img, i) => (
+                                        <img
+                                            key={img.id}
+                                            src={img.url}
+                                            alt={`${i + 1}`}
+                                            className={`lightbox-thumb${activeIdx === i ? ' active' : ''}`}
+                                            onClick={() => {
+                                                setActiveIdx(i)
+                                                scrollRef.current
+                                                    ?.querySelectorAll<HTMLElement>('.lightbox-item')
+                                                [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
                                             }}
-                                            placeholder="Defaults to listing price"
                                         />
-                                        {hasCustomOfferPrice && (
-                                            <span className="offer-price-original">
-                                                {formatPrice(finance.price, finance.price_currency)}
-                                            </span>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <button className="offer-price-btn" onClick={enterFinanceEdit}>
-                                        <span className="offer-price-value">
-                                            {formatPrice(effectiveOfferPrice, finance.price_currency) ?? '—'}
-                                        </span>
-                                        {hasCustomOfferPrice && (
-                                            <span className="offer-price-original">
-                                                {formatPrice(finance.price, finance.price_currency)}
-                                            </span>
-                                        )}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="offer-finance-row offer-finance-row-3">
-                            <div className="tracked-field">
-                                <label>{LABELS.DOWN_PAYMENT_PCT}</label>
-                                {financeEditMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="number"
-                                        min={0} max={100} step={1}
-                                        value={financeDraft?.down_payment_pct != null ? (financeDraft.down_payment_pct * 100).toFixed(0) : ''}
-                                        onChange={e => {
-                                            const pct = e.target.value ? Number(e.target.value) / 100 : null
-                                            const updated = recalcMortgage({ ...financeDraft!, down_payment_pct: pct })
-                                            setFinanceDraft(updated)
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="tracked-value">{finance.down_payment_pct != null ? `${(finance.down_payment_pct * 100).toFixed(0)}%` : '—'}</span>
-                                )}
-                            </div>
-
-                            <div className="tracked-field">
-                                <label>{LABELS.MORTGAGE_RATE}</label>
-                                {financeEditMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="number"
-                                        min={0} max={30} step={0.01}
-                                        value={financeDraft?.mortgage_interest_rate != null ? (financeDraft.mortgage_interest_rate * 100).toFixed(2) : ''}
-                                        onChange={e => {
-                                            const rate = e.target.value ? Number(e.target.value) / 100 : null
-                                            const updated = recalcMortgage({ ...financeDraft!, mortgage_interest_rate: rate })
-                                            setFinanceDraft(updated)
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="tracked-value">{finance.mortgage_interest_rate != null ? `${(finance.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}</span>
-                                )}
-                            </div>
-
-                            <div className="tracked-field">
-                                <label>{LABELS.AMORTIZATION_YEARS}</label>
-                                {financeEditMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="number"
-                                        min={1} max={40} step={1}
-                                        value={financeDraft?.amortization_years ?? ''}
-                                        onChange={e => {
-                                            const yrs = e.target.value ? Number(e.target.value) : null
-                                            const updated = recalcMortgage({ ...financeDraft!, amortization_years: yrs })
-                                            setFinanceDraft(updated)
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="tracked-value">{numLabel(finance.amortization_years, ' yr')}</span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="offer-finance-row offer-finance-row-3">
-                            <div className="tracked-field">
-                                <label>{LABELS.PROPERTY_TAX}</label>
-                                {financeEditMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="number"
-                                        value={financeDraft?.property_tax ?? ''}
-                                        onChange={e => {
-                                            const updated = recalcMortgage({ ...financeDraft!, property_tax: e.target.value ? Number(e.target.value) : null })
-                                            setFinanceDraft(updated)
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="tracked-value">{moneyLabel(finance.property_tax)}</span>
-                                )}
-                            </div>
-
-                            <div className="tracked-field">
-                                <label>{LABELS.HOA_MONTHLY}</label>
-                                {financeEditMode ? (
-                                    <input
-                                        className="edit-input"
-                                        type="number"
-                                        value={financeDraft?.hoa_monthly ?? ''}
-                                        onChange={e => {
-                                            const updated = recalcMortgage({ ...financeDraft!, hoa_monthly: e.target.value ? Number(e.target.value) : null })
-                                            setFinanceDraft(updated)
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="tracked-value">{moneyLabel(finance.hoa_monthly)}</span>
-                                )}
-                            </div>
-
-                            <div className="tracked-field offer-finance-spacer" aria-hidden="true" />
-                        </div>
-
-                        <div className="offer-finance-row offer-finance-row-3">
-                            <div className="tracked-field">
-                                <label>Mortgage (Monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
-                                <span className="tracked-value">{moneyLabel(finance.mortgage_monthly)}</span>
-                            </div>
-                            <div className="tracked-field">
-                                <label>Monthly Total <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyTotalBreakdown}</span></span></label>
-                                <span className="tracked-value">{moneyLabel(monthlyTotalDerived)}</span>
-                            </div>
-                            <div className="tracked-field">
-                                <label>Monthly Cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
-                                <span className="tracked-value">{moneyLabel(monthlyCost)}</span>
-                            </div>
-                        </div>
-
-                        <div className="offer-finance-rental">
-                            <h4>Rental</h4>
-                            <div className="tracked-fields">
-                                <div className="tracked-field">
-                                    <label>Has Rental Suite</label>
-                                    {financeEditMode ? (
-                                        <select className="edit-input" value={financeDraft?.has_rental_suite === null ? '' : financeDraft?.has_rental_suite ? 'true' : 'false'} onChange={e => setFinanceDraft(d => d ? { ...d, has_rental_suite: e.target.value === '' ? null : e.target.value === 'true' } : d)}>
-                                            <option value="">—</option>
-                                            <option value="true">Yes</option>
-                                            <option value="false">No</option>
-                                        </select>
-                                    ) : (
-                                        <span className="tracked-value">{boolLabel(finance.has_rental_suite)}</span>
-                                    )}
+                                    ))}
                                 </div>
-                                {(financeEditMode || finance.has_rental_suite !== false) && (
-                                    <div className="tracked-field">
-                                        <label>Rental Income (Monthly)</label>
-                                        {financeEditMode ? (
-                                            <input className="edit-input" type="number" value={financeDraft?.rental_income ?? ''} onChange={e => setFinanceDraft(d => d ? { ...d, rental_income: e.target.value ? Number(e.target.value) : null } : d)} />
-                                        ) : (
-                                            <span className="tracked-value">{moneyLabel(finance.rental_income)}</span>
-                                        )}
-                                    </div>
-                                )}
+                                <div
+                                    className="lightbox-scroll"
+                                    ref={scrollRef}
+                                    onScroll={() => {
+                                        const container = scrollRef.current
+                                        if (!container) return
+                                        const items = container.querySelectorAll<HTMLElement>('.lightbox-item')
+                                        let closest = 0
+                                        let minDist = Infinity
+                                        items.forEach((el, i) => {
+                                            const dist = Math.abs(el.getBoundingClientRect().top - container.getBoundingClientRect().top)
+                                            if (dist < minDist) { minDist = dist; closest = i }
+                                        })
+                                        if (closest !== activeIdx) {
+                                            setActiveIdx(closest)
+                                            const thumb = thumbsRef.current?.querySelectorAll<HTMLElement>('.lightbox-thumb')[closest]
+                                            thumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                                        }
+                                    }}
+                                >
+                                    {property.images.map((img, i) => (
+                                        <div key={img.id} className="lightbox-item">
+                                            <img src={img.url} alt={`${property.title} — ${i + 1}`} className="lightbox-img" />
+                                            <span className="lightbox-caption">{i + 1} / {property.images.length}</span>
+                                            <span className="lightbox-date">{formatImgDate(img.created_at)}</span>
+                                            <button
+                                                className="lightbox-delete-btn"
+                                                title="Delete image"
+                                                onClick={e => { e.stopPropagation(); handleDeleteImage(img.id) }}
+                                            >✕</button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
 
-                <div className="notes-panel">
-                    <div className="status-picker right-panel-section">
-                        <h3 className="notes-heading">Status</h3>
-                        <div className="status-picker-buttons">
-                            {STATUS_OPTIONS.map(s => (
-                                <button
-                                    key={s}
-                                    className={`status-option-btn${property.status === s ? ' active' : ''}`}
-                                    style={property.status === s ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
-                                    onClick={() => handleStatusChange(s)}
+                <div className="detail-images">
+                    {property.images.length > 0 ? (
+                        <div className="image-grid" onClick={() => setLightboxOpen(true)}>
+                            {property.images.slice(0, 3).map((img, i) => (
+                                <div
+                                    key={img.id}
+                                    className={`image-grid-cell${i === 0 ? ' image-grid-main' : ''}`}
                                 >
-                                    {s}
-                                </button>
+                                    <img src={img.url} alt={property.title} className="image-grid-img" />
+                                    {i === 2 && property.images.length > 3 && (
+                                        <div className="image-grid-more">+{property.images.length - 3}</div>
+                                    )}
+                                </div>
                             ))}
                         </div>
-                    </div>
-
-                    {searches.length > 0 && (
-                        <div className="search-picker right-panel-section">
-                            <h3 className="notes-heading">Search</h3>
-                            <select
-                                className="search-picker-select"
-                                value={property.search_id}
-                                onChange={e => {
-                                    const val = Number(e.target.value)
-                                    if (val) handleMoveToSearch(val)
-                                }}
-                            >
-                                {searches.map(s => (
-                                    <option key={s.id} value={s.id}>{s.title}</option>
-                                ))}
-                            </select>
-                        </div>
+                    ) : (
+                        <div className="no-image">No images available</div>
                     )}
+                </div>
 
-                    <div className="right-panel-section">
-                        <h3 className="notes-heading">My Notes</h3>
-                        {notesEditing ? (
-                            <div className="notes-edit-wrap">
-                                <textarea
-                                    ref={notesInputRef}
-                                    className="notes-textarea"
-                                    value={notes}
-                                    onChange={e => {
-                                        const next = replaceEmojiShortcodes(e.target.value)
-                                        setNotes(next)
-                                        refreshEmojiSuggestions(next, e.target.selectionStart ?? next.length)
-                                    }}
-                                    onClick={e => refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)}
-                                    onKeyUp={e => {
-                                        if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') {
-                                            return
-                                        }
-                                        refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)
-                                    }}
-                                    onKeyDown={e => {
-                                        if (emojiSuggestions.length === 0) return
-                                        if (e.key === 'ArrowDown') {
-                                            e.preventDefault()
-                                            setEmojiSuggestActiveIdx(i => (i + 1) % emojiSuggestions.length)
-                                            return
-                                        }
-                                        if (e.key === 'ArrowUp') {
-                                            e.preventDefault()
-                                            setEmojiSuggestActiveIdx(i => (i - 1 + emojiSuggestions.length) % emojiSuggestions.length)
-                                            return
-                                        }
-                                        if (e.key === 'Enter' || e.key === 'Tab') {
-                                            e.preventDefault()
-                                            const picked = emojiSuggestions[emojiSuggestActiveIdx] ?? emojiSuggestions[0]
-                                            if (picked) insertEmojiSuggestion(picked)
-                                            return
-                                        }
-                                        if (e.key === 'Escape') {
-                                            e.preventDefault()
-                                            setEmojiSuggestions([])
-                                            setEmojiSuggestRange(null)
-                                        }
-                                    }}
-                                    onBlur={() => {
-                                        setEmojiSuggestions([])
-                                        setEmojiSuggestRange(null)
-                                        setNotesEditing(false)
-                                        handleNotesSave()
-                                    }}
-                                    placeholder="Add personal notes… (supports markdown, emoji shortcodes like :warning:)"
-                                    disabled={notesSaving}
-                                    autoFocus
-                                />
-                                {emojiSuggestions.length > 0 && (
-                                    <div className="emoji-suggest" role="listbox" aria-label="Emoji suggestions">
-                                        {emojiSuggestions.map((item, idx) => (
-                                            <button
-                                                key={`${item.name}-${item.emoji}`}
-                                                type="button"
-                                                className={`emoji-suggest-item${idx === emojiSuggestActiveIdx ? ' active' : ''}`}
-                                                onMouseDown={e => {
-                                                    e.preventDefault()
-                                                    insertEmojiSuggestion(item)
-                                                }}
-                                                title={`:${item.name}:`}
-                                            >
-                                                <span className="emoji-suggest-glyph">{item.emoji}</span>
-                                                <span className="emoji-suggest-name">:{item.name}:</span>
-                                            </button>
-                                        ))}
+                <div className="detail-body">
+                    <div className="detail-content">
+                        <div className="detail-header">
+                            <input
+                                className="title-input"
+                                value={titleDraft}
+                                onChange={e => setTitleDraft(e.target.value)}
+                                onBlur={handleTitleSave}
+                                placeholder="(no title)"
+                                aria-label="Property title"
+                            />
+                            <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
+                        </div>
+
+                        {address && <div className="detail-address">{address}</div>}
+
+                        {property.description && (
+                            <div className="detail-description">
+                                <h3>Description</h3>
+                                <p>{property.description}</p>
+                            </div>
+                        )}
+
+                        <div className="tracked-details">
+                            <div className="tracked-details-header">
+                                <h3>Details</h3>
+                                {!editMode ? (
+                                    <button className="edit-btn" onClick={enterEdit}>Edit</button>
+                                ) : (
+                                    <div className="detail-edit-actions">
+                                        <button className="save-btn" onClick={handleSaveEdits} disabled={saving}>
+                                            {saving ? 'Saving…' : 'Save'}
+                                        </button>
+                                        <button className="cancel-btn" onClick={cancelEdit} disabled={saving}>Cancel</button>
                                     </div>
                                 )}
                             </div>
-                        ) : (
-                            <div
-                                className={`notes-display${notes ? '' : ' notes-display-empty'}`}
-                                onClick={() => setNotesEditing(true)}
-                                title="Click to edit"
-                            >
-                                {notes
-                                    ? <div dangerouslySetInnerHTML={{ __html: marked(notes) as string }} />
-                                    : <span>Add personal notes…</span>
-                                }
-                            </div>
-                        )}
-                        {notesSaving && <div className="notes-saving">Saving…</div>}
-                    </div>
 
-                    <div className="source-urls-panel right-panel-section">
-                        <div className="source-urls-header">
-                            <h3 className="notes-heading">External URLs</h3>
-                            <button
-                                className="refresh-btn"
-                                onClick={handleRefreshPreview}
-                                disabled={previewing || editMode || urlsSaving}
-                                title="Preview changes from source (saves URL edits first)"
-                            >
-                                {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
-                            </button>
+                            <div className="tracked-group">
+                                <h4>Property</h4>
+                                <div className="tracked-fields">
+                                    {(p.bedrooms != null || editMode) && (
+                                        <Field label={LABELS.BEDROOMS} viewVal={numLabel(p.bedrooms)}
+                                            editEl={<NumInput label={LABELS.BEDROOMS} value={draft?.bedrooms ?? null} onChange={v => setDraftField('bedrooms', v)} />} />
+                                    )}
+                                    {(p.bathrooms != null || editMode) && (
+                                        <Field label={LABELS.BATHROOMS} viewVal={numLabel(p.bathrooms)}
+                                            editEl={<NumInput label={LABELS.BATHROOMS} value={draft?.bathrooms ?? null} onChange={v => setDraftField('bathrooms', v)} />} />
+                                    )}
+                                    {(p.year_built != null || editMode) && (
+                                        <Field label={LABELS.YEAR_BUILT} viewVal={numLabel(p.year_built)}
+                                            editEl={<NumInput label={LABELS.YEAR_BUILT} value={draft?.year_built ?? null} onChange={v => setDraftField('year_built', v)} />} />
+                                    )}
+                                    {(p.sqft != null || editMode) && (
+                                        <Field label={LABELS.LIVING_AREA} viewVal={numLabel(p.sqft, ' sqft')}
+                                            editEl={<NumInput label={LABELS.LIVING_AREA} value={draft?.sqft ?? null} onChange={v => setDraftField('sqft', v)} />} />
+                                    )}
+                                    {(p.land_sqft != null || editMode) && (
+                                        <Field label={LABELS.LOT_SIZE} viewVal={numLabel(p.land_sqft, ' sqft')}
+                                            editEl={<NumInput label={LABELS.LOT_SIZE} value={draft?.land_sqft ?? null} onChange={v => setDraftField('land_sqft', v)} />} />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="tracked-group">
+                                <h4>Parking</h4>
+                                <div className="tracked-fields">
+                                    <Field label={LABELS.TOTAL_PARKING} viewVal={numLabel(totalParkingSpace)} />
+                                    <Field label={LABELS.GARAGE} viewVal={numLabel(p.parking_garage)}
+                                        editEl={<NumInput label={LABELS.GARAGE} value={draft?.parking_garage ?? null} onChange={v => setDraftField('parking_garage', v)} />} />
+                                    {(p.parking_carport != null || editMode) && (
+                                        <Field label={LABELS.CARPORT} viewVal={numLabel(p.parking_carport)}
+                                            editEl={<NumInput label={LABELS.CARPORT} value={draft?.parking_carport ?? null} onChange={v => setDraftField('parking_carport', v)} />} />
+                                    )}
+                                    {(p.parking_pad != null || editMode) && (
+                                        <Field label={LABELS.PARKING_PAD} viewVal={numLabel(p.parking_pad)}
+                                            editEl={<NumInput label={LABELS.PARKING_PAD} value={draft?.parking_pad ?? null} onChange={v => setDraftField('parking_pad', v)} />} />
+                                    )}
+                                </div>
+                            </div>
+
+
+
+                            {(editMode || p.radiant_floor_heating != null || p.ac != null) && (
+                                <div className="tracked-group">
+                                    <h4>Features</h4>
+                                    <div className="tracked-fields">
+                                        {(p.radiant_floor_heating != null || editMode) && (
+                                            <Field label={LABELS.RADIANT_FLOOR_HEATING} viewVal={boolLabel(p.radiant_floor_heating)}
+                                                editEl={<BoolSelect label={LABELS.RADIANT_FLOOR_HEATING} value={draft?.radiant_floor_heating ?? null} onChange={v => setDraftField('radiant_floor_heating', v)} />} />
+                                        )}
+                                        {(p.ac != null || editMode) && (
+                                            <Field label={LABELS.AIR_CONDITIONING} viewVal={boolLabel(p.ac)}
+                                                editEl={<BoolSelect label={LABELS.AIR_CONDITIONING} value={draft?.ac ?? null} onChange={v => setDraftField('ac', v)} />} />
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {(editMode || p.school_elementary != null || p.school_middle != null || p.school_secondary != null) && (
+                                <div className="tracked-group">
+                                    <h4>Nearby Schools <span className="school-source-note">(Fraser Institute rating /10)</span></h4>
+                                    <div className="tracked-fields">
+                                        {(p.school_elementary != null || editMode) && (
+                                            <div className="tracked-field">
+                                                <label>{LABELS.SCHOOL_ELEMENTARY}</label>
+                                                {editMode ? (
+                                                    <div className="school-edit-row">
+                                                        <input className="edit-input" value={draft?.school_elementary ?? ''} onChange={e => setDraftField('school_elementary', e.target.value || null)} placeholder="School name" />
+                                                        <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_elementary_rating ?? ''} onChange={e => setDraftField('school_elementary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                    </div>
+                                                ) : (
+                                                    <span className="tracked-value school-entry">
+                                                        {p.school_elementary ?? '—'}
+                                                        {p.school_elementary_rating != null && <span className="school-rating">{p.school_elementary_rating.toFixed(1)}</span>}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {(p.school_middle != null || editMode) && (
+                                            <div className="tracked-field">
+                                                <label>{LABELS.SCHOOL_MIDDLE}</label>
+                                                {editMode ? (
+                                                    <div className="school-edit-row">
+                                                        <input className="edit-input" value={draft?.school_middle ?? ''} onChange={e => setDraftField('school_middle', e.target.value || null)} placeholder="School name" />
+                                                        <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_middle_rating ?? ''} onChange={e => setDraftField('school_middle_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                    </div>
+                                                ) : (
+                                                    <span className="tracked-value school-entry">
+                                                        {p.school_middle ?? '—'}
+                                                        {p.school_middle_rating != null && <span className="school-rating">{p.school_middle_rating.toFixed(1)}</span>}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {(p.school_secondary != null || editMode) && (
+                                            <div className="tracked-field">
+                                                <label>{LABELS.SCHOOL_SECONDARY}</label>
+                                                {editMode ? (
+                                                    <div className="school-edit-row">
+                                                        <input className="edit-input" value={draft?.school_secondary ?? ''} onChange={e => setDraftField('school_secondary', e.target.value || null)} placeholder="School name" />
+                                                        <input className="edit-input edit-rating" type="number" min={0} max={10} step={0.1} value={draft?.school_secondary_rating ?? ''} onChange={e => setDraftField('school_secondary_rating', e.target.value ? Number(e.target.value) : null)} placeholder="Rating" />
+                                                    </div>
+                                                ) : (
+                                                    <span className="tracked-value school-entry">
+                                                        {p.school_secondary ?? '—'}
+                                                        {p.school_secondary_rating != null && <span className="school-rating">{p.school_secondary_rating.toFixed(1)}</span>}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
-                        {(() => {
-                            const filledRows = externalUrlRows.filter(({ key }) => urlDraft[key])
-                            const hiddenCount = externalUrlRows.length - filledRows.length
-                            const visibleRows = urlsExpanded ? externalUrlRows : filledRows
-                            return <>
-                                {visibleRows.map(({ key, label, placeholder }) => {
-                                    const currentValue = urlDraft[key]
-                                    const isEditing = editingUrlKey === key
-                                    return (
-                                        <div className="source-url-field" key={key}>
-                                            <label>{label}</label>
-                                            {isEditing ? (
-                                                <div className="source-url-edit-row">
-                                                    <input
-                                                        className="edit-input"
-                                                        type="url"
-                                                        value={currentValue ?? ''}
-                                                        onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
-                                                        placeholder={placeholder}
-                                                    />
-                                                    <button
-                                                        className="source-url-edit-btn"
-                                                        onClick={() => setEditingUrlKey(null)}
-                                                        title="Done editing"
-                                                        type="button"
-                                                    >
-                                                        ✓
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="source-url-line">
-                                                    {currentValue ? (
-                                                        <a className="source-url-link" href={currentValue} target="_blank" rel="noreferrer">
-                                                            {currentValue}
-                                                        </a>
-                                                    ) : (
-                                                        <span className="source-url-empty">—</span>
-                                                    )}
-                                                    <button
-                                                        className="source-url-edit-btn"
-                                                        onClick={() => setEditingUrlKey(key)}
-                                                        title={`Edit ${label} URL`}
-                                                        type="button"
-                                                    >
-                                                        <svg className="source-url-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                                            <path
-                                                                d="M4 20l4.7-1 9.3-9.3a1.4 1.4 0 0 0 0-2l-1.7-1.7a1.4 1.4 0 0 0-2 0L5 15.3 4 20z"
-                                                                stroke="currentColor"
-                                                                strokeWidth="1.8"
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                            />
-                                                            <path
-                                                                d="M13.2 6.8l4 4"
-                                                                stroke="currentColor"
-                                                                strokeWidth="1.8"
-                                                                strokeLinecap="round"
-                                                            />
-                                                        </svg>
-                                                    </button>
-                                                </div>
+
+                        <div className="location-card">
+                            <div className="tracked-details-header">
+                                <h3>Location</h3>
+                                {!locationEditMode ? (
+                                    <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
+                                ) : (
+                                    <div className="detail-edit-actions">
+                                        <button className="save-btn" onClick={saveLocationEdits} disabled={locationSaving}>
+                                            {locationSaving ? 'Saving…' : 'Save'}
+                                        </button>
+                                        <button className="cancel-btn" onClick={cancelLocationEdit} disabled={locationSaving}>Cancel</button>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="tracked-fields location-fields">
+                                <div className="tracked-field"><label>{LABELS.STREET_ADDRESS}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
+                                <div className="tracked-field"><label>{LABELS.CITY}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
+                                <div className="tracked-field"><label>{LABELS.REGION_PROVINCE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
+                                <div className="tracked-field"><label>{LABELS.POSTAL_CODE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
+                            </div>
+
+                            <div className="location-subsection">
+                                <h4>Transit</h4>
+                                <div className="tracked-fields">
+                                    <div className="tracked-field">
+                                        <label>{LABELS.SKYTRAIN_STATION}</label>
+                                        {locationEditMode ? (
+                                            <input className="edit-input" value={locationDraft?.skytrain_station ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_station: e.target.value || null } : d)} />
+                                        ) : (
+                                            <span className="tracked-value">{property.skytrain_station ?? '—'}</span>
+                                        )}
+                                    </div>
+                                    <div className="tracked-field">
+                                        <label>{LABELS.WALK_TIME}</label>
+                                        {locationEditMode ? (
+                                            <input className="edit-input" type="number" value={locationDraft?.skytrain_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
+                                        ) : (
+                                            <span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {property.lat != null && property.lon != null && (
+                                <div className="map-preview">
+                                    <iframe
+                                        title="Property Location"
+                                        src={`https://maps.google.com/maps?q=${property.lat},${property.lon}&z=15&output=embed`}
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="offer-finance-card">
+                            <div className="tracked-details-header">
+                                <h3>Offer, Cost &amp; Finance</h3>
+                                {!financeEditMode ? (
+                                    <button className="edit-btn" onClick={enterFinanceEdit}>Edit</button>
+                                ) : (
+                                    <div className="detail-edit-actions">
+                                        <button className="save-btn" onClick={saveFinanceEdits} disabled={financeSaving}>
+                                            {financeSaving ? 'Saving…' : 'Save'}
+                                        </button>
+                                        <button className="cancel-btn" onClick={cancelFinanceEdit} disabled={financeSaving}>Cancel</button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="offer-finance-row offer-finance-row-1">
+                                <div className="tracked-field">
+                                    <label>Target Offer Price <span className="info-icon">ⓘ<span className="info-tooltip">Used as the base for mortgage calculations. Leave blank to use the listing price.</span></span></label>
+                                    {financeEditMode ? (
+                                        <div className="target-offer-edit-row">
+                                            <input
+                                                className="edit-input target-offer-input"
+                                                type="number"
+                                                value={financeDraft?.offer_price ?? ''}
+                                                onChange={e => {
+                                                    const updated = recalcMortgage({ ...financeDraft!, offer_price: e.target.value ? Number(e.target.value) : null })
+                                                    setFinanceDraft(updated)
+                                                }}
+                                                placeholder="Defaults to listing price"
+                                            />
+                                            {hasCustomOfferPrice && (
+                                                <span className="offer-price-original">
+                                                    {formatPrice(finance.price, finance.price_currency)}
+                                                </span>
                                             )}
                                         </div>
-                                    )
-                                })}
-                                {!urlsExpanded && hiddenCount > 0 && (
-                                    <button className="panel-more-btn" onClick={() => setUrlsExpanded(true)}>
-                                        + {hiddenCount} more
-                                    </button>
-                                )}
-                                {urlsExpanded && (
-                                    <button className="panel-more-btn" onClick={() => { setUrlsExpanded(false); setEditingUrlKey(null) }}>
-                                        Show less
-                                    </button>
-                                )}
-                            </>
-                        })()}
-                        {hasUrlChanges && (
-                            <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
-                                {urlsSaving ? 'Saving…' : 'Save URLs'}
-                            </button>
-                        )}
+                                    ) : (
+                                        <button className="offer-price-btn" onClick={enterFinanceEdit}>
+                                            <span className="offer-price-value">
+                                                {formatPrice(effectiveOfferPrice, finance.price_currency) ?? '—'}
+                                            </span>
+                                            {hasCustomOfferPrice && (
+                                                <span className="offer-price-original">
+                                                    {formatPrice(finance.price, finance.price_currency)}
+                                                </span>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="offer-finance-row offer-finance-row-3">
+                                <div className="tracked-field">
+                                    <label>{LABELS.DOWN_PAYMENT_PCT}</label>
+                                    {financeEditMode ? (
+                                        <input
+                                            className="edit-input"
+                                            type="number"
+                                            min={0} max={100} step={1}
+                                            value={financeDraft?.down_payment_pct != null ? (financeDraft.down_payment_pct * 100).toFixed(0) : ''}
+                                            onChange={e => {
+                                                const pct = e.target.value ? Number(e.target.value) / 100 : null
+                                                const updated = recalcMortgage({ ...financeDraft!, down_payment_pct: pct })
+                                                setFinanceDraft(updated)
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="tracked-value">{finance.down_payment_pct != null ? `${(finance.down_payment_pct * 100).toFixed(0)}%` : '—'}</span>
+                                    )}
+                                </div>
+
+                                <div className="tracked-field">
+                                    <label>{LABELS.MORTGAGE_RATE}</label>
+                                    {financeEditMode ? (
+                                        <input
+                                            className="edit-input"
+                                            type="number"
+                                            min={0} max={30} step={0.01}
+                                            value={financeDraft?.mortgage_interest_rate != null ? (financeDraft.mortgage_interest_rate * 100).toFixed(2) : ''}
+                                            onChange={e => {
+                                                const rate = e.target.value ? Number(e.target.value) / 100 : null
+                                                const updated = recalcMortgage({ ...financeDraft!, mortgage_interest_rate: rate })
+                                                setFinanceDraft(updated)
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="tracked-value">{finance.mortgage_interest_rate != null ? `${(finance.mortgage_interest_rate * 100).toFixed(2)}%` : '—'}</span>
+                                    )}
+                                </div>
+
+                                <div className="tracked-field">
+                                    <label>{LABELS.AMORTIZATION_YEARS}</label>
+                                    {financeEditMode ? (
+                                        <input
+                                            className="edit-input"
+                                            type="number"
+                                            min={1} max={40} step={1}
+                                            value={financeDraft?.amortization_years ?? ''}
+                                            onChange={e => {
+                                                const yrs = e.target.value ? Number(e.target.value) : null
+                                                const updated = recalcMortgage({ ...financeDraft!, amortization_years: yrs })
+                                                setFinanceDraft(updated)
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="tracked-value">{numLabel(finance.amortization_years, ' yr')}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="offer-finance-row offer-finance-row-3">
+                                <div className="tracked-field">
+                                    <label>{LABELS.PROPERTY_TAX}</label>
+                                    {financeEditMode ? (
+                                        <input
+                                            className="edit-input"
+                                            type="number"
+                                            value={financeDraft?.property_tax ?? ''}
+                                            onChange={e => {
+                                                const updated = recalcMortgage({ ...financeDraft!, property_tax: e.target.value ? Number(e.target.value) : null })
+                                                setFinanceDraft(updated)
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="tracked-value">{moneyLabel(finance.property_tax)}</span>
+                                    )}
+                                </div>
+
+                                <div className="tracked-field">
+                                    <label>{LABELS.HOA_MONTHLY}</label>
+                                    {financeEditMode ? (
+                                        <input
+                                            className="edit-input"
+                                            type="number"
+                                            value={financeDraft?.hoa_monthly ?? ''}
+                                            onChange={e => {
+                                                const updated = recalcMortgage({ ...financeDraft!, hoa_monthly: e.target.value ? Number(e.target.value) : null })
+                                                setFinanceDraft(updated)
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="tracked-value">{moneyLabel(finance.hoa_monthly)}</span>
+                                    )}
+                                </div>
+
+                                <div className="tracked-field offer-finance-spacer" aria-hidden="true" />
+                            </div>
+
+                            <div className="offer-finance-row offer-finance-row-3">
+                                <div className="tracked-field">
+                                    <label>Mortgage (Monthly) <span className="info-icon">ⓘ<span className="info-tooltip">Derived from offer price (or listing price), down payment %, interest rate, and amortization years</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(finance.mortgage_monthly)}</span>
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Monthly Total <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyTotalBreakdown}</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(monthlyTotalDerived)}</span>
+                                </div>
+                                <div className="tracked-field">
+                                    <label>Monthly Cost <span className="info-icon">ⓘ<span className="info-tooltip">{monthlyCostBreakdown}</span></span></label>
+                                    <span className="tracked-value">{moneyLabel(monthlyCost)}</span>
+                                </div>
+                            </div>
+
+                            <div className="offer-finance-rental">
+                                <h4>Rental</h4>
+                                <div className="tracked-fields">
+                                    <div className="tracked-field">
+                                        <label>Has Rental Suite</label>
+                                        {financeEditMode ? (
+                                            <select className="edit-input" value={financeDraft?.has_rental_suite === null ? '' : financeDraft?.has_rental_suite ? 'true' : 'false'} onChange={e => setFinanceDraft(d => d ? { ...d, has_rental_suite: e.target.value === '' ? null : e.target.value === 'true' } : d)}>
+                                                <option value="">—</option>
+                                                <option value="true">Yes</option>
+                                                <option value="false">No</option>
+                                            </select>
+                                        ) : (
+                                            <span className="tracked-value">{boolLabel(finance.has_rental_suite)}</span>
+                                        )}
+                                    </div>
+                                    {(financeEditMode || finance.has_rental_suite !== false) && (
+                                        <div className="tracked-field">
+                                            <label>Rental Income (Monthly)</label>
+                                            {financeEditMode ? (
+                                                <input className="edit-input" type="number" value={financeDraft?.rental_income ?? ''} onChange={e => setFinanceDraft(d => d ? { ...d, rental_income: e.target.value ? Number(e.target.value) : null } : d)} />
+                                            ) : (
+                                                <span className="tracked-value">{moneyLabel(finance.rental_income)}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {openHouses.length > 0 && (
-                        <div className="open-houses-panel right-panel-section">
-                            <h3 className="notes-heading">Open Houses</h3>
-                            <ul className="open-houses-list">
-                                {openHouses.map(oh => (
-                                    <li key={oh.id} className={`open-house-entry${oh.visited ? ' visited' : ''}`}>
-                                        <div className="open-house-times">
-                                            <span className="open-house-date">
-                                                {new Date(oh.start_time).toLocaleDateString('en-CA', {
-                                                    weekday: 'short', month: 'short', day: 'numeric',
-                                                })}
-                                            </span>
-                                            <span className="open-house-time">
-                                                {new Date(oh.start_time).toLocaleTimeString('en-CA', {
-                                                    hour: 'numeric', minute: '2-digit',
-                                                })}
-                                                {oh.end_time && ` – ${new Date(oh.end_time).toLocaleTimeString('en-CA', {
-                                                    hour: 'numeric', minute: '2-digit',
-                                                })}`}
-                                            </span>
-                                        </div>
-                                        <button
-                                            className={`open-house-visited-btn${oh.visited ? ' active' : ''}`}
-                                            onClick={async () => {
-                                                const next = !oh.visited
-                                                await fetch(`/api/listings/${property!.id}/open-houses/${oh.id}`, {
-                                                    method: 'PATCH',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ visited: next }),
-                                                })
-                                                setOpenHouses(prev => prev.map(x => x.id === oh.id ? { ...x, visited: next } : x))
-                                            }}
-                                        >
-                                            {oh.visited ? 'Visited' : 'Mark visited'}
-                                        </button>
-                                    </li>
+                    <div className="notes-panel">
+                        <div className="status-picker right-panel-section">
+                            <h3 className="notes-heading">Status</h3>
+                            <div className="status-picker-buttons">
+                                {STATUS_OPTIONS.map(s => (
+                                    <button
+                                        key={s}
+                                        className={`status-option-btn${property.status === s ? ' active' : ''}`}
+                                        style={property.status === s ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+                                        onClick={() => handleStatusChange(s)}
+                                    >
+                                        {s}
+                                    </button>
                                 ))}
-                            </ul>
+                            </div>
                         </div>
-                    )}
 
-                    {history.length > 0 && (
-                        <div className="history-panel right-panel-section">
-                            <h3 className="notes-heading">Change History</h3>
-                            <ul className="history-list">
-                                {(historyExpanded ? history : history.slice(0, 1)).map(entry => (
-                                    <li key={entry.id} className="history-entry">
-                                        <span className="history-field">{entry.field_name}</span>
-                                        <span className="history-change">
-                                            {entry.old_value ?? '—'} → {entry.new_value ?? '—'}
-                                        </span>
-                                        <span className="history-date">
-                                            {new Date(entry.changed_at).toLocaleDateString('en-CA', {
-                                                month: 'short', day: 'numeric', year: 'numeric',
-                                            })}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                            {history.length > 1 && (
-                                <button className="panel-more-btn" onClick={() => setHistoryExpanded(h => !h)}>
-                                    {historyExpanded ? 'Show less' : `+ ${history.length - 1} more`}
+                        {searches.length > 0 && (
+                            <div className="search-picker right-panel-section">
+                                <h3 className="notes-heading">Search</h3>
+                                <select
+                                    className="search-picker-select"
+                                    value={property.search_id}
+                                    onChange={e => {
+                                        const val = Number(e.target.value)
+                                        if (val) handleMoveToSearch(val)
+                                    }}
+                                >
+                                    {searches.map(s => (
+                                        <option key={s.id} value={s.id}>{s.title}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div className="right-panel-section">
+                            <h3 className="notes-heading">My Notes</h3>
+                            {notesEditing ? (
+                                <div className="notes-edit-wrap">
+                                    <textarea
+                                        ref={notesInputRef}
+                                        className="notes-textarea"
+                                        value={notes}
+                                        onChange={e => {
+                                            const next = replaceEmojiShortcodes(e.target.value)
+                                            setNotes(next)
+                                            refreshEmojiSuggestions(next, e.target.selectionStart ?? next.length)
+                                        }}
+                                        onClick={e => refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)}
+                                        onKeyUp={e => {
+                                            if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') {
+                                                return
+                                            }
+                                            refreshEmojiSuggestions(notes, (e.target as HTMLTextAreaElement).selectionStart ?? notes.length)
+                                        }}
+                                        onKeyDown={e => {
+                                            if (emojiSuggestions.length === 0) return
+                                            if (e.key === 'ArrowDown') {
+                                                e.preventDefault()
+                                                setEmojiSuggestActiveIdx(i => (i + 1) % emojiSuggestions.length)
+                                                return
+                                            }
+                                            if (e.key === 'ArrowUp') {
+                                                e.preventDefault()
+                                                setEmojiSuggestActiveIdx(i => (i - 1 + emojiSuggestions.length) % emojiSuggestions.length)
+                                                return
+                                            }
+                                            if (e.key === 'Enter' || e.key === 'Tab') {
+                                                e.preventDefault()
+                                                const picked = emojiSuggestions[emojiSuggestActiveIdx] ?? emojiSuggestions[0]
+                                                if (picked) insertEmojiSuggestion(picked)
+                                                return
+                                            }
+                                            if (e.key === 'Escape') {
+                                                e.preventDefault()
+                                                setEmojiSuggestions([])
+                                                setEmojiSuggestRange(null)
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            setEmojiSuggestions([])
+                                            setEmojiSuggestRange(null)
+                                            setNotesEditing(false)
+                                            handleNotesSave()
+                                        }}
+                                        placeholder="Add personal notes… (supports markdown, emoji shortcodes like :warning:)"
+                                        disabled={notesSaving}
+                                        autoFocus
+                                    />
+                                    {emojiSuggestions.length > 0 && (
+                                        <div className="emoji-suggest" role="listbox" aria-label="Emoji suggestions">
+                                            {emojiSuggestions.map((item, idx) => (
+                                                <button
+                                                    key={`${item.name}-${item.emoji}`}
+                                                    type="button"
+                                                    className={`emoji-suggest-item${idx === emojiSuggestActiveIdx ? ' active' : ''}`}
+                                                    onMouseDown={e => {
+                                                        e.preventDefault()
+                                                        insertEmojiSuggestion(item)
+                                                    }}
+                                                    title={`:${item.name}:`}
+                                                >
+                                                    <span className="emoji-suggest-glyph">{item.emoji}</span>
+                                                    <span className="emoji-suggest-name">:{item.name}:</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div
+                                    className={`notes-display${notes ? '' : ' notes-display-empty'}`}
+                                    onClick={() => setNotesEditing(true)}
+                                    title="Click to edit"
+                                >
+                                    {notes
+                                        ? <div dangerouslySetInnerHTML={{ __html: marked(notes) as string }} />
+                                        : <span>Add personal notes…</span>
+                                    }
+                                </div>
+                            )}
+                            {notesSaving && <div className="notes-saving">Saving…</div>}
+                        </div>
+
+                        <div className="source-urls-panel right-panel-section">
+                            <div className="source-urls-header">
+                                <h3 className="notes-heading">External URLs</h3>
+                                <button
+                                    className="refresh-btn"
+                                    onClick={handleRefreshPreview}
+                                    disabled={previewing || editMode || urlsSaving}
+                                    title="Preview changes from source (saves URL edits first)"
+                                >
+                                    {previewing ? '⟳ Checking…' : urlsSaving ? 'Saving…' : '⟳ Refresh'}
+                                </button>
+                            </div>
+                            {(() => {
+                                const filledRows = externalUrlRows.filter(({ key }) => urlDraft[key])
+                                const hiddenCount = externalUrlRows.length - filledRows.length
+                                const visibleRows = urlsExpanded ? externalUrlRows : filledRows
+                                return <>
+                                    {visibleRows.map(({ key, label, placeholder }) => {
+                                        const currentValue = urlDraft[key]
+                                        const isEditing = editingUrlKey === key
+                                        return (
+                                            <div className="source-url-field" key={key}>
+                                                <label>{label}</label>
+                                                {isEditing ? (
+                                                    <div className="source-url-edit-row">
+                                                        <input
+                                                            className="edit-input"
+                                                            type="url"
+                                                            value={currentValue ?? ''}
+                                                            onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
+                                                            placeholder={placeholder}
+                                                        />
+                                                        <button
+                                                            className="source-url-edit-btn"
+                                                            onClick={() => setEditingUrlKey(null)}
+                                                            title="Done editing"
+                                                            type="button"
+                                                        >
+                                                            ✓
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="source-url-line">
+                                                        {currentValue ? (
+                                                            <a className="source-url-link" href={currentValue} target="_blank" rel="noreferrer">
+                                                                {currentValue}
+                                                            </a>
+                                                        ) : (
+                                                            <span className="source-url-empty">—</span>
+                                                        )}
+                                                        <button
+                                                            className="source-url-edit-btn"
+                                                            onClick={() => setEditingUrlKey(key)}
+                                                            title={`Edit ${label} URL`}
+                                                            type="button"
+                                                        >
+                                                            <svg className="source-url-edit-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                                <path
+                                                                    d="M4 20l4.7-1 9.3-9.3a1.4 1.4 0 0 0 0-2l-1.7-1.7a1.4 1.4 0 0 0-2 0L5 15.3 4 20z"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="1.8"
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                />
+                                                                <path
+                                                                    d="M13.2 6.8l4 4"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="1.8"
+                                                                    strokeLinecap="round"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                    {!urlsExpanded && hiddenCount > 0 && (
+                                        <button className="panel-more-btn" onClick={() => setUrlsExpanded(true)}>
+                                            + {hiddenCount} more
+                                        </button>
+                                    )}
+                                    {urlsExpanded && (
+                                        <button className="panel-more-btn" onClick={() => { setUrlsExpanded(false); setEditingUrlKey(null) }}>
+                                            Show less
+                                        </button>
+                                    )}
+                                </>
+                            })()}
+                            {hasUrlChanges && (
+                                <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
+                                    {urlsSaving ? 'Saving…' : 'Save URLs'}
                                 </button>
                             )}
                         </div>
-                    )}
 
-                    <div className="listing-timestamps right-panel-section">
-                        <span>Watched since: {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        <span>Last refreshed: {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                        {property.open_houses.length > 0 && (
+                            <div className="open-houses-panel right-panel-section">
+                                <h3 className="notes-heading">Open Houses</h3>
+                                <ul className="open-houses-list">
+                                    {property.open_houses.map(oh => (
+                                        <li key={oh.id} className={`open-house-entry${oh.visited ? ' visited' : ''}`}>
+                                            <div className="open-house-times">
+                                                <span className="open-house-date">
+                                                    {new Date(oh.start_time).toLocaleDateString('en-CA', {
+                                                        weekday: 'short', month: 'short', day: 'numeric',
+                                                    })}
+                                                </span>
+                                                <span className="open-house-time">
+                                                    {new Date(oh.start_time).toLocaleTimeString('en-CA', {
+                                                        hour: 'numeric', minute: '2-digit',
+                                                    })}
+                                                    {oh.end_time && ` – ${new Date(oh.end_time).toLocaleTimeString('en-CA', {
+                                                        hour: 'numeric', minute: '2-digit',
+                                                    })}`}
+                                                </span>
+                                            </div>
+                                            <button
+                                                className={`open-house-visited-btn${oh.visited ? ' active' : ''}`}
+                                                onClick={async () => {
+                                                    const next = !oh.visited
+                                                    await fetch(`/api/listings/${property!.id}/open-houses/${oh.id}`, {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ visited: next }),
+                                                    })
+                                                    setProperty(prev => prev ? {
+                                                        ...prev,
+                                                        open_houses: prev.open_houses.map(x => x.id === oh.id ? { ...x, visited: next } : x)
+                                                    } : prev)
+                                                }}
+                                            >
+                                                {oh.visited ? 'Visited' : 'Mark visited'}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
+                        {history.length > 0 && (
+                            <div className="history-panel right-panel-section">
+                                <h3 className="notes-heading">Change History</h3>
+                                <ul className="history-list">
+                                    {(historyExpanded ? history : history.slice(0, 1)).map(entry => (
+                                        <li key={entry.id} className="history-entry">
+                                            <span className="history-field">{entry.field_name}</span>
+                                            <span className="history-change">
+                                                {entry.old_value ?? '—'} → {entry.new_value ?? '—'}
+                                            </span>
+                                            <span className="history-date">
+                                                {new Date(entry.changed_at).toLocaleDateString('en-CA', {
+                                                    month: 'short', day: 'numeric', year: 'numeric',
+                                                })}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                {history.length > 1 && (
+                                    <button className="panel-more-btn" onClick={() => setHistoryExpanded(h => !h)}>
+                                        {historyExpanded ? 'Show less' : `+ ${history.length - 1} more`}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="listing-timestamps right-panel-section">
+                            <span>Watched since: {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span>Last refreshed: {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {titleToast && (
-                <div className="title-toast">Title updated</div>
-            )}
-        </div>
+                {titleToast && (
+                    <div className="title-toast">Title updated</div>
+                )}
+            </div>
         </>
     )
 }

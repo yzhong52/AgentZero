@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
@@ -9,18 +9,29 @@ import type { StatusOption } from './constants'
 import type { Property, Search } from './types'
 
 function App() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [listings, setListings] = useState<Property[]>([])
-  const [statusFilter, setStatusFilter] = useState<Set<StatusOption>>(new Set(['Interested', 'Buyable']))
+  const [statusFilter, setStatusFilter] = useState<Set<StatusOption>>(() => {
+    const p = searchParams.get('status')
+    if (p) {
+      const parsed = p.split(',').filter(s => STATUS_OPTIONS.includes(s as StatusOption)) as StatusOption[]
+      if (parsed.length > 0) return new Set(parsed)
+    }
+    return new Set<StatusOption>(['Interested', 'Buyable'])
+  })
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
   // ── Searches ──────────────────────────────────────────────────────────────
   const [searches, setSearches] = useState<Search[]>([])
-  const [activeSearchId, setActiveSearchId] = useState<number | null>(null)
+  const [activeSearchId, setActiveSearchId] = useState<number | null>(() => {
+    const p = searchParams.get('search')
+    return p ? Number(p) : null
+  })
   const [newSearchOpen, setNewSearchOpen] = useState(false)
   const [newSearchTitle, setNewSearchTitle] = useState('')
   const [newSearchDesc, setNewSearchDesc] = useState('')
@@ -32,15 +43,24 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
 
+  // Sync filters back to URL so back-navigation restores them
+  useEffect(() => {
+    const params: Record<string, string> = {}
+    if (statusFilter.size > 0) params.status = [...statusFilter].join(',')
+    if (activeSearchId !== null) params.search = String(activeSearchId)
+    setSearchParams(params, { replace: true })
+  }, [statusFilter, activeSearchId])
+
   async function fetchSearches() {
     try {
       const resp = await fetch('/api/searches')
       if (resp.ok) {
         const data: Search[] = await resp.json()
         setSearches(data)
-        // Auto-select first search if none selected
-        if (data.length > 0 && activeSearchId === null) {
-          setActiveSearchId(data[0].id)
+        // Auto-select first search if none selected or the selected one no longer exists
+        if (data.length > 0) {
+          const validId = activeSearchId !== null && data.some(s => s.id === activeSearchId)
+          if (!validId) setActiveSearchId(data[0].id)
         }
       }
     } catch {

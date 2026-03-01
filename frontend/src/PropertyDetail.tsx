@@ -848,7 +848,7 @@ export function PropertyDetail() {
     return (
         <>
             <div className="detail-nav">
-                <button className="back-btn" onClick={() => navigate('/')}>
+                <button className="back-btn" onClick={() => navigate(-1)}>
                     <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     Back
                 </button>

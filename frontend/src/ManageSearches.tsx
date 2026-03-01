@@ -71,7 +71,7 @@ export function ManageSearches() {
                     <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     Back
                 </button>
-                <span className="detail-nav-title">Manage Searches</span>
+                <span className="detail-nav-title">Manage Scenarios</span>
             </div>
             <div className="manage-page-content">
                 {searches.map(s => {
@@ -84,7 +84,7 @@ export function ManageSearches() {
                                 <div className="manage-search-delete-corner">
                                     <button
                                         className="delete-btn"
-                                        title={searches.length <= 1 ? 'Cannot delete the only search' : `Delete "${s.title}"`}
+                                        title={searches.length <= 1 ? 'Cannot delete the only scenario' : `Delete "${s.title}"`}
                                         disabled={searches.length <= 1}
                                         onClick={() => setConfirmDeleteId(s.id)}
                                     >
@@ -99,7 +99,7 @@ export function ManageSearches() {
                                         className="manage-search-edit-title"
                                         value={editDraft.title}
                                         onChange={e => setEditDraft(d => ({ ...d, title: e.target.value }))}
-                                        placeholder="Search title"
+                                        placeholder="Scenario title"
                                         autoFocus
                                     />
                                     <textarea
@@ -118,7 +118,7 @@ export function ManageSearches() {
                             )}
                             {confirmDeleteId === s.id ? (
                                 <div className="manage-search-delete-banner">
-                                    <span>Delete this search? Its listings will be unassigned.</span>
+                                    <span>Delete this scenario? Its listings will be unassigned.</span>
                                     <div className="manage-search-delete-banner-actions">
                                         <button className="cancel-btn" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
                                         <button

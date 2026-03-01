@@ -183,7 +183,7 @@ function App() {
               <ul className="app-menu-dropdown">
                 <li>
                   <button onClick={() => { setMenuOpen(false); navigate('/searches') }}>
-                    Manage Searches
+                    Manage Scenarios
                   </button>
                 </li>
               </ul>
@@ -239,8 +239,8 @@ function App() {
         <button
           className={`search-tabs-add${newSearchOpen ? ' active' : ''}`}
           onClick={() => setNewSearchOpen(o => !o)}
-          title="New search"
-          aria-label="New search"
+          title="New scenario"
+          aria-label="New scenario"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
             <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -252,7 +252,7 @@ function App() {
         <form className="new-search-form" onSubmit={handleCreateSearch}>
           <input
             className="new-search-title"
-            placeholder="Search title (e.g. East Van House)"
+            placeholder="Scenario title (e.g. East Van House)"
             value={newSearchTitle}
             onChange={e => setNewSearchTitle(e.target.value)}
             autoFocus
@@ -266,7 +266,7 @@ function App() {
           />
           <div className="new-search-actions">
             <button type="submit" disabled={creatingSrch || !newSearchTitle.trim()}>
-              {creatingSrch ? 'Creating…' : 'Create Search'}
+              {creatingSrch ? 'Creating…' : 'Create Scenario'}
             </button>
             <button type="button" className="cancel-btn" onClick={() => setNewSearchOpen(false)}>Cancel</button>
           </div>

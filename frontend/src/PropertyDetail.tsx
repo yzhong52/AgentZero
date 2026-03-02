@@ -401,6 +401,35 @@ export function PropertyDetail() {
     const [activeIdx, setActiveIdx] = useState(0)
     const thumbsRef = useRef<HTMLDivElement>(null)
     const scrollRef = useRef<HTMLDivElement>(null)
+    // Suppresses the onScroll sync while a programmatic scrollIntoView is animating
+    const programmaticScroll = useRef(false)
+
+    function goTo(next: number) {
+        if (!property) return
+        const clamped = Math.max(0, Math.min(next, property.images.length - 1))
+        if (clamped === activeIdx) return
+        programmaticScroll.current = true
+        setActiveIdx(clamped)
+        scrollRef.current?.querySelectorAll<HTMLElement>('.lightbox-item')[clamped]
+            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        thumbsRef.current?.querySelectorAll<HTMLElement>('.lightbox-thumb')[clamped]
+            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        setTimeout(() => { programmaticScroll.current = false }, 600)
+    }
+
+    useEffect(() => {
+        if (!lightboxOpen) return
+        function handleKey(e: KeyboardEvent) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                goTo(e.key === 'ArrowDown' ? activeIdx + 1 : activeIdx - 1)
+            } else if (e.key === 'Escape') {
+                setLightboxOpen(false)
+            }
+        }
+        window.addEventListener('keydown', handleKey)
+        return () => window.removeEventListener('keydown', handleKey)
+    }, [lightboxOpen, activeIdx, property?.images.length])
 
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -892,12 +921,7 @@ export function PropertyDetail() {
                                             src={img.url}
                                             alt={`${i + 1}`}
                                             className={`lightbox-thumb${activeIdx === i ? ' active' : ''}`}
-                                            onClick={() => {
-                                                setActiveIdx(i)
-                                                scrollRef.current
-                                                    ?.querySelectorAll<HTMLElement>('.lightbox-item')
-                                                [i]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                                            }}
+                                            onClick={() => goTo(i)}
                                         />
                                     ))}
                                 </div>
@@ -905,6 +929,7 @@ export function PropertyDetail() {
                                     className="lightbox-scroll"
                                     ref={scrollRef}
                                     onScroll={() => {
+                                        if (programmaticScroll.current) return
                                         const container = scrollRef.current
                                         if (!container) return
                                         const items = container.querySelectorAll<HTMLElement>('.lightbox-item')

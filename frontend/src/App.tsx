@@ -68,11 +68,9 @@ function App() {
     }
   }
 
-  async function fetchListings(filter?: Set<StatusOption>, searchId?: number | null) {
-    const active = filter ?? statusFilter
+  async function fetchListings(searchId?: number | null) {
     const sid = searchId !== undefined ? searchId : activeSearchId
     const params = new URLSearchParams()
-    if (active.size > 0) params.set('status', [...active].join(','))
     if (sid !== null && sid !== undefined) params.set('search_id', String(sid))
     const qs = params.toString() ? '?' + params.toString() : ''
     try {
@@ -113,10 +111,17 @@ function App() {
     setStatusFilter(prev => {
       const next = new Set(prev)
       next.has(s) ? next.delete(s) : next.add(s)
-      fetchListings(next, activeSearchId)
       return next
     })
   }
+
+  const statusCounts = Object.fromEntries(
+    STATUS_OPTIONS.map(s => [s, listings.filter(p => p.status === s).length])
+  ) as Record<StatusOption, number>
+
+  const filteredListings = statusFilter.size > 0
+    ? listings.filter(p => statusFilter.has(p.status as StatusOption))
+    : listings
 
   const [savedInfo, setSavedInfo] = useState<{ id: number; title: string } | null>(null)
   const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string | null } | null>(null)
@@ -303,68 +308,68 @@ function App() {
         </div>
       )}
 
-      {listings.length > 0 && (
-        <section className="listings-section">
-          <div className="listings-header">
-            <span className="listings-count">{listings.length} {listings.length === 1 ? 'property' : 'properties'}</span>
-
-            <div className="status-filter">
-              {STATUS_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  className={`filter-btn${statusFilter.has(s) ? ' active' : ''}`}
-                  onClick={() => toggleStatus(s)}
-                  style={statusFilter.has(s) ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            <div className="view-controls">
-              <button className={`view-btn${viewMode === 'grid' ? ' active' : ''}`} onClick={() => setViewMode('grid')}>Grid</button>
-              <button className={`view-btn${viewMode === 'table' ? ' active' : ''}`} onClick={() => setViewMode('table')}>Table</button>
-              {viewMode === 'table' && (
-                <div className="col-picker-wrap">
-                  <button className="view-btn" onClick={() => setColPickerOpen(o => !o)}>Columns ▾</button>
-                  {colPickerOpen && (
-                    <div className="col-picker-dropdown">
-                      {ALL_COLUMNS.map(c => (
-                        <label key={c.key} className="col-picker-item">
-                          <input
-                            type="checkbox"
-                            checked={visibleCols.has(c.key)}
-                            onChange={() => setVisibleCols(prev => {
-                              const next = new Set(prev)
-                              next.has(c.key) ? next.delete(c.key) : next.add(c.key)
-                              return next
-                            })}
-                          />
-                          {c.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+      <section className="listings-section">
+        <div className="listings-header">
+          <div className="status-filter">
+            {STATUS_OPTIONS.map((s) => (
+              <button
+                key={s}
+                className={`filter-btn${statusFilter.has(s) ? ' active' : ''}`}
+                onClick={() => toggleStatus(s)}
+                style={statusFilter.has(s) ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
+              >
+                {s} · {statusCounts[s]}
+              </button>
+            ))}
           </div>
 
-          {viewMode === 'grid' ? (
-            <ListingGrid rows={[...listings].sort((a, b) => {
+          <div className="view-controls">
+            <button className={`view-btn${viewMode === 'grid' ? ' active' : ''}`} onClick={() => setViewMode('grid')}>Grid</button>
+            <button className={`view-btn${viewMode === 'table' ? ' active' : ''}`} onClick={() => setViewMode('table')}>Table</button>
+            {viewMode === 'table' && (
+              <div className="col-picker-wrap">
+                <button className="view-btn" onClick={() => setColPickerOpen(o => !o)}>Columns ▾</button>
+                {colPickerOpen && (
+                  <div className="col-picker-dropdown">
+                    {ALL_COLUMNS.map(c => (
+                      <label key={c.key} className="col-picker-item">
+                        <input
+                          type="checkbox"
+                          checked={visibleCols.has(c.key)}
+                          onChange={() => setVisibleCols(prev => {
+                            const next = new Set(prev)
+                            next.has(c.key) ? next.delete(c.key) : next.add(c.key)
+                            return next
+                          })}
+                        />
+                        {c.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {filteredListings.length > 0 ? (
+          viewMode === 'grid' ? (
+            <ListingGrid rows={[...filteredListings].sort((a, b) => {
               const ra = STATUS_OPTIONS.indexOf(a.status as any)
               const rb = STATUS_OPTIONS.indexOf(b.status as any)
               return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb)
             })} />
           ) : (
-            <ListingTable rows={listings} cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))} />
-          )}
-        </section>
-      )}
-
-      {listings.length === 0 && (
-        <p className="empty">No listings saved yet. Paste a property URL above and click Save.</p>
-      )}
+            <ListingTable rows={filteredListings} cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))} />
+          )
+        ) : (
+          <p className="empty">
+            {listings.length === 0
+              ? 'No listings saved yet. Paste a property URL above and click Save.'
+              : 'No listings match the selected filters.'}
+          </p>
+        )}
+      </section>
     </div>
   )
 }

@@ -23,6 +23,8 @@ function StatusBadge({ status }: { status: string | null }) {
 function ListingCard({ p }: { p: Property }) {
   const navigate = useNavigate()
   const img = p.images[0]?.url
+  const statusColor = STATUS_COLORS[p.status] ?? '#e0dfd8'
+  const address = [p.street_address, p.city].filter(Boolean).join(', ')
 
   return (
     <button
@@ -30,12 +32,18 @@ function ListingCard({ p }: { p: Property }) {
       onClick={() => navigate(`/property/${p.id}`)}
       type="button"
     >
-      {img && <img src={img} alt={p.title} className="listing-img" />}
-      <div className="listing-body" style={{ borderTop: `3px solid ${STATUS_COLORS[p.status] ?? '#e0dfd8'}` }}>
+      <div className="listing-img-wrap">
+        {img
+          ? <img src={img} alt={p.title} className="listing-img" />
+          : <div className="listing-img-placeholder" />
+        }
+      </div>
+      <div className="listing-body" style={{ borderLeft: `4px solid ${statusColor}` }}>
         <div className="listing-price-row">
-          <div className="listing-price">{formatPrice(p.price, p.price_currency)}</div>
+          <div className="listing-price">{formatPrice(p.price, p.price_currency) ?? '—'}</div>
           <StatusBadge status={p.status} />
         </div>
+        {address && <div className="listing-address">{address}</div>}
         <div className="listing-stats">
           {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
           {p.bathrooms != null && <span>{p.bathrooms} ba</span>}

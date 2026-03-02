@@ -25,7 +25,7 @@ export type Search = {
 
 export type Property = {
   id: number
-  search_id: number
+  search_criteria_id: number
   redfin_url: string | null
   realtor_url: string | null
   rew_url: string | null

@@ -22,7 +22,7 @@ pub struct NotesRequest {
 
 #[derive(Deserialize)]
 pub struct SearchIdRequest {
-    pub search_id: Option<i64>,
+    pub search_criteria_id: i64,
 }
 
 /// PATCH /api/listings/:id/notes
@@ -52,7 +52,7 @@ pub async fn patch_search(
     Path(id): Path<i64>,
     Json(body): Json<SearchIdRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    db::update_search_id(&state.db, id, body.search_id)
+    db::update_search_criteria_id(&state.db, id, body.search_criteria_id)
         .await
         .map_err(|e| {
             (

@@ -470,10 +470,10 @@ export function PropertyDetail() {
             const resp = await fetch(`/api/listings/${property.id}/search`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ search_id: searchId }),
+                body: JSON.stringify({ search_criteria_id: searchId }),
             })
             if (resp.ok) {
-                setProperty(prev => prev ? { ...prev, search_id: searchId } : prev)
+                setProperty(prev => prev ? { ...prev, search_criteria_id: searchId } : prev)
                 // refresh search counts
                 fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
             }
@@ -1411,7 +1411,7 @@ export function PropertyDetail() {
                                 <h3 className="notes-heading">Search</h3>
                                 <select
                                     className="search-picker-select"
-                                    value={property.search_id}
+                                    value={property.search_criteria_id}
                                     onChange={e => {
                                         const val = Number(e.target.value)
                                         if (val) handleMoveToSearch(val)

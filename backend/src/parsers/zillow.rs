@@ -391,7 +391,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     Some(ParsedListing {
         property: db::Property {
             id: 0,
-            search_id: None,
+            search_criteria_id: 0, // overwritten by caller
             title,
             description: next.description.unwrap_or_default(),
             price: ld.price,

@@ -30,7 +30,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Search>, sqlx::Error> {
         r#"SELECT s.id, s.title, s.description, s.position, s.created_at, s.updated_at,
                   COUNT(l.id) AS listing_count
            FROM searches s
-           LEFT JOIN listings l ON l.search_id = s.id
+           LEFT JOIN listings l ON l.search_criteria_id = s.id
            GROUP BY s.id
            ORDER BY s.position ASC"#,
     )
@@ -57,7 +57,7 @@ pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Search, sqlx::Error
         r#"SELECT s.id, s.title, s.description, s.position, s.created_at, s.updated_at,
                   COUNT(l.id) AS listing_count
            FROM searches s
-           LEFT JOIN listings l ON l.search_id = s.id
+           LEFT JOIN listings l ON l.search_criteria_id = s.id
            WHERE s.id = ?
            GROUP BY s.id"#,
     )
@@ -120,9 +120,9 @@ pub async fn reorder(pool: &SqlitePool, ids: &[i64]) -> Result<(), sqlx::Error> 
 pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
     // Move listings to the first remaining search (by position) if one exists.
     sqlx::query(
-        r#"UPDATE listings SET search_id = (
+        r#"UPDATE listings SET search_criteria_id = (
                SELECT id FROM searches WHERE id != ? ORDER BY position ASC LIMIT 1
-           ) WHERE search_id = ?"#,
+           ) WHERE search_criteria_id = ?"#,
     )
     .bind(id)
     .bind(id)

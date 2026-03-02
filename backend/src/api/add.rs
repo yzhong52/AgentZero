@@ -32,8 +32,8 @@ use crate::{
 pub struct AddRequest {
     /// One or more listing URLs for the same property (e.g. redfin + rew).
     pub urls: Vec<String>,
-    /// Optional search/project to assign this listing to.
-    pub search_id: Option<i64>,
+    /// Search to assign this listing to.
+    pub search_criteria_id: i64,
 }
 
 pub async fn add_listing(
@@ -170,8 +170,8 @@ pub async fn add_listing(
         }
     }
 
-    // Assign to search if requested.
-    property.search_id = body.search_id;
+    // Assign to search.
+    property.search_criteria_id = body.search_criteria_id;
 
     let saved = db::add_listing(&state.db, &property).await.map_err(|e| {
         (
@@ -224,7 +224,7 @@ fn is_blocked_host(url: &Url) -> bool {
 fn blank_stub() -> db::Property {
     db::Property {
         id: 0,
-        search_id: None,
+        search_criteria_id: 0, // overwritten by the caller before insert
         redfin_url: None,
         realtor_url: None,
         rew_url: None,

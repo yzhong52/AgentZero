@@ -211,7 +211,7 @@ fn merge_property(
 ) -> db::Property {
     db::Property {
         id: primary.id,
-        search_id: primary.search_id.or(fallback.search_id),
+        search_criteria_id: primary.search_criteria_id,
 
         redfin_url: primary.redfin_url.or(fallback.redfin_url),
         realtor_url: primary.realtor_url.or(fallback.realtor_url),

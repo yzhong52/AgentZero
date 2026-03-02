@@ -87,7 +87,7 @@ function App() {
   async function fetchListings(searchId?: number | null) {
     const sid = searchId !== undefined ? searchId : activeSearchId
     const params = new URLSearchParams()
-    if (sid !== null && sid !== undefined) params.set('search_id', String(sid))
+    if (sid !== null && sid !== undefined) params.set('search_criteria_id', String(sid))
     const qs = params.toString() ? '?' + params.toString() : ''
     try {
       const resp = await fetch(`/api/listings${qs}`)
@@ -153,7 +153,7 @@ function App() {
       const resp = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: [url.trim()], search_id: activeSearchId }),
+        body: JSON.stringify({ urls: [url.trim()], search_criteria_id: activeSearchId }),
       })
       if (!resp.ok) {
         const text = await resp.text()

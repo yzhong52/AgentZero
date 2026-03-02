@@ -94,7 +94,7 @@ mod tests {
 
         // Insert a minimal listing so FK constraints are satisfied.
         let listing_id: i64 = sqlx::query_scalar(
-            "INSERT INTO listings (title, description, status) VALUES ('Test', '', 'Interested') RETURNING id",
+            "INSERT INTO listings (title, description, status, search_criteria_id) VALUES ('Test', '', 'Interested', 1) RETURNING id",
         )
         .fetch_one(&pool)
         .await
@@ -174,7 +174,7 @@ mod tests {
 
         // Create a second listing in the same DB.
         let id_b: i64 = sqlx::query_scalar(
-            "INSERT INTO listings (title, description, status) VALUES ('Other', '', 'Interested') RETURNING id",
+            "INSERT INTO listings (title, description, status, search_criteria_id) VALUES ('Other', '', 'Interested', 1) RETURNING id",
         )
         .fetch_one(&pool)
         .await

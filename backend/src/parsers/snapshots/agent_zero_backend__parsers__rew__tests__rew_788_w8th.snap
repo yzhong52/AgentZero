@@ -4,7 +4,7 @@ expression: property
 ---
 {
   "id": 0,
-  "search_id": null,
+  "search_criteria_id": 0,
   "title": "For Sale: L01-788 W 8th Avenue, Vancouver, BC",
   "description": "Browse 23 photos of this Townhouse in Fairview, Vancouver listed for $1,249,900. This property features 3 beds, 4 baths and is 1560 Sqft. MLS® # R3086230",
   "price": 1249900,

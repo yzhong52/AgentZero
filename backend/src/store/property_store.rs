@@ -17,7 +17,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating,
                     property_type, listed_date, mls_number, laundry_in_unit,
-                    search_id";
+                    search_criteria_id";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -57,7 +57,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 property_type, listed_date, mls_number, laundry_in_unit,
-                search_id,
+                search_criteria_id,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -115,7 +115,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(&p.listed_date)
     .bind(&p.mls_number)
     .bind(p.laundry_in_unit)
-    .bind(p.search_id)
+    .bind(p.search_criteria_id)
     .fetch_one(pool)
     .await?;
 
@@ -181,7 +181,7 @@ pub async fn update_by_id(
                has_rental_suite         = ?,
                rental_income            = ?,
                status                   = ?,
-               search_id                = ?,
+               search_criteria_id       = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -235,7 +235,7 @@ pub async fn update_by_id(
     .bind(p.has_rental_suite)
     .bind(p.rental_income)
     .bind(&p.status)
-    .bind(p.search_id)
+    .bind(p.search_criteria_id)
     .bind(id)
     .execute(pool)
     .await?;
@@ -244,15 +244,15 @@ pub async fn update_by_id(
 }
 
 /// Retrieve all properties ordered by created_at (newest first).
-/// List properties, optionally filtered by status values and/or search_id.
+/// List properties, optionally filtered by status values and/or search_criteria_id.
 ///
 /// - `statuses`: if empty, returns all properties.
 /// - `statuses`: if non-empty, returns only rows whose `status` is in the given list.
-/// - `search_id`: if Some, restricts to listings in that search.
+/// - `search_criteria_id`: if Some, restricts to listings in that search.
 pub async fn list(
     pool: &SqlitePool,
     statuses: &[ListingStatus],
-    search_id: Option<i64>,
+    search_criteria_id: Option<i64>,
 ) -> Result<Vec<Property>, sqlx::Error> {
     let mut conditions: Vec<String> = Vec::new();
 
@@ -261,8 +261,8 @@ pub async fn list(
         conditions.push(format!("status IN ({})", placeholders.join(",")));
     }
 
-    if let Some(sid) = search_id {
-        conditions.push(format!("search_id = {sid}"));
+    if let Some(sid) = search_criteria_id {
+        conditions.push(format!("search_criteria_id = {sid}"));
     }
 
     let sql = if conditions.is_empty() {
@@ -313,14 +313,14 @@ pub async fn update_notes(
     Ok(())
 }
 
-/// Move a property to a different search (or detach from any search).
-pub async fn update_search_id(
+/// Move a property to a different search.
+pub async fn update_search_criteria_id(
     pool: &SqlitePool,
     id: i64,
-    search_id: Option<i64>,
+    search_criteria_id: i64,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query("UPDATE listings SET search_id = ?, updated_at = datetime('now') WHERE id = ?")
-        .bind(search_id)
+    sqlx::query("UPDATE listings SET search_criteria_id = ?, updated_at = datetime('now') WHERE id = ?")
+        .bind(search_criteria_id)
         .bind(id)
         .execute(pool)
         .await?;
@@ -378,7 +378,7 @@ async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::E
 fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
     Property {
         id: row.get("id"),
-        search_id: row.get("search_id"),
+        search_criteria_id: row.get("search_criteria_id"),
         redfin_url: row.get("redfin_url"),
         realtor_url: row.get("realtor_url"),
         rew_url: row.get("rew_url"),
@@ -455,7 +455,7 @@ mod tests {
 
         let p = Property {
             id: 0,
-            search_id: None,
+            search_criteria_id: 1,
             redfin_url: Some("https://example.com/add".to_string()),
             realtor_url: Some("https://realtor.example/add".to_string()),
             rew_url: Some("https://rew.example/add".to_string()),
@@ -540,7 +540,7 @@ mod tests {
         // Construct a minimal property to save.
         let p = Property {
             id: 0,
-            search_id: None,
+            search_criteria_id: 1,
             redfin_url: Some("https://example.com/1".to_string()),
             realtor_url: None,
             rew_url: None,
@@ -599,7 +599,7 @@ mod tests {
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)
-        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', datetime('now'))")
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, search_criteria_id, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', 1, datetime('now'))")
             .bind(&p.redfin_url)
             .bind(&p.title)
             .bind(&p.description)
@@ -645,7 +645,7 @@ mod tests {
         let pool = init(&database_url).await;
 
         // Insert initial listing with a title and known price
-        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', datetime('now'))")
+        let _ = sqlx::query("INSERT INTO listings (redfin_url, title, description, price, price_currency, status, search_criteria_id, created_at) VALUES (?, ?, ?, ?, ?, 'Interested', 1, datetime('now'))")
             .bind(&Some("https://example.com/2".to_string()))
             .bind("Seed Title")
             .bind("")

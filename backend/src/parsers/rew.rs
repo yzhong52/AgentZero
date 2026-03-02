@@ -367,7 +367,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
     let property = db::Property {
         id: 0,
-        search_id: None,
+        search_criteria_id: 0, // overwritten by caller
         redfin_url: None,
         realtor_url: None,
         rew_url: Some(url.to_string()),

@@ -109,6 +109,10 @@ cargo run --bin strip -- input.html output.html  # strip to a separate file
 
 Always run `cargo test` after stripping to verify no parser-relevant content was removed.
 
+## Frontend Design
+
+When making layout or styling changes to the frontend, ask if the user would like to load the `frontend-design` skill first (invoke via `/frontend-design`). It provides design thinking guidelines and aesthetic direction to avoid generic UI patterns.
+
 ## Coding Conventions
 
 ### Rust: prefer named structs over tuples

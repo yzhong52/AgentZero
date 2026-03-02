@@ -2,13 +2,21 @@ import { useNavigate } from 'react-router-dom'
 import { STATUS_COLORS } from './constants'
 import type { Property } from './types'
 
-function formatPrice(price: number | null, currency: string | null) {
+function formatNotePreview(notes: string): string {
+  return notes
+    .replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu, '')
+    .replace(/\n\s*-\s*/g, '; ')   // newline-bullet → semicolon
+    .replace(/^\s*-\s*/, '')        // strip leading dash
+    .replace(/\s+-\s+/g, '; ')     // inline dash-separator → semicolon
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function formatPrice(price: number | null) {
   if (price == null) return null
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: currency ?? 'CAD',
-    maximumFractionDigits: 0,
-  }).format(price)
+  if (price >= 1_000_000) return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (price >= 1_000) return `$${Math.round(price / 1_000)}K`
+  return `$${price}`
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -40,17 +48,22 @@ function ListingCard({ p }: { p: Property }) {
       </div>
       <div className="listing-body" style={{ borderLeft: `4px solid ${statusColor}` }}>
         <div className="listing-price-row">
-          <div className="listing-price">{formatPrice(p.price, p.price_currency) ?? '—'}</div>
+          <div className="listing-price">{formatPrice(p.price) ?? '—'}</div>
           <StatusBadge status={p.status} />
         </div>
-        {address && <div className="listing-address">{address}</div>}
+        {address && <div className="listing-address">
+          <svg width="9" height="12" viewBox="0 0 9 12" fill="currentColor" aria-hidden="true" className="listing-address-icon">
+            <path d="M4.5 0C2.015 0 0 2.015 0 4.5c0 3.375 4.5 7.5 4.5 7.5S9 7.875 9 4.5C9 2.015 6.985 0 4.5 0zm0 6.125A1.625 1.625 0 1 1 4.5 2.875a1.625 1.625 0 0 1 0 3.25z"/>
+          </svg>
+          {address}
+        </div>}
         <div className="listing-stats">
           {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
           {p.bathrooms != null && <span>{p.bathrooms} ba</span>}
           {p.sqft != null && <span>{p.sqft.toLocaleString()} sqft</span>}
           {p.year_built != null && <span>Built {p.year_built}</span>}
         </div>
-        <div className="listing-title">{p.title}</div>
+        {p.notes && <div className="listing-notes">💬 {formatNotePreview(p.notes)}</div>}
       </div>
     </button>
   )

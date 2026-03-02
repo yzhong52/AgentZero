@@ -5,17 +5,12 @@ use std::str::FromStr;
 
 /// The user-facing status of a listing.
 /// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ListingStatus {
+    #[default]
     Interested,
     Buyable,
     Pass,
-}
-
-impl Default for ListingStatus {
-    fn default() -> Self {
-        Self::Interested
-    }
 }
 
 impl std::fmt::Display for ListingStatus {

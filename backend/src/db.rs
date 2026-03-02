@@ -19,4 +19,3 @@ pub use crate::store::property_store::{
     add_listing, delete, find_by_mls, find_by_source_url, get_by_id, init, list, update_by_id,
     update_notes, update_search_criteria_id,
 };
-pub use crate::store::search_store;

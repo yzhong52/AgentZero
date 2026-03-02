@@ -262,9 +262,9 @@ struct ParkingInfo {
 }
 
 fn parse_parking_info(document: &Html) -> ParkingInfo {
-    let total = find_section_value(&document, "Parking Spaces").and_then(|s| parse_int(&s));
+    let total = find_section_value(document, "Parking Spaces").and_then(|s| parse_int(&s));
 
-    let details = find_section_value(&document, "Parking Details")
+    let details = find_section_value(document, "Parking Details")
         .unwrap_or_default()
         .to_lowercase();
 

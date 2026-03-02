@@ -242,7 +242,7 @@ fn extract_next_data(html: &str) -> NextData {
     let property_tax = json_i64(&prop, "taxAnnualAmount")
         .or_else(|| {
             prop.get("propertyTaxRate")
-                .and_then(|_| None::<i64>) // rate alone isn't useful
+                .and(None::<i64>) // rate alone isn't useful
         });
 
     // MLS number — from attributionInfo or palsId.

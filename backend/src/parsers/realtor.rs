@@ -78,7 +78,7 @@ fn extract_address(json_ld: &[JsonValue]) -> AddressInfo {
             street_address: addr
                 .get("streetAddress")
                 .and_then(|v| v.as_str())
-                .map(|s| titlecase(s)),
+                .map(titlecase),
             city: addr
                 .get("addressLocality")
                 .and_then(|v| v.as_str())
@@ -90,7 +90,7 @@ fn extract_address(json_ld: &[JsonValue]) -> AddressInfo {
             postal_code: addr
                 .get("postalCode")
                 .and_then(|v| v.as_str())
-                .map(|s| format_postal_code(s)),
+                .map(format_postal_code),
             lat: geo
                 .and_then(|g| g.get("latitude"))
                 .and_then(|v| v.as_str().and_then(|s| s.parse().ok()).or_else(|| v.as_f64())),

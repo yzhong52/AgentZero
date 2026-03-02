@@ -20,9 +20,17 @@ function App() {
       const parsed = p.split(',').filter(s => STATUS_OPTIONS.includes(s as StatusOption)) as StatusOption[]
       if (parsed.length > 0) return new Set(parsed)
     }
+    const saved = localStorage.getItem('az_status_filter')
+    if (saved) {
+      const parsed = saved.split(',').filter(s => STATUS_OPTIONS.includes(s as StatusOption)) as StatusOption[]
+      if (parsed.length > 0) return new Set(parsed)
+    }
     return new Set<StatusOption>(['Interested', 'Buyable'])
   })
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+    const saved = localStorage.getItem('az_view_mode')
+    return saved === 'table' ? 'table' : 'grid'
+  })
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
@@ -50,6 +58,14 @@ function App() {
     if (activeSearchId !== null) params.search = String(activeSearchId)
     setSearchParams(params, { replace: true })
   }, [statusFilter, activeSearchId])
+
+  // Persist preferences across sessions
+  useEffect(() => {
+    localStorage.setItem('az_status_filter', [...statusFilter].join(','))
+  }, [statusFilter])
+  useEffect(() => {
+    localStorage.setItem('az_view_mode', viewMode)
+  }, [viewMode])
 
   async function fetchSearches() {
     try {

@@ -24,7 +24,7 @@ function ListingCard({ p }: { p: Property }) {
   const navigate = useNavigate()
   const img = p.images[0]?.url
   const statusColor = STATUS_COLORS[p.status] ?? '#e0dfd8'
-  const address = [p.street_address, p.city].filter(Boolean).join(', ')
+  const address = p.street_address
 
   return (
     <button

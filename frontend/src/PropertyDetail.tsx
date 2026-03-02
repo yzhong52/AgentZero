@@ -411,7 +411,7 @@ export function PropertyDetail() {
         programmaticScroll.current = true
         setActiveIdx(clamped)
         scrollRef.current?.querySelectorAll<HTMLElement>('.lightbox-item')[clamped]
-            ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         thumbsRef.current?.querySelectorAll<HTMLElement>('.lightbox-thumb')[clamped]
             ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
         setTimeout(() => { programmaticScroll.current = false }, 600)

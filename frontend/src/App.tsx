@@ -186,7 +186,7 @@ function App() {
       <header className="app-header">
         <div className="app-header-brand">
           <h1>Agent Zero</h1>
-          <p className="app-tagline">Your private property shortlist</p>
+          <p className="app-tagline">AI-powered research — there's a perfect home for everybody</p>
         </div>
         {/* ── Hamburger menu ── */}
         <div className="app-menu-wrap">

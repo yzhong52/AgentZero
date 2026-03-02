@@ -84,10 +84,9 @@ function App() {
     }
   }
 
-  async function fetchListings(searchId?: number | null) {
-    const sid = searchId !== undefined ? searchId : activeSearchId
+  async function fetchListings(searchCriteriaId: number) {
     const params = new URLSearchParams()
-    if (sid !== null && sid !== undefined) params.set('search_criteria_id', String(sid))
+    params.set('search_criteria_id', String(searchCriteriaId))
     const qs = params.toString() ? '?' + params.toString() : ''
     try {
       const resp = await fetch(`/api/listings${qs}`)
@@ -171,7 +170,7 @@ function App() {
       const saved: Property = await resp.json()
       setSavedInfo({ id: saved.id, title: saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url || `Listing #${saved.id}` })
       setUrl('')
-      await fetchListings()
+      if (activeSearchId !== null) await fetchListings(activeSearchId)
       await fetchSearches()
     } catch (err: any) {
       setError(err?.message || String(err))

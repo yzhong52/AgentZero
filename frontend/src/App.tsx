@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import './App.css'
 import { ListingGrid } from './ListingGrid'
+import { ReviewQueue } from './ReviewQueue'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
@@ -130,13 +131,25 @@ function App() {
     })
   }
 
+  const pendingListings = listings.filter(p => p.status === 'Pending')
+  const reviewedListings = listings.filter(p => p.status !== 'Pending')
+
   const statusCounts = Object.fromEntries(
-    STATUS_OPTIONS.map(s => [s, listings.filter(p => p.status === s).length])
+    STATUS_OPTIONS.map(s => [
+      s,
+      s === 'Pending'
+        ? pendingListings.length
+        : reviewedListings.filter(p => p.status === s).length,
+    ])
   ) as Record<StatusOption, number>
 
   const filteredListings = statusFilter.size > 0
     ? listings.filter(p => statusFilter.has(p.status as StatusOption))
-    : listings
+    : reviewedListings
+
+  function handleReviewed(id: number, status: string) {
+    setListings(prev => prev.map(p => p.id === id ? { ...p, status } : p))
+  }
 
   const [savedInfo, setSavedInfo] = useState<{ id: number; title: string } | null>(null)
   const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string | null } | null>(null)
@@ -322,6 +335,8 @@ function App() {
           Saved: <a href={`/property/${savedInfo.id}`}>{savedInfo.title}</a>
         </div>
       )}
+
+      <ReviewQueue listings={pendingListings} onReviewed={handleReviewed} />
 
       <section className="listings-section">
         <div className="listings-header">

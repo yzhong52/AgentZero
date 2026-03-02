@@ -7,6 +7,8 @@ use std::str::FromStr;
 /// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ListingStatus {
+    /// Auto-added by Agent Zero; awaiting user review.
+    Pending,
     #[default]
     Interested,
     Buyable,
@@ -16,6 +18,7 @@ pub enum ListingStatus {
 impl std::fmt::Display for ListingStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
+            Self::Pending => "Pending",
             Self::Interested => "Interested",
             Self::Buyable => "Buyable",
             Self::Pass => "Pass",
@@ -27,6 +30,7 @@ impl FromStr for ListingStatus {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "Pending" => Ok(Self::Pending),
             "Interested" => Ok(Self::Interested),
             "Buyable" => Ok(Self::Buyable),
             "Pass" => Ok(Self::Pass),

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Property } from './types'
 import { LABELS } from './labels'
 import { STATUS_OPTIONS } from './constants'
+import { formatPriceFull } from './utils'
 
 export type ColKey =
   | 'name' | 'price' | 'status' | 'address' | 'bedrooms' | 'bathrooms'
@@ -11,18 +12,9 @@ export type ColKey =
 
 export type ColDef = { key: ColKey; label: string; render: (p: Property) => React.ReactNode }
 
-function formatPrice(price: number | null, currency: string | null) {
-  if (price == null) return null
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: currency ?? 'CAD',
-    maximumFractionDigits: 0,
-  }).format(price)
-}
-
 export const ALL_COLUMNS: ColDef[] = [
   { key: 'name', label: 'Name', render: p => p.title },
-  { key: 'price', label: 'Price', render: p => formatPrice(p.price, p.price_currency) ?? '—' },
+  { key: 'price', label: 'Price', render: p => formatPriceFull(p.price, p.price_currency) ?? '—' },
   { key: 'status', label: 'Status', render: p => p.status ?? '—' },
   { key: 'address', label: 'Address', render: p => [p.street_address, p.city].filter(Boolean).join(', ') || '—' },
   { key: 'bedrooms', label: 'Beds', render: p => p.bedrooms ?? '—' },

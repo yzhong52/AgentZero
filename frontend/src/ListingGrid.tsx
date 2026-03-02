@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { STATUS_COLORS } from './constants'
 import type { Property } from './types'
+import { formatPriceCompact } from './utils'
 
 function formatNotePreview(notes: string): string {
   return notes
@@ -10,13 +11,6 @@ function formatNotePreview(notes: string): string {
     .replace(/\s+-\s+/g, '; ')     // inline dash-separator → semicolon
     .replace(/\s+/g, ' ')
     .trim()
-}
-
-function formatPrice(price: number | null) {
-  if (price == null) return null
-  if (price >= 1_000_000) return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (price >= 1_000) return `$${Math.round(price / 1_000)}K`
-  return `$${price}`
 }
 
 function StatusBadge({ status }: { status: string | null }) {
@@ -48,7 +42,7 @@ function ListingCard({ p }: { p: Property }) {
       </div>
       <div className="listing-body" style={{ borderLeft: `4px solid ${statusColor}` }}>
         <div className="listing-price-row">
-          <div className="listing-price">{formatPrice(p.price) ?? '—'}</div>
+          <div className="listing-price">{formatPriceCompact(p.price) ?? '—'}</div>
           <StatusBadge status={p.status} />
         </div>
         {address && <div className="listing-address">

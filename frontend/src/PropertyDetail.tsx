@@ -6,6 +6,7 @@ import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, Search } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
+import { formatPriceFull } from './utils'
 
 type HistoryEntry = {
     id: number
@@ -29,16 +30,6 @@ function moneyLabel(v: number | null): string {
 function numLabel(v: number | null, suffix = ''): string {
     return v === null ? '—' : `${v}${suffix}`
 }
-
-function formatPrice(price: number | null, currency: string | null) {
-    if (price == null) return null
-    return new Intl.NumberFormat('en-CA', {
-        style: 'currency',
-        currency: currency ?? 'CAD',
-        maximumFractionDigits: 0,
-    }).format(price)
-}
-
 
 function formatImgDate(dateStr: string) {
     if (!dateStr) return ''
@@ -995,7 +986,7 @@ export function PropertyDetail() {
                                 placeholder="(no title)"
                                 aria-label="Property title"
                             />
-                            <div className="detail-price">{formatPrice(p.price, p.price_currency)}</div>
+                            <div className="detail-price">{formatPriceFull(p.price, p.price_currency)}</div>
                         </div>
 
                         {address && <div className="detail-address">{address}</div>}
@@ -1228,18 +1219,18 @@ export function PropertyDetail() {
                                             />
                                             {hasCustomOfferPrice && (
                                                 <span className="offer-price-original">
-                                                    {formatPrice(finance.price, finance.price_currency)}
+                                                    {formatPriceFull(finance.price, finance.price_currency)}
                                                 </span>
                                             )}
                                         </div>
                                     ) : (
                                         <button className="offer-price-btn" onClick={enterFinanceEdit}>
                                             <span className="offer-price-value">
-                                                {formatPrice(effectiveOfferPrice, finance.price_currency) ?? '—'}
+                                                {formatPriceFull(effectiveOfferPrice, finance.price_currency) ?? '—'}
                                             </span>
                                             {hasCustomOfferPrice && (
                                                 <span className="offer-price-original">
-                                                    {formatPrice(finance.price, finance.price_currency)}
+                                                    {formatPriceFull(finance.price, finance.price_currency)}
                                                 </span>
                                             )}
                                         </button>

@@ -115,6 +115,10 @@ When making layout or styling changes to the frontend, ask if the user would lik
 
 ## Coding Conventions
 
+### No code duplication — use shared utilities
+
+Before writing a helper function, check if it already exists elsewhere in the codebase. Shared frontend utilities live in `frontend/src/utils.ts`. Do not copy-paste the same logic into multiple files; extract it to a shared location and import it.
+
 ### Rust: prefer named structs over tuples
 
 When a function returns or stores more than one related value, define a small named struct instead of using a tuple. This improves call-site readability and makes fields self-documenting.

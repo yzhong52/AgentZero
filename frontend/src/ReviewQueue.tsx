@@ -2,17 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
 import type { Property } from './types'
+import { formatPriceCompact } from './utils'
 
 interface ReviewQueueProps {
   listings: Property[]
   onReviewed: (id: number, status: string) => void
-}
-
-function formatPrice(price: number | null) {
-  if (price == null) return '—'
-  if (price >= 1_000_000) return `$${(price / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (price >= 1_000) return `$${Math.round(price / 1_000)}K`
-  return `$${price}`
 }
 
 export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
@@ -57,7 +51,7 @@ export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
                   }
                 </div>
                 <div className="review-card-body">
-                  <div className="review-card-price">{formatPrice(p.price)}</div>
+                  <div className="review-card-price">{formatPriceCompact(p.price) ?? '—'}</div>
                   {address && <div className="review-card-address">{address}</div>}
                   <div className="review-card-stats">
                     {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
@@ -66,7 +60,7 @@ export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
                   </div>
                 </div>
                 <div className="review-card-actions">
-                  {STATUS_OPTIONS.map(s => (
+                  {STATUS_OPTIONS.filter(s => s !== 'Pending').map(s => (
                     <button
                       key={s}
                       className="review-action-btn"

@@ -98,7 +98,7 @@ function App() {
   }
 
   useEffect(() => { fetchSearches() }, [])
-  useEffect(() => { if (activeSearchId !== null) fetchListings(undefined, activeSearchId) }, [activeSearchId])
+  useEffect(() => { if (activeSearchId !== null) fetchListings(activeSearchId) }, [activeSearchId])
 
   async function handleCreateSearch(e: React.FormEvent) {
     e.preventDefault()

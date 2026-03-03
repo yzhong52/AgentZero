@@ -4,6 +4,7 @@ pub mod images;
 pub mod ingest;
 pub mod models;
 pub mod parsers;
+pub mod property;
 pub mod store;
 
 pub(crate) use finance::{

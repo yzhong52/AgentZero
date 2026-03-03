@@ -25,11 +25,9 @@ use crate::ingest::fetch::fetch_html;
 use crate::ingest::html_snapshots::save_listing_html;
 use crate::ingest::url::parse_listing_url;
 use crate::models::property::Property;
+use crate::property::finance as property_finance;
 use crate::store::{image_store, open_house_store, property_store};
-use crate::{
-    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, images, parsers, AppState,
-};
+use crate::{images, parsers, AppState};
 
 #[derive(Deserialize)]
 pub struct AddRequest {
@@ -125,21 +123,7 @@ pub(crate) async fn add_listing(
     property.down_payment_pct = Some(down_pct);
     property.mortgage_interest_rate = Some(rate);
     property.amortization_years = Some(years);
-    let base_price = property.offer_price.or(property.price);
-    if let Some(price) = base_price {
-        property.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    property.monthly_total = compute_monthly_total(
-        property.mortgage_monthly,
-        property.property_tax,
-        property.hoa_monthly,
-    );
-    let initial_interest = base_price.map(|p| compute_initial_monthly_interest(p, down_pct, rate));
-    property.monthly_cost = compute_monthly_cost(
-        initial_interest,
-        property.property_tax,
-        property.hoa_monthly,
-    );
+    property_finance::recompute_from_explicit_terms(&mut property, down_pct, rate, years);
 
     // Check for duplicate MLS number before inserting.
     if let Some(ref mls) = property.mls_number {

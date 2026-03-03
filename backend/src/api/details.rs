@@ -14,8 +14,9 @@ use serde::Deserialize;
 use crate::ingest::url::parse_listing_url;
 use crate::models::history::HistoryEntry;
 use crate::models::property::{Property, UserDetails};
+use crate::property::finance as property_finance;
 use crate::store::{history_store, image_store, property_store};
-use crate::{compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, parsers, AppState};
+use crate::{parsers, AppState};
 
 /// Validate and strip query params from a URL that must belong to `expected`.
 /// Returns the cleaned URL string, or a 400 error describing what went wrong.
@@ -201,21 +202,10 @@ pub(crate) async fn patch_details(
         })?;
 
     // Recompute monthly_total/monthly_cost from the freshly saved values.
-    updated.monthly_total = compute_monthly_total(
-        updated.mortgage_monthly,
-        updated.property_tax,
-        updated.hoa_monthly,
-    );
-    let base_price = updated.offer_price.or(updated.price);
-    let initial_interest = base_price.map(|price| {
-        compute_initial_monthly_interest(
-            price,
-            updated.down_payment_pct.unwrap_or(0.20),
-            updated.mortgage_interest_rate.unwrap_or(0.05),
-        )
-    });
-    updated.monthly_cost =
-        compute_monthly_cost(initial_interest, updated.property_tax, updated.hoa_monthly);
+    let down_pct = updated.down_payment_pct.unwrap_or(0.20);
+    let rate = updated.mortgage_interest_rate.unwrap_or(0.05);
+    let years = updated.amortization_years.unwrap_or(25);
+    property_finance::recompute_from_explicit_terms(&mut updated, down_pct, rate, years);
 
     let _ = sqlx::query("UPDATE listings SET monthly_total = ?, monthly_cost = ? WHERE id = ?")
         .bind(updated.monthly_total)

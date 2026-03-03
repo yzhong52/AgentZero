@@ -4,11 +4,9 @@ use crate::ingest::html_snapshots::save_listing_html;
 use crate::ingest::url::parse_listing_url;
 use crate::models::property::Property;
 use crate::parsers;
+use crate::property::finance as property_finance;
 use crate::store::{history_store, image_store, open_house_store, property_store};
-use crate::{
-    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, AppState,
-};
+use crate::AppState;
 use axum::http::StatusCode;
 use axum::{
     extract::{Path, State},
@@ -114,31 +112,6 @@ fn apply_refresh_identity_fields(target: &mut Property, stored: &Property, id: i
     target.zillow_url = stored.zillow_url.clone();
 }
 
-fn recompute_mortgage_fields(target: &mut Property, stored: &Property) {
-    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years = stored.amortization_years.unwrap_or(25);
-    target.down_payment_pct = Some(down_pct);
-    target.mortgage_interest_rate = Some(rate);
-    target.amortization_years = Some(years);
-    if let Some(price) = target.offer_price.or(target.price) {
-        target.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    target.monthly_total = compute_monthly_total(
-        target.mortgage_monthly,
-        target.property_tax,
-        target.hoa_monthly,
-    );
-    target.monthly_cost = compute_monthly_cost(
-        target
-            .offer_price
-            .or(target.price)
-            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
-        target.property_tax,
-        target.hoa_monthly,
-    );
-}
-
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
@@ -182,7 +155,7 @@ pub(crate) async fn refresh_listing(
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     // Carry forward the user's saved mortgage parameters and recompute the monthly
     // payment against the (potentially updated) price.
-    recompute_mortgage_fields(&mut updated, &stored);
+    property_finance::recompute_with_stored_terms(&mut updated, &stored);
 
     // ── 6. Record price-change history ────────────────────────────────────────
     if stored.price != updated.price {
@@ -273,7 +246,7 @@ pub(crate) async fn preview_refresh(
     apply_shared_preserved_fields(&mut preview, &stored);
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
-    recompute_mortgage_fields(&mut preview, &stored);
+    property_finance::recompute_with_stored_terms(&mut preview, &stored);
 
     Ok(Json(preview))
 }

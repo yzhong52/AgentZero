@@ -1,9 +1,10 @@
-use crate::db;
 use crate::images;
 use crate::ingest::fetch::fetch_html;
 use crate::ingest::html_snapshots::save_listing_html;
 use crate::ingest::url::parse_listing_url;
+use crate::models::property::Property;
 use crate::parsers;
+use crate::store::{history_store, image_store, open_house_store, property_store};
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
     compute_mortgage, AppState,
@@ -31,9 +32,9 @@ fn is_title_exist(title: &str) -> bool {
 pub(crate) async fn refresh_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
+) -> Result<Json<Property>, (StatusCode, String)> {
     // ── 1. Load the stored record ──────────────────────────────────────────────
-    let stored = db::get_by_id(&state.db, id)
+    let stored = property_store::get_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
@@ -161,13 +162,13 @@ pub(crate) async fn refresh_listing(
     if stored.price != updated.price {
         let old = stored.price.map(|v| v.to_string());
         let new = updated.price.map(|v| v.to_string());
-        let _ = db::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+        let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
     }
 
     // ── 7. Persist parsed fields ──────────────────────────────────────────────
     // `update_by_id` intentionally omits user-only columns (notes, status,
     // has_rental_suite, rental_income, skytrain_*) so those remain intact in the DB.
-    let saved = db::update_by_id(&state.db, id, &updated)
+    let saved = property_store::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
 
@@ -180,7 +181,7 @@ pub(crate) async fn refresh_listing(
 
     // ── 8. Upsert open house events ───────────────────────────────────────────
     if !open_houses.is_empty() {
-        if let Err(e) = db::upsert_open_houses(&state.db, id, &open_houses).await {
+        if let Err(e) = open_house_store::upsert_open_houses(&state.db, id, &open_houses).await {
             tracing::warn!("refresh_listing: failed to save open houses for id={}: {}", id, e);
         }
     }
@@ -201,20 +202,20 @@ pub(crate) async fn refresh_listing(
         image_urls.len()
     );
     for (position, url) in image_urls.iter().enumerate() {
-        let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
+        let _ = image_store::insert_image_url(&state.db, id, url, position as i64).await;
     }
     let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
     tracing::info!("refresh_listing: id={} cached {} new image(s)", id, cached);
 
     // ── 10. Return the refreshed record with image metadata ───────────────────
-    let images = db::list_images_with_meta(&state.db, saved.id)
+    let images = image_store::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
-    let open_houses = db::list_open_houses(&state.db, saved.id)
+    let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
         .await
         .unwrap_or_default();
 
-    Ok(Json(db::Property { images, open_houses, ..saved }))
+    Ok(Json(Property { images, open_houses, ..saved }))
 }
 
 /// GET /api/listings/:id/preview
@@ -225,9 +226,9 @@ pub(crate) async fn refresh_listing(
 pub(crate) async fn preview_refresh(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
+) -> Result<Json<Property>, (StatusCode, String)> {
     // ── 1. Load the stored record ──────────────────────────────────────────────
-    let stored = db::get_by_id(&state.db, id)
+    let stored = property_store::get_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 

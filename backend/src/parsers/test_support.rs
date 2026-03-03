@@ -1,5 +1,4 @@
-use crate::db;
-use crate::models::OpenHouseEvent;
+use crate::models::{ImageEntry, OpenHouseEvent, Property};
 use crate::parsers::ParsedListing;
 use serde::Serialize;
 
@@ -16,23 +15,23 @@ pub(crate) fn fixture(name: &str) -> std::path::PathBuf {
 #[derive(Serialize)]
 pub(crate) struct ListingSnapshot {
     #[serde(flatten)]
-    pub property: db::Property,
+    pub property: Property,
     pub open_houses: Vec<OpenHouseEvent>,
 }
 
-pub(crate) fn listing_to_property(listing: ParsedListing) -> db::Property {
+pub(crate) fn listing_to_property(listing: ParsedListing) -> Property {
     let images = listing
         .image_urls
         .into_iter()
         .enumerate()
-        .map(|(i, url)| db::ImageEntry {
+        .map(|(i, url)| ImageEntry {
             id: i as i64,
             url,
             created_at: String::new(),
         })
         .collect();
 
-    db::Property {
+    Property {
         images,
         ..listing.property
     }

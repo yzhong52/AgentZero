@@ -10,14 +10,16 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::{db, AppState};
+use crate::models::open_house::OpenHouse;
+use crate::store::open_house_store;
+use crate::AppState;
 
 /// GET /api/listings/:id/open-houses
 pub(crate) async fn get_open_houses(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<Vec<db::OpenHouse>>, (StatusCode, String)> {
-    let entries = db::list_open_houses(&state.db, id).await.map_err(|e| {
+) -> Result<Json<Vec<OpenHouse>>, (StatusCode, String)> {
+    let entries = open_house_store::list_open_houses(&state.db, id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),
@@ -37,7 +39,7 @@ pub(crate) async fn patch_open_house(
     Path((listing_id, oh_id)): Path<(i64, i64)>,
     Json(body): Json<PatchVisitedRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let found = db::patch_open_house_visited(&state.db, listing_id, oh_id, body.visited)
+    let found = open_house_store::patch_open_house_visited(&state.db, listing_id, oh_id, body.visited)
         .await
         .map_err(|e| {
             (

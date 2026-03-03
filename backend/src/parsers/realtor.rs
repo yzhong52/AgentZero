@@ -18,7 +18,7 @@ use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;
 
 use super::{extract_json_ld, OpenHouseEvent, ParsedListing};
-use crate::db;
+use crate::models::property::Property;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -338,7 +338,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
     Some(ParsedListing {
         open_houses,
-        property: db::Property {
+        property: Property {
             id: 0,
             search_criteria_id: 0, // overwritten by caller
             title,

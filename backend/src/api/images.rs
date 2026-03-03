@@ -8,7 +8,8 @@ use object_store::{path::Path as ObjectPath, ObjectStoreExt};
 use tokio::fs;
 
 use crate::images::paths;
-use crate::{db, AppState};
+use crate::store::image_store;
+use crate::AppState;
 
 /// DELETE /api/listings/:id/images/:image_id
 ///
@@ -20,7 +21,7 @@ pub(crate) async fn delete_image(
     Path((listing_id, image_id)): Path<(i64, i64)>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     // Verify the image exists and belongs to this listing; get sha256+ext if downloaded.
-    let image_ext = db::get_image_ext(&state.db, image_id, listing_id)
+    let image_ext = image_store::get_image_ext(&state.db, image_id, listing_id)
         .await
         .map_err(|e| {
             (
@@ -43,7 +44,7 @@ pub(crate) async fn delete_image(
         }
     }
 
-    db::delete_image_record(&state.db, image_id, listing_id)
+    image_store::delete_image_record(&state.db, image_id, listing_id)
         .await
         .map_err(|e| {
             (

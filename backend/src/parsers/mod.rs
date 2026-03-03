@@ -13,7 +13,7 @@ pub mod zillow;
 #[cfg(test)]
 pub(crate) mod test_support;
 
-use crate::db;
+use crate::models::property::Property;
 use scraper::{Html, Selector};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
@@ -27,7 +27,7 @@ pub use crate::models::OpenHouseEvent;
 /// The normalised result of parsing a listing page: structured property data,
 /// the ordered list of image source URLs, and any open house events.
 pub struct ParsedListing {
-    pub property: db::Property,
+    pub property: Property,
     pub image_urls: Vec<String>,
     pub open_houses: Vec<OpenHouseEvent>,
 }
@@ -218,12 +218,12 @@ fn merge_text(primary: String, fallback: String) -> String {
 }
 
 fn merge_property(
-    primary: db::Property,
-    fallback: db::Property,
+    primary: Property,
+    fallback: Property,
     primary_source: ListingSite,
     fallback_source: ListingSite,
-) -> db::Property {
-    db::Property {
+) -> Property {
+    Property {
         id: primary.id,
         search_criteria_id: primary.search_criteria_id,
 

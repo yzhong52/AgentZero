@@ -14,8 +14,9 @@ use serde::Deserialize;
 use tokio::fs;
 
 use crate::images::paths;
-use crate::models::property::ListingStatus;
-use crate::{db, AppState};
+use crate::models::property::{ListingStatus, Property};
+use crate::store::{image_store, property_store};
+use crate::AppState;
 
 #[derive(Deserialize)]
 pub struct ListingsQuery {
@@ -33,14 +34,14 @@ pub struct ListingsQuery {
 pub(crate) async fn list_listings(
     State(state): State<AppState>,
     Query(params): Query<ListingsQuery>,
-) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
+) -> Result<Json<Vec<Property>>, (StatusCode, String)> {
     // Parse "Interested,Buyable" → [ListingStatus::Interested, ...]; empty = all.
     let statuses: Vec<ListingStatus> = match &params.status {
         None => vec![],
         Some(s) => s.split(',').filter_map(|v| v.parse().ok()).collect(),
     };
 
-    let listings = db::list(&state.db, &statuses, params.search_criteria_id).await.map_err(|e| {
+    let listings = property_store::list(&state.db, &statuses, params.search_criteria_id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),
@@ -55,8 +56,8 @@ pub(crate) async fn list_listings(
 pub(crate) async fn get_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
-    let p = db::get_by_id(&state.db, id)
+) -> Result<Json<Property>, (StatusCode, String)> {
+    let p = property_store::get_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
     Ok(Json(p))
@@ -71,7 +72,7 @@ pub(crate) async fn delete_listing(
     Path(id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     // 1. Delete locally-cached image files from the object store.
-    let cached = db::list_cached_images(&state.db, id).await.map_err(|e| {
+    let cached = image_store::list_cached_images(&state.db, id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),
@@ -79,7 +80,7 @@ pub(crate) async fn delete_listing(
     })?;
 
     for img in &cached {
-            let object_key = paths::object_key(id, &img.sha256, &img.ext);
+        let object_key = paths::object_key(id, &img.sha256, &img.ext);
         if let Err(e) = state
             .store
             .delete(&ObjectPath::from(object_key.as_str()))
@@ -95,13 +96,13 @@ pub(crate) async fn delete_listing(
     }
 
     // 2. Remove the per-listing image directory (now empty after step 1).
-        let dir = paths::listing_dir(id);
+    let dir = paths::listing_dir(id);
     if let Err(e) = fs::remove_dir(&dir).await {
         tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
     }
 
     // 3. Remove images_cache rows (no CASCADE on this FK).
-    db::delete_all_image_records(&state.db, id)
+    image_store::delete_all_image_records(&state.db, id)
         .await
         .map_err(|e| {
             (
@@ -111,7 +112,7 @@ pub(crate) async fn delete_listing(
         })?;
 
     // 4. Delete the listing row (listing_history cascades automatically).
-    db::delete(&state.db, id).await.map_err(|e| {
+    property_store::delete(&state.db, id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),

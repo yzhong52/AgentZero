@@ -1,5 +1,6 @@
-use crate::db;
 use crate::images::paths;
+use crate::models::image::CachedImage;
+use crate::store::image_store;
 use image::imageops::FilterType;
 use object_store::{path::Path as ObjectPath, ObjectStore, ObjectStoreExt};
 use reqwest::Client;
@@ -55,12 +56,12 @@ pub async fn cache_images(
     listing_id: i64,
 ) -> usize {
     // Already-cached images for this listing (for SHA-256 / dHash dedup).
-    let mut cached = db::list_cached_images(pool, listing_id)
+    let mut cached = image_store::list_cached_images(pool, listing_id)
         .await
         .unwrap_or_default();
 
     // URLs registered but not yet downloaded.
-    let pending = match db::list_pending_image_urls(pool, listing_id).await {
+    let pending = match image_store::list_pending_image_urls(pool, listing_id).await {
         Ok(urls) => urls,
         Err(e) => {
             tracing::error!(
@@ -110,7 +111,7 @@ pub async fn cache_images(
         // SHA-256 — exact duplicate within this listing.
         let sha256 = hex::encode(Sha256::digest(&bytes));
         if let Some(c) = cached.iter().find(|c| c.sha256 == sha256) {
-            let _ = db::update_cached_image(pool, listing_id, url, &sha256, c.phash, &c.ext).await;
+            let _ = image_store::update_cached_image(pool, listing_id, url, &sha256, c.phash, &c.ext).await;
             continue;
         }
 
@@ -135,7 +136,7 @@ pub async fn cache_images(
                     url,
                     hamming(existing.phash, ph)
                 );
-                let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.ext)
+                let _ = image_store::update_cached_image(pool, listing_id, url, &sha256, ph, &existing.ext)
                     .await;
                 continue;
             }
@@ -150,10 +151,10 @@ pub async fn cache_images(
             continue;
         }
 
-        let _ = db::update_cached_image(pool, listing_id, url, &sha256, ph, ext).await;
+        let _ = image_store::update_cached_image(pool, listing_id, url, &sha256, ph, ext).await;
 
         // Update in-memory list for subsequent dedup checks.
-        cached.push(db::CachedImage {
+        cached.push(CachedImage {
             sha256,
             phash: ph,
             ext: ext.to_string(),

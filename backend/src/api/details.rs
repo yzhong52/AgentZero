@@ -12,10 +12,10 @@ use axum::{
 use serde::Deserialize;
 
 use crate::ingest::url::parse_listing_url;
-use crate::{
-    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, db,
-    parsers, AppState,
-};
+use crate::models::history::HistoryEntry;
+use crate::models::property::{Property, UserDetails};
+use crate::store::{history_store, image_store, property_store};
+use crate::{compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, parsers, AppState};
 
 /// Validate and strip query params from a URL that must belong to `expected`.
 /// Returns the cleaned URL string, or a 400 error describing what went wrong.
@@ -56,7 +56,7 @@ pub(crate) async fn patch_notes(
     Path(id): Path<i64>,
     Json(body): Json<NotesRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    db::update_notes(&state.db, id, body.notes.as_deref())
+    property_store::update_notes(&state.db, id, body.notes.as_deref())
         .await
         .map_err(|e| {
             (
@@ -75,7 +75,7 @@ pub(crate) async fn patch_search(
     Path(id): Path<i64>,
     Json(body): Json<SearchIdRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    db::update_search_criteria_id(&state.db, id, body.search_criteria_id)
+    property_store::update_search_criteria_id(&state.db, id, body.search_criteria_id)
         .await
         .map_err(|e| {
             (
@@ -93,10 +93,10 @@ pub(crate) async fn patch_search(
 pub(crate) async fn patch_details(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    Json(body): Json<db::UserDetails>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
+    Json(body): Json<UserDetails>,
+) -> Result<Json<Property>, (StatusCode, String)> {
     // Load the stored record once; used both as the merge base and for price-history comparison.
-    let current = db::get_by_id(&state.db, id)
+    let current = property_store::get_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
@@ -191,7 +191,7 @@ pub(crate) async fn patch_details(
     updated.laundry_in_unit = body.laundry_in_unit.or(updated.laundry_in_unit);
     updated.mls_number = body.mls_number.clone().or(updated.mls_number.clone());
 
-    let mut updated = db::update_by_id(&state.db, id, &updated)
+    let mut updated = property_store::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| {
             (
@@ -227,11 +227,11 @@ pub(crate) async fn patch_details(
     if current.price != updated.price {
         let old = current.price.map(|v| v.to_string());
         let new = updated.price.map(|v| v.to_string());
-        let _ = db::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+        let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
     }
 
     // Re-attach images (update_by_id doesn't load them).
-    let images = db::list_images_with_meta(&state.db, id)
+    let images = image_store::list_images_with_meta(&state.db, id)
         .await
         .map_err(|e| {
             (
@@ -240,7 +240,7 @@ pub(crate) async fn patch_details(
             )
         })?;
 
-    Ok(Json(db::Property { images, ..updated }))
+    Ok(Json(Property { images, ..updated }))
 }
 
 /// GET /api/listings/:id/history
@@ -249,8 +249,8 @@ pub(crate) async fn patch_details(
 pub(crate) async fn get_history(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<Vec<db::HistoryEntry>>, (StatusCode, String)> {
-    let entries = db::list_history(&state.db, id).await.map_err(|e| {
+) -> Result<Json<Vec<HistoryEntry>>, (StatusCode, String)> {
+    let entries = history_store::list_history(&state.db, id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),

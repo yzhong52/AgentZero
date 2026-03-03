@@ -1,5 +1,4 @@
 pub mod api;
-pub mod db;
 mod finance;
 pub mod images;
 pub mod ingest;
@@ -18,6 +17,7 @@ use axum::{
 };
 use object_store::local::LocalFileSystem;
 use reqwest::Client;
+use crate::store::property_store;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
@@ -41,7 +41,7 @@ pub(crate) struct AppState {
 pub async fn build_app() -> Router {
 	let database_url =
 		std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
-	let db = db::init(&database_url).await;
+	let db = property_store::init(&database_url).await;
 
 	images::ensure_images_dir(IMAGES_LOCAL_DIR).await;
 	ingest::html_snapshots::ensure_dir().await;

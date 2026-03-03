@@ -13,7 +13,7 @@ use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;
 
 use super::{extract_description, extract_json_ld, extract_title, ParsedListing};
-use crate::db;
+use crate::models::property::Property;
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
@@ -365,7 +365,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let property_type = extract_property_type(&document);
     let sqft = extract_sqft(&document);
 
-    let property = db::Property {
+    let property = Property {
         id: 0,
         search_criteria_id: 0, // overwritten by caller
         redfin_url: None,

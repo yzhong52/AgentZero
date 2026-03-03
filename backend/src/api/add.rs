@@ -24,9 +24,11 @@ use serde::Deserialize;
 use crate::ingest::fetch::fetch_html;
 use crate::ingest::html_snapshots::save_listing_html;
 use crate::ingest::url::parse_listing_url;
+use crate::models::property::Property;
+use crate::store::{image_store, open_house_store, property_store};
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, db, images, parsers, AppState,
+    compute_mortgage, images, parsers, AppState,
 };
 
 #[derive(Deserialize)]
@@ -40,7 +42,7 @@ pub struct AddRequest {
 pub(crate) async fn add_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
-) -> Result<Json<db::Property>, (StatusCode, String)> {
+) -> Result<Json<Property>, (StatusCode, String)> {
     let listing_url = parse_listing_url(body.url.trim()).ok_or((
         StatusCode::BAD_REQUEST,
         format!("Invalid URL: {}", body.url.trim()),
@@ -49,7 +51,7 @@ pub(crate) async fn add_listing(
     let parsed_url = listing_url.url;
 
     // Check for duplicate source URLs before fetching.
-    if let Ok(Some(existing)) = db::find_by_source_url(&state.db, parsed_url.as_str()).await {
+    if let Ok(Some(existing)) = property_store::find_by_source_url(&state.db, parsed_url.as_str()).await {
         let body = serde_json::json!({
             "duplicate": true,
             "existing_id": existing.id,
@@ -141,7 +143,7 @@ pub(crate) async fn add_listing(
 
     // Check for duplicate MLS number before inserting.
     if let Some(ref mls) = property.mls_number {
-        if let Ok(Some(existing)) = db::find_by_mls(&state.db, mls).await {
+        if let Ok(Some(existing)) = property_store::find_by_mls(&state.db, mls).await {
             let body = serde_json::json!({
                 "duplicate": true,
                 "existing_id": existing.id,
@@ -155,7 +157,7 @@ pub(crate) async fn add_listing(
     // Assign to search.
     property.search_criteria_id = body.search_criteria_id;
 
-    let saved = db::add_listing(&state.db, &property).await.map_err(|e| {
+    let saved = property_store::add_listing(&state.db, &property).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("DB error: {}", e),
@@ -164,7 +166,7 @@ pub(crate) async fn add_listing(
 
     // Save any parsed open house events (upsert — ignore duplicates).
     if !open_houses.is_empty() {
-        if let Err(e) = db::upsert_open_houses(&state.db, saved.id, &open_houses).await {
+        if let Err(e) = open_house_store::upsert_open_houses(&state.db, saved.id, &open_houses).await {
             tracing::warn!("add_listing: failed to save open houses for id={}: {}", saved.id, e);
         }
     }
@@ -180,20 +182,20 @@ pub(crate) async fn add_listing(
     save_listing_html(saved.id, site, &source.html).await;
 
     for (position, url) in image_urls.iter().enumerate() {
-        let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
+        let _ = image_store::insert_image_url(&state.db, saved.id, url, position as i64).await;
     }
 
     // Download any pending images.
     let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), saved.id).await;
     tracing::info!("add_listing: id={} cached {} new image(s)", saved.id, cached);
 
-    let images = db::list_images_with_meta(&state.db, saved.id)
+    let images = image_store::list_images_with_meta(&state.db, saved.id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e)))?;
-    let open_houses = db::list_open_houses(&state.db, saved.id)
+    let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
         .await
         .unwrap_or_default();
-    Ok(Json(db::Property { images, open_houses, ..saved }))
+    Ok(Json(Property { images, open_houses, ..saved }))
 }
 
 /// Returns `true` for hosts that are known to block programmatic HTTP
@@ -209,8 +211,8 @@ fn is_blocked_host(site: parsers::ListingSite) -> bool {
 /// Constructs a blank `Property` with all fields zeroed/None and mortgage
 /// defaults pre-filled.  Used as a base for stub listings when scraping is
 /// blocked.  Callers should set the relevant URL field(s) after calling this.
-fn blank_stub() -> db::Property {
-    db::Property {
+fn blank_stub() -> Property {
+    Property {
         id: 0,
         search_criteria_id: 0, // overwritten by the caller before insert
         redfin_url: None,

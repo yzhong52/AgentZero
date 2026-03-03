@@ -10,7 +10,7 @@ use serde_json::Value as JsonValue;
 use std::sync::OnceLock;
 
 use super::{extract_json_ld, extract_title, OpenHouseEvent, ParsedListing};
-use crate::db;
+use crate::models::property::Property;
 
 // ── Static regexes ────────────────────────────────────────────────────────────
 
@@ -404,7 +404,7 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
 /// Extracts structured property fields from JSON-LD blocks.
 /// Looks for the item whose `@type` includes `"RealEstateListing"`.
 /// `images` is always left empty — `extract_image_urls` handles that.
-pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option<db::Property> {
+pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option<Property> {
     let listing = json_ld.iter().find(|v| {
         let t = &v["@type"];
         t == "RealEstateListing"
@@ -449,7 +449,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         .as_str()
         .map(|s| s[..s.len().min(10)].to_string());
 
-    Some(db::Property {
+    Some(Property {
         id: 0,
         search_criteria_id: 0, // overwritten by caller
         redfin_url: Some(url.to_string()),

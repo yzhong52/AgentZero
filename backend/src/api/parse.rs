@@ -11,8 +11,8 @@ use std::collections::HashMap;
 use crate::parsers::{
     extract_description, extract_images, extract_json_ld, extract_title, meta_map, ParseResult,
 };
-use crate::ingest::fetch::fetch_html;
-use crate::ingest::url::parse_listing_url;
+use crate::fetching::fetch::fetch_html;
+use crate::fetching::url::parse_listing_url;
 use crate::AppState;
 
 /// GET /api/parse?url=<url>

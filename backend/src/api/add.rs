@@ -21,9 +21,9 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 
-use crate::ingest::fetch::fetch_html;
-use crate::ingest::html_snapshots::save_listing_html;
-use crate::ingest::url::parse_listing_url;
+use crate::fetching::fetch::fetch_html;
+use crate::fetching::html_snapshots::save_listing_html;
+use crate::fetching::url::parse_listing_url;
 use crate::models::property::Property;
 use crate::finance as property_finance;
 use crate::store::{image_store, open_house_store, property_store};

@@ -1,7 +1,7 @@
 use crate::images;
-use crate::ingest::fetch::fetch_html;
-use crate::ingest::html_snapshots::save_listing_html;
-use crate::ingest::url::parse_listing_url;
+use crate::fetching::fetch::fetch_html;
+use crate::fetching::html_snapshots::save_listing_html;
+use crate::fetching::url::parse_listing_url;
 use crate::models::property::Property;
 use crate::parsers;
 use crate::finance as property_finance;

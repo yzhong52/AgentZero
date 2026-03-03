@@ -11,7 +11,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::ingest::url::parse_listing_url;
+use crate::fetching::url::parse_listing_url;
 use crate::models::history::HistoryEntry;
 use crate::models::property::{Property, UserDetails};
 use crate::finance as property_finance;

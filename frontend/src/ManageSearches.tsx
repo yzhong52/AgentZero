@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
-import type { Search } from './types'
+import type { SavedSearch } from './types'
 
 export function ManageSearches() {
     const navigate = useNavigate()
 
-    const [searches, setSearches] = useState<Search[]>([])
+    const [searches, setSearches] = useState<SavedSearch[]>([])
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editDraft, setEditDraft] = useState<{ title: string; desc: string }>({ title: '', desc: '' })
     const [savingId, setSavingId] = useState<number | null>(null)
@@ -17,7 +17,7 @@ export function ManageSearches() {
         try {
             const resp = await fetch('/api/searches')
             if (resp.ok) {
-                const data: Search[] = await resp.json()
+                const data: SavedSearch[] = await resp.json()
                 setSearches(data)
             }
         } catch { /* non-fatal */ }
@@ -25,7 +25,7 @@ export function ManageSearches() {
 
     useEffect(() => { fetchSearches() }, [])
 
-    function startEdit(s: Search) {
+    function startEdit(s: SavedSearch) {
         setEditingId(s.id)
         setEditDraft({ title: s.title, desc: s.description ?? '' })
         setConfirmDeleteId(null)
@@ -68,7 +68,7 @@ export function ManageSearches() {
         <div className="manage-page">
             <div className="detail-nav">
                 <button className="back-btn" onClick={() => navigate(-1)}>
-                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     Back
                 </button>
                 <span className="detail-nav-title">Manage Scenarios</span>

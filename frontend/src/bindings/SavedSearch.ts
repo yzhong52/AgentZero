@@ -3,7 +3,7 @@
 /**
  * A saved search / project that groups related property listings.
  */
-export type Search = { id: bigint, title: string, description: string, position: bigint, created_at: string, updated_at: string | null, 
+export type SavedSearch = { id: bigint, title: string, description: string, position: bigint, created_at: string, updated_at: string | null, 
 /**
  * Number of listings belonging to this search (populated by queries).
  */

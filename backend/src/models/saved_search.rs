@@ -5,7 +5,7 @@ use ts_rs::TS;
 /// A saved search / project that groups related property listings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
-pub struct Search {
+pub struct SavedSearch {
     pub id: i64,
     pub title: String,
     pub description: String,

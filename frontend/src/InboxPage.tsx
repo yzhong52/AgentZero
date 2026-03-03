@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Property, Search } from './types'
+import type { Property, SavedSearch } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
 
 export function InboxPage() {
   const navigate = useNavigate()
-  const [searches, setSearches] = useState<Search[]>([])
+  const [searches, setSearches] = useState<SavedSearch[]>([])
   const [listings, setListings] = useState<Property[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [dismissing, setDismissing] = useState<Set<number>>(new Set())
@@ -19,7 +19,7 @@ export function InboxPage() {
       try {
         const searchResp = await fetch('/api/searches')
         if (!searchResp.ok) return
-        const allSearches: Search[] = await searchResp.json()
+        const allSearches: SavedSearch[] = await searchResp.json()
         setSearches(allSearches)
 
         const results = await Promise.all(

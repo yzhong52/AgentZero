@@ -6,7 +6,7 @@ import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import type { StatusOption } from './constants'
-import type { Property, Search } from './types'
+import type { Property, SavedSearch } from './types'
 
 function App() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -35,7 +35,7 @@ function App() {
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
   // ── Searches ──────────────────────────────────────────────────────────────
-  const [searches, setSearches] = useState<Search[]>([])
+  const [searches, setSearches] = useState<SavedSearch[]>([])
   const [activeSearchId, setActiveSearchId] = useState<number | null>(() => {
     const p = searchParams.get('search')
     return p ? Number(p) : null
@@ -71,7 +71,7 @@ function App() {
     try {
       const resp = await fetch('/api/searches')
       if (resp.ok) {
-        const data: Search[] = await resp.json()
+        const data: SavedSearch[] = await resp.json()
         setSearches(data)
         // Auto-select first search if none selected or the selected one no longer exists
         if (data.length > 0) {
@@ -110,7 +110,7 @@ function App() {
         body: JSON.stringify({ title: newSearchTitle.trim(), description: newSearchDesc.trim() }),
       })
       if (resp.ok) {
-        const created: Search = await resp.json()
+        const created: SavedSearch = await resp.json()
         setNewSearchTitle('')
         setNewSearchDesc('')
         setNewSearchOpen(false)

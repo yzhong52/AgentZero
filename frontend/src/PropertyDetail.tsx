@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
-import type { Property, Search } from './types'
+import type { Property, SavedSearch } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
@@ -451,7 +451,7 @@ export function PropertyDetail() {
     useEffect(() => { loadProperty() }, [id])
 
     // ── Searches (for move-to-search) ─────────────────────────────────────────
-    const [searches, setSearches] = useState<Search[]>([])
+    const [searches, setSearches] = useState<SavedSearch[]>([])
     useEffect(() => {
         fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
     }, [])

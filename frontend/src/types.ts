@@ -25,7 +25,7 @@ export type ImageEntry = {
   created_at: string
 }
 
-export type Search = {
+export type SavedSearch = {
   id: number
   title: string
   description: string

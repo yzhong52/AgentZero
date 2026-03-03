@@ -1,8 +1,8 @@
-use crate::models::search::Search;
+use crate::models::saved_search::SavedSearch;
 use sqlx::{Row, SqlitePool};
 
 /// Insert a new search and return it. Position is set to max+1 so it appears last.
-pub async fn create(pool: &SqlitePool, title: &str, description: &str) -> Result<Search, sqlx::Error> {
+pub async fn create(pool: &SqlitePool, title: &str, description: &str) -> Result<SavedSearch, sqlx::Error> {
     let row = sqlx::query(
         r#"INSERT INTO searches (title, description, position)
            VALUES (?, ?, COALESCE((SELECT MAX(position) FROM searches), -1) + 1)
@@ -13,7 +13,7 @@ pub async fn create(pool: &SqlitePool, title: &str, description: &str) -> Result
     .fetch_one(pool)
     .await?;
 
-    Ok(Search {
+    Ok(SavedSearch {
         id: row.get("id"),
         title: row.get("title"),
         description: row.get("description"),
@@ -25,7 +25,7 @@ pub async fn create(pool: &SqlitePool, title: &str, description: &str) -> Result
 }
 
 /// List all searches ordered by position, with a count of listings in each.
-pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Search>, sqlx::Error> {
+pub async fn list_all(pool: &SqlitePool) -> Result<Vec<SavedSearch>, sqlx::Error> {
     let rows = sqlx::query(
         r#"SELECT s.id, s.title, s.description, s.position, s.created_at, s.updated_at,
                   COUNT(l.id) AS listing_count
@@ -39,7 +39,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Search>, sqlx::Error> {
 
     Ok(rows
         .iter()
-        .map(|r| Search {
+        .map(|r| SavedSearch {
             id: r.get("id"),
             title: r.get("title"),
             description: r.get("description"),
@@ -52,7 +52,7 @@ pub async fn list_all(pool: &SqlitePool) -> Result<Vec<Search>, sqlx::Error> {
 }
 
 /// Get a single search by ID.
-pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Search, sqlx::Error> {
+pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<SavedSearch, sqlx::Error> {
     let row = sqlx::query(
         r#"SELECT s.id, s.title, s.description, s.position, s.created_at, s.updated_at,
                   COUNT(l.id) AS listing_count
@@ -65,7 +65,7 @@ pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Search, sqlx::Error
     .fetch_one(pool)
     .await?;
 
-    Ok(Search {
+    Ok(SavedSearch {
         id: row.get("id"),
         title: row.get("title"),
         description: row.get("description"),
@@ -82,7 +82,7 @@ pub async fn update(
     id: i64,
     title: Option<&str>,
     description: Option<&str>,
-) -> Result<Search, sqlx::Error> {
+) -> Result<SavedSearch, sqlx::Error> {
     if let Some(t) = title {
         sqlx::query("UPDATE searches SET title = ?, updated_at = datetime('now') WHERE id = ?")
             .bind(t)

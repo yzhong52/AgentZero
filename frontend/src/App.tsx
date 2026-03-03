@@ -125,7 +125,7 @@ function App() {
   function toggleStatus(s: StatusOption) {
     setStatusFilter(prev => {
       const next = new Set(prev)
-      next.has(s) ? next.delete(s) : next.add(s)
+      if (next.has(s)) { next.delete(s) } else { next.add(s) }
       return next
     })
   }
@@ -378,7 +378,7 @@ function App() {
                           checked={visibleCols.has(c.key)}
                           onChange={() => setVisibleCols(prev => {
                             const next = new Set(prev)
-                            next.has(c.key) ? next.delete(c.key) : next.add(c.key)
+                            if (next.has(c.key)) { next.delete(c.key) } else { next.add(c.key) }
                             return next
                           })}
                         />

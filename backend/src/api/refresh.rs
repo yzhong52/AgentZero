@@ -184,10 +184,16 @@ pub async fn refresh_listing(
 
     // ── 9. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
+    tracing::info!(
+        "refresh_listing: id={} registering {} image URL(s)",
+        id,
+        image_urls.len()
+    );
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, id, url, position as i64).await;
     }
-    images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
+    let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
+    tracing::info!("refresh_listing: id={} cached {} new image(s)", id, cached);
 
     // ── 10. Return the refreshed record with image metadata ───────────────────
     let images = db::list_images_with_meta(&state.db, saved.id)

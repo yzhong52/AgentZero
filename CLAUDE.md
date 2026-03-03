@@ -29,6 +29,20 @@ Defaults:
 - Backend log: `/tmp/agent_zero_backend.log`
 - Frontend log: `/tmp/agent_zero_frontend.log`
 
+## Logs
+
+**Backend log**: `/tmp/agent_zero_backend.log`
+
+Key log patterns to look for when debugging:
+
+| Pattern | Meaning |
+|---|---|
+| `add_listing: id=N registering 0 image URL(s)` | Parser found no images — likely a sold/off-market listing |
+| `redfin::parse: no images in JSON-LD for …` | Redfin sold listing — photos stripped from JSON-LD |
+| `Image URL returned error status …` | Image server returned 4xx/5xx — URL probably expired |
+| `Failed to download image …` | Network error fetching an image |
+| `cache_images: listing_id=N pending=0` | No new images to download (all already cached or none registered) |
+
 Optional overrides:
 ```bash
 BACKEND_PORT=8000 LOG_FILE=/tmp/backend.log ./scripts/run_backend.sh

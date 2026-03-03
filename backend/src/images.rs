@@ -72,6 +72,17 @@ pub async fn cache_images(
         }
     };
 
+    tracing::info!(
+        "cache_images: listing_id={} pending={} already_cached={}",
+        listing_id,
+        pending.len(),
+        cached.len()
+    );
+
+    if pending.is_empty() {
+        return 0;
+    }
+
     let mut newly_cached = 0usize;
 
     for url in &pending {

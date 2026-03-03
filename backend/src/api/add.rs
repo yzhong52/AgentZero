@@ -188,12 +188,18 @@ pub async fn add_listing(
     }
 
     // Register image URLs in images_cache, preserving parser ordering.
+    tracing::info!(
+        "add_listing: id={} registering {} image URL(s)",
+        saved.id,
+        image_urls.len()
+    );
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
     }
 
     // Download any pending images.
-    images::cache_images(&state.db, &state.client, state.store.as_ref(), saved.id).await;
+    let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), saved.id).await;
+    tracing::info!("add_listing: id={} cached {} new image(s)", saved.id, cached);
 
     let images = db::list_images_with_meta(&state.db, saved.id)
         .await

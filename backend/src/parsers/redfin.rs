@@ -601,6 +601,14 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     }
 
     let image_urls = extract_image_urls(&json_ld);
+    if image_urls.is_empty() {
+        tracing::info!(
+            "redfin::parse: no images in JSON-LD for {} (sold/off-market listing?)",
+            url
+        );
+    } else {
+        tracing::debug!("redfin::parse: found {} image URL(s) for {}", image_urls.len(), url);
+    }
 
     // Derive year from listed_date ("2026-02-24" → 2026) for date resolution.
     let year = property

@@ -7,7 +7,7 @@ use axum::{
 use object_store::{path::Path as ObjectPath, ObjectStoreExt};
 use tokio::fs;
 
-use crate::image_paths;
+use crate::images::paths;
 use crate::{db, AppState};
 
 /// DELETE /api/listings/:id/images/:image_id
@@ -32,7 +32,7 @@ pub(crate) async fn delete_image(
 
     // Delete the file from the object store when it was successfully downloaded.
     if let Some((sha256, ext)) = image_ext {
-        let object_key = image_paths::object_key(listing_id, &sha256, &ext);
+        let object_key = paths::object_key(listing_id, &sha256, &ext);
         if let Err(e) = state
             .store
             .delete(&ObjectPath::from(object_key.as_str()))
@@ -53,7 +53,7 @@ pub(crate) async fn delete_image(
         })?;
 
     // If no images remain for this listing, remove the empty per-listing directory.
-    let dir = image_paths::listing_dir(listing_id);
+    let dir = paths::listing_dir(listing_id);
     if let Err(e) = fs::remove_dir(&dir).await {
         // Not empty (other images remain) or already gone — both are fine.
         tracing::debug!("Could not remove image dir {}: {}", dir, e);

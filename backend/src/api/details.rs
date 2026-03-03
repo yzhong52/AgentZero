@@ -11,9 +11,10 @@ use axum::{
 };
 use serde::Deserialize;
 
+use crate::ingest::url::parse_listing_url;
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, db,
-    parse_listing_url, parsers, AppState,
+    parsers, AppState,
 };
 
 /// Validate and strip query params from a URL that must belong to `expected`.

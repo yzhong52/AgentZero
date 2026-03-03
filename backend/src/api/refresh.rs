@@ -1,9 +1,12 @@
 use crate::db;
 use crate::images;
+use crate::ingest::fetch::fetch_html;
+use crate::ingest::html_snapshots::save_listing_html;
+use crate::ingest::url::parse_listing_url;
 use crate::parsers;
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, fetch_html, parse_listing_url, AppState,
+    compute_mortgage, AppState,
 };
 use axum::http::StatusCode;
 use axum::{
@@ -188,7 +191,7 @@ pub(crate) async fn refresh_listing(
     // Save raw HTML snapshots for offline inspection / parser backfills.
     for source in &sources {
         if let Some(site) = parsers::ListingSite::from_url(&source.url) {
-            crate::html_snapshots::save_listing_html(id, site, &source.html).await;
+            save_listing_html(id, site, &source.html).await;
         }
     }
 

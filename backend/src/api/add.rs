@@ -21,9 +21,12 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 
+use crate::ingest::fetch::fetch_html;
+use crate::ingest::html_snapshots::save_listing_html;
+use crate::ingest::url::parse_listing_url;
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, db, fetch_html, images, parsers, parse_listing_url, AppState,
+    compute_mortgage, db, images, parsers, AppState,
 };
 
 #[derive(Deserialize)]
@@ -174,7 +177,7 @@ pub(crate) async fn add_listing(
     );
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
-    crate::html_snapshots::save_listing_html(saved.id, site, &source.html).await;
+    save_listing_html(saved.id, site, &source.html).await;
 
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;

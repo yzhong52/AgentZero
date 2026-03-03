@@ -13,7 +13,7 @@ use object_store::{path::Path as ObjectPath, ObjectStoreExt};
 use serde::Deserialize;
 use tokio::fs;
 
-use crate::image_paths;
+use crate::images::paths;
 use crate::models::property::ListingStatus;
 use crate::{db, AppState};
 
@@ -79,7 +79,7 @@ pub(crate) async fn delete_listing(
     })?;
 
     for img in &cached {
-        let object_key = image_paths::object_key(id, &img.sha256, &img.ext);
+            let object_key = paths::object_key(id, &img.sha256, &img.ext);
         if let Err(e) = state
             .store
             .delete(&ObjectPath::from(object_key.as_str()))
@@ -95,7 +95,7 @@ pub(crate) async fn delete_listing(
     }
 
     // 2. Remove the per-listing image directory (now empty after step 1).
-    let dir = image_paths::listing_dir(id);
+        let dir = paths::listing_dir(id);
     if let Err(e) = fs::remove_dir(&dir).await {
         tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
     }

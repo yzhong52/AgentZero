@@ -1,4 +1,4 @@
-use crate::image_paths;
+use crate::images::paths;
 use crate::models::image::{CachedImage, ImageEntry};
 use sqlx::{Row, SqlitePool};
 
@@ -102,7 +102,7 @@ pub async fn list_images_with_meta(
         .map(|r| {
             let ext: Option<String> = r.get("ext");
             let url = match ext {
-                Some(ref e) => image_paths::serve_url(listing_id, &r.get::<String, _>("sha256"), e),
+                Some(ref e) => paths::serve_url(listing_id, &r.get::<String, _>("sha256"), e),
                 None => r.get("source_url"),
             };
             ImageEntry {

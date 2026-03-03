@@ -1,22 +1,16 @@
 pub mod api;
 pub mod db;
-mod fetch;
 mod finance;
-pub mod html_snapshots;
-pub mod image_paths;
 pub mod images;
 pub mod ingest;
 pub mod models;
 pub mod parsers;
 pub mod store;
-pub mod utils;
 
-pub(crate) use fetch::fetch_html;
 pub(crate) use finance::{
 	compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
 	compute_mortgage,
 };
-pub(crate) use utils::parse_listing_url;
 
 use axum::{
 	routing::{delete, get, patch, post, put},
@@ -50,7 +44,7 @@ pub async fn build_app() -> Router {
 	let db = db::init(&database_url).await;
 
 	images::ensure_images_dir(IMAGES_LOCAL_DIR).await;
-	html_snapshots::ensure_dir().await;
+	ingest::html_snapshots::ensure_dir().await;
 	let store: Arc<dyn object_store::ObjectStore> = Arc::new(
 		LocalFileSystem::new_with_prefix(std::path::Path::new(IMAGES_LOCAL_DIR))
 			.expect("Failed to initialize local image store"),

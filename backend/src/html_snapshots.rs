@@ -11,19 +11,11 @@ use tokio::fs;
 
 pub const DIR: &str = "html_snapshots";
 
-/// Derive a short source label from the URL hostname.
+/// Derive a short source label from the URL via the [`crate::parsers::SourceKind`] enum.
 fn source_label(url: &str) -> &'static str {
-    if url.contains("redfin.") {
-        "redfin"
-    } else if url.contains("rew.ca") {
-        "rew"
-    } else if url.contains("realtor.ca") {
-        "realtor"
-    } else if url.contains("zillow.com") {
-        "zillow"
-    } else {
-        "unknown"
-    }
+    crate::parsers::SourceKind::from_url(url)
+        .map(|k| k.name())
+        .unwrap_or("unknown")
 }
 
 /// Create the snapshots directory if it doesn't exist.

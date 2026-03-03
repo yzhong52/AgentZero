@@ -3,6 +3,7 @@ pub mod html_snapshots;
 pub mod image_paths;
 pub mod images;
 pub mod models;
+pub mod parsers;
 pub mod store;
 pub mod utils;
 

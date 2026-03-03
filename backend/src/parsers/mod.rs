@@ -134,7 +134,7 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 // ── Parser dispatch ───────────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum SourceKind {
+pub(crate) enum SourceKind {
     Redfin,
     Rew,
     Zillow,
@@ -142,12 +142,26 @@ enum SourceKind {
 }
 
 impl SourceKind {
-    fn name(self) -> &'static str {
+    pub(crate) fn name(self) -> &'static str {
         match self {
             SourceKind::Redfin => "redfin",
             SourceKind::Rew => "rew",
             SourceKind::Zillow => "zillow",
             SourceKind::Realtor => "realtor",
+        }
+    }
+
+    pub(crate) fn from_url(url: &str) -> Option<Self> {
+        if url.contains("redfin.") {
+            Some(SourceKind::Redfin)
+        } else if url.contains("rew.ca") {
+            Some(SourceKind::Rew)
+        } else if url.contains("zillow.com") {
+            Some(SourceKind::Zillow)
+        } else if url.contains("realtor.ca") {
+            Some(SourceKind::Realtor)
+        } else {
+            None
         }
     }
 }
@@ -593,31 +607,14 @@ fn merge_listing(
 }
 
 fn parse_source(url: &str, html: &str) -> Option<ParsedSource> {
-    if url.contains("redfin") {
-        return redfin::parse(url, html).map(|listing| ParsedSource {
-            kind: SourceKind::Redfin,
-            listing,
-        });
-    }
-    if url.contains("rew.ca") {
-        return rew::parse(url, html).map(|listing| ParsedSource {
-            kind: SourceKind::Rew,
-            listing,
-        });
-    }
-    if url.contains("zillow.com") {
-        return zillow::parse(url, html).map(|listing| ParsedSource {
-            kind: SourceKind::Zillow,
-            listing,
-        });
-    }
-    if url.contains("realtor.ca") {
-        return realtor::parse(url, html).map(|listing| ParsedSource {
-            kind: SourceKind::Realtor,
-            listing,
-        });
-    }
-    None
+    let kind = SourceKind::from_url(url)?;
+    let listing = match kind {
+        SourceKind::Redfin => redfin::parse(url, html)?,
+        SourceKind::Rew => rew::parse(url, html)?,
+        SourceKind::Zillow => zillow::parse(url, html)?,
+        SourceKind::Realtor => realtor::parse(url, html)?,
+    };
+    Some(ParsedSource { kind, listing })
 }
 
 /// Parses and merges data from multiple listing pages for the same property.

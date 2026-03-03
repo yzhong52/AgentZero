@@ -25,7 +25,7 @@ fn is_title_exist(title: &str) -> bool {
 /// skytrain info, rental details) are never touched by `update_by_id` and remain intact.
 /// Fields the parser may produce but that users can also set manually (schools, HOA fee)
 /// are preserved from the stored record when the parser returns nothing for them.
-pub async fn refresh_listing(
+pub(crate) async fn refresh_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
@@ -219,7 +219,7 @@ pub async fn refresh_listing(
 /// Fetches and parses a listing without saving — used to build the refresh diff preview.
 /// Applies the same field-preservation rules as `refresh_listing` so the diff accurately
 /// reflects what would change if the user confirmed the refresh.
-pub async fn preview_refresh(
+pub(crate) async fn preview_refresh(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {

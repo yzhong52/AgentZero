@@ -30,7 +30,7 @@ pub struct ListingsQuery {
 ///
 /// Returns saved properties, newest first. Optionally filtered by status and/or search.
 /// Each record includes cached image metadata (id, local_path, position).
-pub async fn list_listings(
+pub(crate) async fn list_listings(
     State(state): State<AppState>,
     Query(params): Query<ListingsQuery>,
 ) -> Result<Json<Vec<db::Property>>, (StatusCode, String)> {
@@ -52,7 +52,7 @@ pub async fn list_listings(
 /// GET /api/listings/:id
 ///
 /// Returns a single listing by ID (includes images and metadata).
-pub async fn get_listing(
+pub(crate) async fn get_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
@@ -66,7 +66,7 @@ pub async fn get_listing(
 ///
 /// Deletes a listing: removes image files from the object store, clears the
 /// images_cache rows, then removes the listing row itself.
-pub async fn delete_listing(
+pub(crate) async fn delete_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, String)> {

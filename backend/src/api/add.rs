@@ -34,7 +34,7 @@ pub struct AddRequest {
     pub search_criteria_id: i64,
 }
 
-pub async fn add_listing(
+pub(crate) async fn add_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {

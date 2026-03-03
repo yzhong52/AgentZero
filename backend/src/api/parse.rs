@@ -17,7 +17,7 @@ use crate::{fetch_html, parse_listing_url, AppState};
 ///
 /// Fetches the given URL and runs all parsers, returning the raw parsed fields
 /// (title, description, images, JSON-LD, meta tags). Does not write to the DB.
-pub async fn parse(
+pub(crate) async fn parse(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<ParseResult>, (StatusCode, String)> {

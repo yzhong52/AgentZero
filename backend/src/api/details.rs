@@ -50,7 +50,7 @@ pub struct SearchIdRequest {
 /// PATCH /api/listings/:id/notes
 ///
 /// Updates the personal notes for a listing. `id` is the property/listing ID.
-pub async fn patch_notes(
+pub(crate) async fn patch_notes(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<NotesRequest>,
@@ -69,7 +69,7 @@ pub async fn patch_notes(
 /// PATCH /api/listings/:id/search
 ///
 /// Move a listing to a different search (or detach it by passing `null`).
-pub async fn patch_search(
+pub(crate) async fn patch_search(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<SearchIdRequest>,
@@ -89,7 +89,7 @@ pub async fn patch_search(
 ///
 /// Updates user-tracked details for a listing. `id` is the property/listing ID.
 /// Records a history entry if the price changed. Returns the updated property.
-pub async fn patch_details(
+pub(crate) async fn patch_details(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<db::UserDetails>,
@@ -245,7 +245,7 @@ pub async fn patch_details(
 /// GET /api/listings/:id/history
 ///
 /// Returns price/field change history for a listing. `id` is the property/listing ID.
-pub async fn get_history(
+pub(crate) async fn get_history(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<db::HistoryEntry>>, (StatusCode, String)> {

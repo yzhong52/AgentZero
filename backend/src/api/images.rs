@@ -15,7 +15,7 @@ use crate::{db, AppState};
 /// Removes a single cached image: deletes the file from the object store and
 /// the row from `images_cache`. Silently removes the per-listing directory if
 /// it becomes empty.
-pub async fn delete_image(
+pub(crate) async fn delete_image(
     State(state): State<AppState>,
     Path((listing_id, image_id)): Path<(i64, i64)>,
 ) -> Result<StatusCode, (StatusCode, String)> {

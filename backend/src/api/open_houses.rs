@@ -13,7 +13,7 @@ use serde::Deserialize;
 use crate::{db, AppState};
 
 /// GET /api/listings/:id/open-houses
-pub async fn get_open_houses(
+pub(crate) async fn get_open_houses(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Vec<db::OpenHouse>>, (StatusCode, String)> {
@@ -32,7 +32,7 @@ pub struct PatchVisitedRequest {
 }
 
 /// PATCH /api/listings/:id/open-houses/:oh_id
-pub async fn patch_open_house(
+pub(crate) async fn patch_open_house(
     State(state): State<AppState>,
     Path((listing_id, oh_id)): Path<(i64, i64)>,
     Json(body): Json<PatchVisitedRequest>,

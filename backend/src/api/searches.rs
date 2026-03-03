@@ -37,7 +37,7 @@ pub struct ReorderRequest {
 }
 
 /// GET /api/searches
-pub async fn list_searches(
+pub(crate) async fn list_searches(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<SavedSearch>>, (StatusCode, String)> {
     let searches = saved_search_store::list_all(&state.db)
@@ -47,7 +47,7 @@ pub async fn list_searches(
 }
 
 /// POST /api/searches
-pub async fn create_search(
+pub(crate) async fn create_search(
     State(state): State<AppState>,
     Json(body): Json<CreateSearchRequest>,
 ) -> Result<Json<SavedSearch>, (StatusCode, String)> {
@@ -61,7 +61,7 @@ pub async fn create_search(
 }
 
 /// GET /api/searches/:id
-pub async fn get_search(
+pub(crate) async fn get_search(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<SavedSearch>, (StatusCode, String)> {
@@ -72,7 +72,7 @@ pub async fn get_search(
 }
 
 /// PATCH /api/searches/:id
-pub async fn update_search(
+pub(crate) async fn update_search(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<UpdateSearchRequest>,
@@ -89,7 +89,7 @@ pub async fn update_search(
 }
 
 /// PUT /api/searches/reorder
-pub async fn reorder_searches(
+pub(crate) async fn reorder_searches(
     State(state): State<AppState>,
     Json(body): Json<ReorderRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
@@ -103,7 +103,7 @@ pub async fn reorder_searches(
 }
 
 /// DELETE /api/searches/:id
-pub async fn delete_search(
+pub(crate) async fn delete_search(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, (StatusCode, String)> {

@@ -1,12 +1,12 @@
 //! POST /api/listings — add a new listing.
 //!
-//! Fetches and parses one or more listing URLs for the same property, saves
-//! the merged result to the DB, downloads images, and returns the saved record.
+//! Fetches and parses the given listing URL, saves the result to the DB,
+//! downloads images, and returns the saved record.
 //!
 //! # Supported parsers
 //!
 //! | Source      | Status  | Notes                                      |
-//! |-------------|---------|--------------------------------------------|
+//! |-------------|---------|--------------------------------------------|  
 //! | Redfin      | ✅ Works | Primary source; best structured data       |
 //! | REW.ca      | ✅ Works | Good supplement; includes property tax     |
 //! | Zillow      | ❌ Blocked | PerimeterX / CloudFront (403)            |
@@ -14,10 +14,9 @@
 //!
 //! # Blocked-host handling
 //!
-//! When **all** submitted URLs are from known-blocked hosts (Zillow,
-//! Realtor.ca), a stub listing is saved containing only the URL(s) so the
-//! user can fill in details manually via the edit panel.  A mix of blocked
-//! and unrecognised URLs still returns 422.
+//! When the submitted URL is from a known-blocked host (Zillow, Realtor.ca),
+//! a stub listing is saved containing only the URL so the user can fill in
+//! details manually via the edit panel.
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
@@ -85,9 +84,8 @@ pub async fn add_listing(
             ))
         }
     };
-    let sources = std::slice::from_ref(&source);
 
-    let listing_opt = parsers::parse_multi(&sources);
+    let listing_opt = parsers::parse_multi(std::slice::from_ref(&source));
 
     let (mut property, image_urls, open_houses) = match listing_opt {
         Some(listing) => (listing.property, listing.image_urls, listing.open_houses),
@@ -176,8 +174,8 @@ pub async fn add_listing(
     );
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
-    for source in sources {
-        crate::html_snapshots::save(saved.id, &source.url, &source.html).await;
+    if let Some(kind) = parsers::SourceKind::from_url(&source.url) {
+        crate::html_snapshots::save_listing_html(saved.id, kind, &source.html).await;
     }
 
     for (position, url) in image_urls.iter().enumerate() {

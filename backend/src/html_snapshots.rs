@@ -11,13 +11,6 @@ use tokio::fs;
 
 pub const DIR: &str = "html_snapshots";
 
-/// Derive a short source label from the URL via the [`crate::parsers::SourceKind`] enum.
-fn source_label(url: &str) -> &'static str {
-    crate::parsers::SourceKind::from_url(url)
-        .map(|k| k.name())
-        .unwrap_or("unknown")
-}
-
 /// Create the snapshots directory if it doesn't exist.
 pub async fn ensure_dir() {
     if let Err(e) = fs::create_dir_all(DIR).await {
@@ -27,11 +20,11 @@ pub async fn ensure_dir() {
 
 /// Write `html` to `{DIR}/{listing_id}_{source}.html`.
 /// Silently skips empty HTML (e.g. blocked-host stubs).
-pub async fn save(listing_id: i64, url: &str, html: &str) {
+pub(crate) async fn save_listing_html(listing_id: i64, kind: crate::parsers::SourceKind, html: &str) {
     if html.is_empty() {
         return;
     }
-    let label = source_label(url);
+    let label = kind.name();
     let path = format!("{}/{listing_id}_{label}.html", DIR);
     match fs::write(&path, html.as_bytes()).await {
         Ok(_) => tracing::debug!(

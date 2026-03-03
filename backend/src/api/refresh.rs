@@ -187,7 +187,9 @@ pub async fn refresh_listing(
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
     for source in &sources {
-        crate::html_snapshots::save(id, &source.url, &source.html).await;
+        if let Some(kind) = parsers::SourceKind::from_url(&source.url) {
+            crate::html_snapshots::save_listing_html(id, kind, &source.html).await;
+        }
     }
 
     tracing::info!(

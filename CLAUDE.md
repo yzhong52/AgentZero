@@ -71,8 +71,8 @@ Below are the public HTTP endpoints exposed by the backend. All endpoints return
 	- Response (200): { "url": "...", "title": "...", "description": "...", "images": ["..."], "meta": {...} }
 
 - **POST /api/listings**
-	- Description: Parse and save one or more listing source URLs as a single property. Use when you have multiple source URLs (Redfin, Realtor, etc.) for the same property.
-	- Body (JSON): { "urls": ["https://redfin.example/...", "https://rew.example/..."] }
+	- Description: Parse and save a single listing URL as a property.
+	- Body (JSON): { "url": "https://redfin.example/...", "search_criteria_id": 1 }
 	- Response (200): the saved `Property` record (includes `id`, parsed fields, and `images` metadata).
 	- Errors: 400 for invalid request, 502 for fetch failures, 422 if no supported listing format found.
 

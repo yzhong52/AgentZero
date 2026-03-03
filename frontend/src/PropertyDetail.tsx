@@ -1534,7 +1534,16 @@ export function PropertyDetail() {
                                                             className="edit-input"
                                                             type="url"
                                                             value={currentValue ?? ''}
-                                                            onChange={e => setUrlDraft(d => ({ ...d, [key]: e.target.value || null }))}
+                                                            onChange={e => {
+                                                                const raw = e.target.value
+                                                                let cleaned = raw
+                                                                try {
+                                                                    const u = new URL(raw)
+                                                                    u.search = ''
+                                                                    cleaned = u.toString()
+                                                                } catch { /* keep raw while typing */ }
+                                                                setUrlDraft(d => ({ ...d, [key]: cleaned || null }))
+                                                            }}
                                                             placeholder={placeholder}
                                                         />
                                                         <button

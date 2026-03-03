@@ -198,33 +198,33 @@ function App() {
         </div>
         {/* ── Header right ── */}
         <div className="app-header-right">
-        <button className="inbox-link-btn" onClick={() => navigate('/inbox')}>
-          {pendingListings.length > 0 && (
-            <span className="inbox-link-badge">{pendingListings.length}</span>
-          )}
-          Inbox
-        </button>
-        <div className="app-menu-wrap">
-          <button
-            className="app-menu-btn"
-            onClick={() => setMenuOpen(o => !o)}
-            aria-label="Menu"
-          >
-            <span /><span /><span />
+          <button className="inbox-link-btn" onClick={() => navigate('/inbox')}>
+            {pendingListings.length > 0 && (
+              <span className="inbox-link-badge">{pendingListings.length}</span>
+            )}
+            Inbox
           </button>
-          {menuOpen && (
-            <>
-              <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
-              <ul className="app-menu-dropdown">
-                <li>
-                  <button onClick={() => { setMenuOpen(false); navigate('/searches') }}>
-                    Manage Scenarios
-                  </button>
-                </li>
-              </ul>
-            </>
-          )}
-        </div>
+          <div className="app-menu-wrap">
+            <button
+              className="app-menu-btn"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="Menu"
+            >
+              <span /><span /><span />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
+                <ul className="app-menu-dropdown">
+                  <li>
+                    <button onClick={() => { setMenuOpen(false); navigate('/searches') }}>
+                      Manage Scenarios
+                    </button>
+                  </li>
+                </ul>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -279,7 +279,7 @@ function App() {
           aria-label="New scenario"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
       </div>
@@ -319,7 +319,16 @@ function App() {
             type="url"
             placeholder="Redfin, rew.ca, or Zillow URL"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value
+              try {
+                const u = new URL(raw)
+                u.search = ''
+                setUrl(u.toString())
+              } catch {
+                setUrl(raw)
+              }
+            }}
           />
           <button type="submit" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}

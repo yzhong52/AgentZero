@@ -12,15 +12,27 @@ pub(crate) struct ListingUrl {
 /// Strips query parameters to produce a canonical URL suitable for deduplication.
 /// Returns `None` for malformed strings, non-HTTP schemes, or unrecognised hosts.
 pub(crate) fn parse_listing_url(input: &str) -> Option<ListingUrl> {
-    let mut u = Url::parse(input).ok()?;
+    let cleaned = strip_url_query(input);
+    let u = Url::parse(&cleaned).ok()?;
     match u.scheme() {
         "http" | "https" => {
-            let site = crate::parsers::ListingSite::from_url(input)?;
-            u.set_query(None);
+            let site = crate::parsers::ListingSite::from_url(&cleaned)?;
             Some(ListingUrl { url: u, site })
         }
         _ => None,
     }
+}
+
+/// Strip query parameters from a URL string, returning the cleaned URL.
+/// If the input cannot be parsed as a URL, returns it unchanged.
+pub(crate) fn strip_url_query(url: &str) -> String {
+    Url::parse(url)
+        .ok()
+        .map(|mut u| {
+            u.set_query(None);
+            u.to_string()
+        })
+        .unwrap_or_else(|| url.to_string())
 }
 
 #[cfg(test)]

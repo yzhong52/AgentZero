@@ -12,8 +12,30 @@ use axum::{
 use serde::Deserialize;
 
 use crate::{
-    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, db, AppState,
+    compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total, db,
+    parse_listing_url, parsers, AppState,
 };
+
+/// Validate and strip query params from a URL that must belong to `expected`.
+/// Returns the cleaned URL string, or a 400 error describing what went wrong.
+fn validate_listing_url(
+    url: &str,
+    expected: parsers::ListingSite,
+) -> Result<String, (StatusCode, String)> {
+    let lu = parse_listing_url(url).ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Invalid URL (must be a http/https {} link): {url}", expected.name()),
+        )
+    })?;
+    if lu.site != expected {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("Expected a {} URL but got a {} URL", expected.name(), lu.site.name()),
+        ));
+    }
+    Ok(lu.url.to_string())
+}
 
 #[derive(Deserialize)]
 pub struct NotesRequest {
@@ -83,17 +105,17 @@ pub async fn patch_details(
 
     updated.title = body.title.clone().unwrap_or(updated.title.clone());
 
-    if body.redfin_url.is_some() {
-        updated.redfin_url = body.redfin_url.clone();
+    if let Some(url) = &body.redfin_url {
+        updated.redfin_url = Some(validate_listing_url(url, parsers::ListingSite::Redfin)?);
     }
-    if body.realtor_url.is_some() {
-        updated.realtor_url = body.realtor_url.clone();
+    if let Some(url) = &body.realtor_url {
+        updated.realtor_url = Some(validate_listing_url(url, parsers::ListingSite::Realtor)?);
     }
-    if body.rew_url.is_some() {
-        updated.rew_url = body.rew_url.clone();
+    if let Some(url) = &body.rew_url {
+        updated.rew_url = Some(validate_listing_url(url, parsers::ListingSite::Rew)?);
     }
-    if body.zillow_url.is_some() {
-        updated.zillow_url = body.zillow_url.clone();
+    if let Some(url) = &body.zillow_url {
+        updated.zillow_url = Some(validate_listing_url(url, parsers::ListingSite::Zillow)?);
     }
 
     updated.price = body.price.or(updated.price);

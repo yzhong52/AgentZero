@@ -64,52 +64,9 @@ FRONTEND_PORT=5173 LOG_FILE=/tmp/frontend.log ./scripts/run_frontend.sh
 
 ## API
 
-Below are the public HTTP endpoints exposed by the backend. All endpoints return JSON unless noted.
-
-- **GET /api/parse?url=<url>**
-	- Description: Fetch the given URL and run the parser, returning parsed fields (title, description, images, address, price, beds, baths, sqft, etc.). This does not write to the DB.
-	- Response (200): { "url": "...", "title": "...", "description": "...", "images": ["..."], "meta": {...} }
-
-- **POST /api/listings**
-	- Description: Parse and save a single listing URL as a property.
-	- Body (JSON): { "url": "https://redfin.example/...", "search_criteria_id": 1 }
-	- Response (200): the saved `Property` record (includes `id`, parsed fields, and `images` metadata).
-	- Errors: 400 for invalid request, 502 for fetch failures, 422 if no supported listing format found.
-
-- **GET /api/listings**
-	- Description: Return all saved properties, newest first. Each record includes cached `images` metadata (id, local_path, position).
-
-- **GET /api/listings/:id**
-	- Description: Get a single property by ID (includes images and metadata).
-
-- **PUT /api/listings/:id**
-	- Description: Refresh an existing listing by re-fetching its stored source URLs and re-parsing; overwrites parsed fields but preserves user-edits like mortgage settings.
-
-- **DELETE /api/listings/:id**
-	- Description: Delete a property and associated data (images cascade via FK).
-
-- **GET /api/listings/:id/preview**
-	- Description: Run a preview refresh (fetch/parse) without saving changes — useful for validating parser output.
-
-- **PATCH /api/listings/:id/notes**
-	- Description: Update the `notes` field. Body: `{ "notes": "..." }`.
-
-- **PATCH /api/listings/:id/nickname**
-	- Description: Update the user-visible `nickname`/alias. Body: `{ "nickname": "My shortlist" }`.
-
-- **PATCH /api/listings/:id/details**
-	- Description: Apply user-edited fields (partial) to a listing. Accepts the same shape as `UserDetails` in the codebase — common fields: `price`, `price_currency`, `offer_price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `year_built`, `mortgage_monthly`, etc.
-	- Body (example): `{ "price": 110000, "city": "Vancouver", "bedrooms": 3 }`
-
-- **GET /api/listings/:id/history**
-	- Description: Get the change history for a property (price changes etc.).
-
-- **DELETE /api/listings/:id/images/:image_id**
-	- Description: Delete a cached image for the listing. This removes the DB record and the underlying file/object-store key.
-
-Notes:
-- Cached images are served from `/images/<object_key>` by the webserver (local filesystem in dev). The stored `local_path` values are of the form `/images/<listing_id>/<sha256>.<ext>`.
-- Most endpoints return `500` for unexpected DB errors; handlers attempt to translate fetch/parse failures into `502` / `422` where appropriate.
+Route definitions and handler signatures are the source of truth. See:
+- `backend/src/main.rs` — all routes wired up
+- `backend/src/api/` — one file per handler group (`add.rs`, `refresh.rs`, `listings.rs`, `details.rs`, `images.rs`, `parse.rs`)
 
 ## Tests
 
@@ -145,6 +102,28 @@ When making layout or styling changes to the frontend, ask if the user would lik
 ### No code duplication — use shared utilities
 
 Before writing a helper function, check if it already exists elsewhere in the codebase. Shared frontend utilities live in `frontend/src/utils.ts`. Do not copy-paste the same logic into multiple files; extract it to a shared location and import it.
+
+### No hardcoded strings — use named constants
+
+Magic strings that appear in multiple places must be extracted to a named constant and imported from there. This applies to status values, route paths, API keys, and any other string literal that carries semantic meaning.
+
+**Don't:**
+```ts
+listings.filter(p => p.status === 'Pending')
+STATUS_OPTIONS.filter(s => s !== 'Pending')
+```
+
+**Do:**
+```ts
+// constants.ts
+export const PENDING_STATUS: StatusOption = 'Pending'
+
+// elsewhere
+listings.filter(p => p.status === PENDING_STATUS)
+STATUS_OPTIONS.filter(s => s !== PENDING_STATUS)
+```
+
+Frontend string constants live in `frontend/src/constants.ts`.
 
 ### Rust: prefer named structs over tuples
 

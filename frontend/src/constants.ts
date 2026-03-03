@@ -1,5 +1,6 @@
 export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass', 'Pending'] as const
 export type StatusOption = typeof STATUS_OPTIONS[number]
+export const PENDING_STATUS: StatusOption = 'Pending'
 
 export const STATUS_COLORS: Record<string, string> = {
   Pending: '#d97706',

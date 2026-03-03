@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property, Search } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
 
@@ -30,7 +30,7 @@ export function InboxPage() {
           )
         )
         const pending = (results.flat() as Property[])
-          .filter(p => p.status === 'Pending')
+          .filter(p => p.status === PENDING_STATUS)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         setListings(pending)
         if (pending.length > 0) setSelectedId(pending[0].id)
@@ -179,7 +179,7 @@ export function InboxPage() {
                   <p className="inbox-detail-desc">{selected.description}</p>
                 )}
                 <div className="inbox-detail-actions">
-                  {STATUS_OPTIONS.filter(s => s !== 'Pending').map(s => (
+                  {STATUS_OPTIONS.filter(s => s !== PENDING_STATUS).map(s => (
                     <button
                       key={s}
                       className="inbox-action-btn"

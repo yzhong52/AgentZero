@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, Search } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import { formatPriceFull } from './utils'
 
 type HistoryEntry = {
@@ -1384,7 +1384,7 @@ export function PropertyDetail() {
                         <div className="status-picker right-panel-section">
                             <h3 className="notes-heading">Status</h3>
                             <div className="status-picker-buttons">
-                                {STATUS_OPTIONS.map(s => (
+                                {STATUS_OPTIONS.filter(s => s !== PENDING_STATUS).map(s => (
                                     <button
                                         key={s}
                                         className={`status-option-btn${property.status === s ? ' active' : ''}`}

@@ -3,7 +3,7 @@ use crate::images;
 use crate::parsers;
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, fetch_html, safe_url, AppState,
+    compute_mortgage, fetch_html, parse_listing_url, AppState,
 };
 use axum::http::StatusCode;
 use axum::{
@@ -54,10 +54,10 @@ pub async fn refresh_listing(
 
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &source_urls {
-        let parsed_url = safe_url(url).ok_or((
+        let parsed_url = parse_listing_url(url).ok_or((
             StatusCode::BAD_REQUEST,
             format!("Invalid stored URL: {url}"),
-        ))?;
+        ))?.url;
         match fetch_html(&state.client, &parsed_url).await {
             Ok(html) => {
                 tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
@@ -187,8 +187,8 @@ pub async fn refresh_listing(
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
     for source in &sources {
-        if let Some(kind) = parsers::SourceKind::from_url(&source.url) {
-            crate::html_snapshots::save_listing_html(id, kind, &source.html).await;
+        if let Some(site) = parsers::ListingSite::from_url(&source.url) {
+            crate::html_snapshots::save_listing_html(id, site, &source.html).await;
         }
     }
 
@@ -248,10 +248,10 @@ pub async fn preview_refresh(
 
     let mut sources: Vec<parsers::SourceInput> = Vec::new();
     for url in &stored_urls {
-        let parsed_url = safe_url(url).ok_or((
+        let parsed_url = parse_listing_url(url).ok_or((
             StatusCode::BAD_REQUEST,
             format!("Invalid stored URL: {url}"),
-        ))?;
+        ))?.url;
         match fetch_html(&state.client, &parsed_url).await {
             Ok(html) => {
                 sources.push(parsers::SourceInput {

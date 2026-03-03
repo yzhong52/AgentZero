@@ -134,50 +134,50 @@ pub fn extract_images(document: &Html) -> Vec<String> {
 // ── Parser dispatch ───────────────────────────────────────────────────────────
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum SourceKind {
+pub(crate) enum ListingSite {
     Redfin,
     Rew,
     Zillow,
     Realtor,
 }
 
-impl SourceKind {
+impl ListingSite {
     pub(crate) fn name(self) -> &'static str {
         match self {
-            SourceKind::Redfin => "redfin",
-            SourceKind::Rew => "rew",
-            SourceKind::Zillow => "zillow",
-            SourceKind::Realtor => "realtor",
+            ListingSite::Redfin => "redfin",
+            ListingSite::Rew => "rew",
+            ListingSite::Zillow => "zillow",
+            ListingSite::Realtor => "realtor",
         }
     }
 
     pub(crate) fn from_url(url: &str) -> Option<Self> {
         if url.contains("redfin.") {
-            Some(SourceKind::Redfin)
+            Some(ListingSite::Redfin)
         } else if url.contains("rew.ca") {
-            Some(SourceKind::Rew)
+            Some(ListingSite::Rew)
         } else if url.contains("zillow.com") {
-            Some(SourceKind::Zillow)
+            Some(ListingSite::Zillow)
         } else if url.contains("realtor.ca") {
-            Some(SourceKind::Realtor)
+            Some(ListingSite::Realtor)
         } else {
             None
         }
     }
 }
 
-fn source_rank(kind: SourceKind) -> u8 {
-    match kind {
-        SourceKind::Redfin => 0,
-        SourceKind::Rew => 1,
-        SourceKind::Zillow => 2,
-        SourceKind::Realtor => 3,
+fn source_rank(site: ListingSite) -> u8 {
+    match site {
+        ListingSite::Redfin => 0,
+        ListingSite::Rew => 1,
+        ListingSite::Zillow => 2,
+        ListingSite::Realtor => 3,
     }
 }
 
 /// A successfully parsed listing tagged with the source that produced it.
 struct ParsedSource {
-    kind: SourceKind,
+    site: ListingSite,
     listing: ParsedListing,
 }
 
@@ -185,8 +185,8 @@ fn merge_opt<T>(
     field: &str,
     primary: Option<T>,
     fallback: Option<T>,
-    primary_source: SourceKind,
-    fallback_source: SourceKind,
+    primary_source: ListingSite,
+    fallback_source: ListingSite,
 ) -> Option<T>
 where
     T: PartialEq + Clone + Debug,
@@ -220,8 +220,8 @@ fn merge_text(primary: String, fallback: String) -> String {
 fn merge_property(
     primary: db::Property,
     fallback: db::Property,
-    primary_source: SourceKind,
-    fallback_source: SourceKind,
+    primary_source: ListingSite,
+    fallback_source: ListingSite,
 ) -> db::Property {
     db::Property {
         id: primary.id,
@@ -577,8 +577,8 @@ fn merge_property(
 fn merge_listing(
     primary: ParsedListing,
     fallback: ParsedListing,
-    primary_source: SourceKind,
-    fallback_source: SourceKind,
+    primary_source: ListingSite,
+    fallback_source: ListingSite,
 ) -> ParsedListing {
     let mut image_urls = primary.image_urls;
     for image_url in fallback.image_urls {
@@ -607,14 +607,14 @@ fn merge_listing(
 }
 
 fn parse_source(url: &str, html: &str) -> Option<ParsedSource> {
-    let kind = SourceKind::from_url(url)?;
-    let listing = match kind {
-        SourceKind::Redfin => redfin::parse(url, html)?,
-        SourceKind::Rew => rew::parse(url, html)?,
-        SourceKind::Zillow => zillow::parse(url, html)?,
-        SourceKind::Realtor => realtor::parse(url, html)?,
+    let site = ListingSite::from_url(url)?;
+    let listing = match site {
+        ListingSite::Redfin => redfin::parse(url, html)?,
+        ListingSite::Rew => rew::parse(url, html)?,
+        ListingSite::Zillow => zillow::parse(url, html)?,
+        ListingSite::Realtor => realtor::parse(url, html)?,
     };
-    Some(ParsedSource { kind, listing })
+    Some(ParsedSource { site, listing })
 }
 
 /// Parses and merges data from multiple listing pages for the same property.
@@ -635,12 +635,12 @@ pub fn parse_multi(sources: &[SourceInput]) -> Option<ParsedListing> {
         return None;
     }
 
-    parsed.sort_by_key(|ps| source_rank(ps.kind));
+    parsed.sort_by_key(|ps| source_rank(ps.site));
 
     let first = parsed.remove(0);
-    let (primary_source, mut merged_listing) = (first.kind, first.listing);
+    let (primary_source, mut merged_listing) = (first.site, first.listing);
     for ps in parsed {
-        merged_listing = merge_listing(merged_listing, ps.listing, primary_source, ps.kind);
+        merged_listing = merge_listing(merged_listing, ps.listing, primary_source, ps.site);
     }
 
     tracing::info!(

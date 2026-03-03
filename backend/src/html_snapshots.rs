@@ -20,11 +20,11 @@ pub async fn ensure_dir() {
 
 /// Write `html` to `{DIR}/{listing_id}_{source}.html`.
 /// Silently skips empty HTML (e.g. blocked-host stubs).
-pub(crate) async fn save_listing_html(listing_id: i64, kind: crate::parsers::SourceKind, html: &str) {
+pub(crate) async fn save_listing_html(listing_id: i64, site: crate::parsers::ListingSite, html: &str) {
     if html.is_empty() {
         return;
     }
-    let label = kind.name();
+    let label = site.name();
     let path = format!("{}/{listing_id}_{label}.html", DIR);
     match fs::write(&path, html.as_bytes()).await {
         Ok(_) => tracing::debug!(

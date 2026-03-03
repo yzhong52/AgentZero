@@ -8,7 +8,7 @@ mod parsers;
 mod store;
 mod utils;
 
-pub(crate) use utils::safe_url;
+pub(crate) use utils::parse_listing_url;
 
 use axum::{
     routing::{delete, get, patch, post, put},

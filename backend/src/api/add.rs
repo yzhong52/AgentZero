@@ -20,11 +20,10 @@
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
-use url::Url;
 
 use crate::{
     compute_initial_monthly_interest, compute_monthly_cost, compute_monthly_total,
-    compute_mortgage, db, fetch_html, images, parsers, safe_url, AppState,
+    compute_mortgage, db, fetch_html, images, parsers, parse_listing_url, AppState,
 };
 
 #[derive(Deserialize)]
@@ -39,11 +38,12 @@ pub async fn add_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
-    let mut parsed_url = safe_url(body.url.trim()).ok_or((
+    let listing_url = parse_listing_url(body.url.trim()).ok_or((
         StatusCode::BAD_REQUEST,
         format!("Invalid URL: {}", body.url.trim()),
     ))?;
-    parsed_url.set_query(None);
+    let site = listing_url.site;
+    let parsed_url = listing_url.url;
 
     // Check for duplicate source URLs before fetching.
     if let Ok(Some(existing)) = db::find_by_source_url(&state.db, parsed_url.as_str()).await {
@@ -66,7 +66,7 @@ pub async fn add_listing(
             url: parsed_url.to_string(),
             html,
         },
-        Err(e) if is_blocked_host(&parsed_url) => {
+        Err(e) if is_blocked_host(site) => {
             tracing::info!(
                 "add_listing: fetch failed for {} ({}), saving stub",
                 parsed_url,
@@ -92,7 +92,7 @@ pub async fn add_listing(
         None => {
             // Parsing yielded nothing.  Only save a stub for known-blocked hosts;
             // for unrecognised URLs return 422.
-            if !is_blocked_host(&parsed_url) {
+            if !is_blocked_host(site) {
                 return Err((
                     StatusCode::UNPROCESSABLE_ENTITY,
                     "No recognized listing format found in page".to_string(),
@@ -104,9 +104,9 @@ pub async fn add_listing(
             );
             let mut stub = blank_stub();
             // Populate whichever URL fields we know about.
-            match parsed_url.host_str().unwrap_or("") {
-                h if h.contains("zillow.com") => stub.zillow_url = Some(parsed_url.to_string()),
-                h if h.contains("realtor.ca") => stub.realtor_url = Some(parsed_url.to_string()),
+            match site {
+                parsers::ListingSite::Zillow => stub.zillow_url = Some(parsed_url.to_string()),
+                parsers::ListingSite::Realtor => stub.realtor_url = Some(parsed_url.to_string()),
                 _ => {}
             }
             (stub, vec![], vec![])
@@ -174,9 +174,7 @@ pub async fn add_listing(
     );
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
-    if let Some(kind) = parsers::SourceKind::from_url(&source.url) {
-        crate::html_snapshots::save_listing_html(saved.id, kind, &source.html).await;
-    }
+    crate::html_snapshots::save_listing_html(saved.id, site, &source.html).await;
 
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
@@ -201,12 +199,8 @@ pub async fn add_listing(
 ///
 /// - **zillow.com** — PerimeterX via CloudFront (`x-px-blocked: 1`)
 /// - **realtor.ca** — Imperva Incapsula
-fn is_blocked_host(url: &Url) -> bool {
-    match url.host_str().unwrap_or("") {
-        h if h.contains("zillow.com") => true,
-        h if h.contains("realtor.ca") => true,
-        _ => false,
-    }
+fn is_blocked_host(site: parsers::ListingSite) -> bool {
+    matches!(site, parsers::ListingSite::Zillow | parsers::ListingSite::Realtor)
 }
 
 /// Constructs a blank `Property` with all fields zeroed/None and mortgage

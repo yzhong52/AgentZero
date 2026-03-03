@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::parsers::{
     extract_description, extract_images, extract_json_ld, extract_title, meta_map, ParseResult,
 };
-use crate::{fetch_html, safe_url, AppState};
+use crate::{fetch_html, parse_listing_url, AppState};
 
 /// GET /api/parse?url=<url>
 ///
@@ -26,8 +26,7 @@ pub async fn parse(
         "Missing 'url' query parameter".to_string(),
     ))?;
     let url = url.trim();
-    let mut parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL".to_string()))?;
-    parsed.set_query(None);
+    let parsed = parse_listing_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid or unsupported listing URL".to_string()))?.url;
 
     let html = fetch_html(&state.client, &parsed).await.map_err(|e| {
         (

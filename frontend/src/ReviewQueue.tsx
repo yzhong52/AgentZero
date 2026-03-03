@@ -11,14 +11,13 @@ interface ReviewQueueProps {
 
 export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
   const navigate = useNavigate()
-  const [collapsed, setCollapsed] = useState(false)
-  const [assigning, setAssigning] = useState<number | null>(null)
+  const [dismissing, setDismissing] = useState<Set<number>>(new Set())
 
   if (listings.length === 0) return null
 
   async function assign(id: number, status: string) {
-    setAssigning(id)
-    onReviewed(id, status)
+    setDismissing(prev => new Set(prev).add(id))
+    setTimeout(() => onReviewed(id, status), 280)
     try {
       await fetch(`/api/listings/${id}/details`, {
         method: 'PATCH',
@@ -26,63 +25,55 @@ export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
         body: JSON.stringify({ status }),
       })
     } catch { /* non-fatal — optimistic update already applied */ }
-    setAssigning(null)
   }
 
   return (
     <section className="review-queue">
-      <button className="review-queue-header" onClick={() => setCollapsed(c => !c)}>
+      <div className="review-queue-header">
         <span className="review-queue-badge">{listings.length}</span>
-        <span className="review-queue-title">New from Agent Zero</span>
-        <span className="review-queue-chevron">{collapsed ? '▸' : '▾'}</span>
-      </button>
-
-      {!collapsed && (
-        <div className="review-queue-scroll">
-          {listings.map(p => {
-            const img = p.images[0]?.url
-            const address = p.street_address
-            return (
-              <div key={p.id} className="review-card">
-                <div className="review-card-img-wrap">
-                  {img
-                    ? <img src={img} alt={p.title} className="review-card-img" />
-                    : <div className="review-card-img-placeholder" />
-                  }
-                </div>
-                <div className="review-card-body">
-                  <div className="review-card-price">{formatPriceCompact(p.price) ?? '—'}</div>
-                  {address && <div className="review-card-address">{address}</div>}
-                  <div className="review-card-stats">
-                    {p.bedrooms != null && <span>{p.bedrooms} bd</span>}
-                    {p.bathrooms != null && <span>{p.bathrooms} ba</span>}
-                    {p.sqft != null && <span>{p.sqft.toLocaleString()} sqft</span>}
-                  </div>
-                </div>
-                <div className="review-card-actions">
-                  {STATUS_OPTIONS.filter(s => s !== 'Pending').map(s => (
-                    <button
-                      key={s}
-                      className="review-action-btn"
-                      style={{ '--action-color': STATUS_COLORS[s] } as React.CSSProperties}
-                      onClick={() => assign(p.id, s)}
-                      disabled={assigning === p.id}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                  <button
-                    className="review-view-btn"
-                    onClick={() => navigate(`/property/${p.id}`)}
-                  >
-                    View →
-                  </button>
-                </div>
+        <span className="review-queue-title">Needs review</span>
+      </div>
+      <div className="review-queue-list">
+        {listings.map(p => {
+          const img = p.images[0]?.url
+          const stats = [
+            p.bedrooms != null ? `${p.bedrooms} bd` : null,
+            p.bathrooms != null ? `${p.bathrooms} ba` : null,
+            p.sqft != null ? `${p.sqft.toLocaleString()} sqft` : null,
+          ].filter(Boolean).join(' · ')
+          return (
+            <div
+              key={p.id}
+              className={`review-row${dismissing.has(p.id) ? ' dismissing' : ''}`}
+            >
+              <div className="review-row-thumb" onClick={() => navigate(`/property/${p.id}`)}>
+                {img
+                  ? <img src={img} alt={p.title} />
+                  : <div className="review-row-thumb-empty" />
+                }
               </div>
-            )
-          })}
-        </div>
-      )}
+              <div className="review-row-info" onClick={() => navigate(`/property/${p.id}`)}>
+                <div className="review-row-price">{formatPriceCompact(p.price) ?? '—'}</div>
+                {p.street_address && <div className="review-row-address">{p.street_address}</div>}
+                {stats && <div className="review-row-stats">{stats}</div>}
+              </div>
+              <div className="review-row-actions">
+                {STATUS_OPTIONS.filter(s => s !== 'Pending').map(s => (
+                  <button
+                    key={s}
+                    className="review-pill"
+                    style={{ '--pill-color': STATUS_COLORS[s] } as React.CSSProperties}
+                    onClick={() => assign(p.id, s)}
+                    disabled={dismissing.has(p.id)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </section>
   )
 }

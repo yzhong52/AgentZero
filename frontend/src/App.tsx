@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import './App.css'
 import { ListingGrid } from './ListingGrid'
-import { ReviewQueue } from './ReviewQueue'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
 import { STATUS_OPTIONS, STATUS_COLORS } from './constants'
@@ -147,10 +146,6 @@ function App() {
     ? listings.filter(p => statusFilter.has(p.status as StatusOption))
     : reviewedListings
 
-  function handleReviewed(id: number, status: string) {
-    setListings(prev => prev.map(p => p.id === id ? { ...p, status } : p))
-  }
-
   const [savedInfo, setSavedInfo] = useState<{ id: number; title: string } | null>(null)
   const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string | null } | null>(null)
 
@@ -201,7 +196,14 @@ function App() {
           <h1>Agent Zero</h1>
           <p className="app-tagline">AI-powered research — there's a perfect home for everybody</p>
         </div>
-        {/* ── Hamburger menu ── */}
+        {/* ── Header right ── */}
+        <div className="app-header-right">
+        <button className="inbox-link-btn" onClick={() => navigate('/inbox')}>
+          {pendingListings.length > 0 && (
+            <span className="inbox-link-badge">{pendingListings.length}</span>
+          )}
+          Inbox
+        </button>
         <div className="app-menu-wrap">
           <button
             className="app-menu-btn"
@@ -222,6 +224,7 @@ function App() {
               </ul>
             </>
           )}
+        </div>
         </div>
       </header>
 
@@ -335,8 +338,6 @@ function App() {
           Saved: <a href={`/property/${savedInfo.id}`}>{savedInfo.title}</a>
         </div>
       )}
-
-      <ReviewQueue listings={pendingListings} onReviewed={handleReviewed} />
 
       <section className="listings-section">
         <div className="listings-header">

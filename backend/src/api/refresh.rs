@@ -184,6 +184,12 @@ pub async fn refresh_listing(
 
     // ── 9. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
+
+    // Save raw HTML snapshots for offline inspection / parser backfills.
+    for source in &sources {
+        crate::html_snapshots::save(id, &source.url, &source.html).await;
+    }
+
     tracing::info!(
         "refresh_listing: id={} registering {} image URL(s)",
         id,

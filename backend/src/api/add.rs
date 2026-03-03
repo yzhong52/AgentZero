@@ -193,6 +193,12 @@ pub async fn add_listing(
         saved.id,
         image_urls.len()
     );
+
+    // Save raw HTML snapshots for offline inspection / parser backfills.
+    for source in &sources {
+        crate::html_snapshots::save(saved.id, &source.url, &source.html).await;
+    }
+
     for (position, url) in image_urls.iter().enumerate() {
         let _ = db::insert_image_url(&state.db, saved.id, url, position as i64).await;
     }

@@ -1,4 +1,5 @@
 pub mod db;
+pub mod html_snapshots;
 pub mod image_paths;
 pub mod images;
 pub mod models;

@@ -16,3 +16,4 @@ dist/
 .claude/
 *.db
 listings_images/
+html_snapshots/

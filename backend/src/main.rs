@@ -1,5 +1,6 @@
 mod api;
 mod db;
+mod html_snapshots;
 mod image_paths;
 mod images;
 mod models;
@@ -216,6 +217,7 @@ async fn main() {
 
     // Local filesystem store.
     images::ensure_images_dir(IMAGES_LOCAL_DIR).await;
+    html_snapshots::ensure_dir().await;
     let store: Arc<dyn object_store::ObjectStore> = Arc::new(
         LocalFileSystem::new_with_prefix(std::path::Path::new(IMAGES_LOCAL_DIR))
             .expect("Failed to initialize local image store"),

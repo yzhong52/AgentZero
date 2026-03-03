@@ -43,6 +43,19 @@ Key log patterns to look for when debugging:
 | `Failed to download image …` | Network error fetching an image |
 | `cache_images: listing_id=N pending=0` | No new images to download (all already cached or none registered) |
 
+## HTML Snapshots
+
+Every time a listing is saved or refreshed, the raw fetched HTML is written to `backend/html_snapshots/` as:
+
+```
+{listing_id}_{source}.html   e.g.  42_redfin.html,  42_rew.html
+```
+
+Refreshing a listing overwrites the file with the latest fetch. Use these files to:
+- Inspect exactly what the parser received
+- Re-run or fix the parser locally without re-fetching the URL
+- Copy to `backend/src/parsers/fixtures/` (and run the strip tool) to create a test fixture
+
 Optional overrides:
 ```bash
 BACKEND_PORT=8000 LOG_FILE=/tmp/backend.log ./scripts/run_backend.sh

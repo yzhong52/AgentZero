@@ -93,6 +93,19 @@ cargo run --bin strip -- input.html output.html  # strip to a separate file
 
 Always run `cargo test` after stripping to verify no parser-relevant content was removed.
 
+## TypeScript Type Bindings
+
+The backend models are annotated with `#[cfg_attr(test, derive(TS))]` (from the [`ts-rs`](https://github.com/Aleph-Alpha/ts-rs) crate). Running `cargo test` regenerates TypeScript reference types into `frontend/src/bindings/`.
+
+These files are committed to git and serve as a **drift-detection signal**: when a Rust model changes, the corresponding file in `bindings/` changes in the git diff, which is your reminder to also update `frontend/src/types.ts`.
+
+The generated files use `bigint` for `i64` (technically correct for Rust), while `types.ts` uses `number` (correct for JSON values). Do **not** import from `bindings/` directly in frontend code — it is reference material only.
+
+**Workflow when changing a backend model:**
+1. Update the Rust struct in `backend/src/models/`
+2. Run `cargo test` — the file in `frontend/src/bindings/` updates automatically
+3. Reflect the change in `frontend/src/types.ts`
+
 ## Frontend Design
 
 When making layout or styling changes to the frontend, ask if the user would like to load the `frontend-design` skill first (invoke via `/frontend-design`). It provides design thinking guidelines and aesthetic direction to avoid generic UI patterns.

@@ -1,3 +1,15 @@
+// Hand-maintained types matching the Rust backend models.
+//
+// The generated reference types in frontend/src/bindings/ are auto-updated by
+// `cargo test` in the backend. When you add or remove fields from a Rust model,
+// the corresponding file in bindings/ will change in the git diff — that is your
+// signal to update this file too.
+//
+// Note: bindings/ uses bigint for i64 (Rust-accurate) but this file uses number
+// (correct for JSON API values that are always within JS Number range).
+
+import type { StatusOption } from './constants'
+
 export type OpenHouse = {
   id: number
   listing_id: number
@@ -70,7 +82,7 @@ export type Property = {
   monthly_cost: number | null
   has_rental_suite: boolean | null
   rental_income: number | null
-  status: string
+  status: StatusOption
   school_elementary: string | null
   school_elementary_rating: number | null
   school_middle: string | null

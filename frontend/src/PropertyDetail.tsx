@@ -6,6 +6,7 @@ import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, Search } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
+import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
 
 type HistoryEntry = {
@@ -754,7 +755,7 @@ export function PropertyDetail() {
 
     // ── Status ────────────────────────────────────────────────────────────────
 
-    async function handleStatusChange(newStatus: string) {
+    async function handleStatusChange(newStatus: StatusOption) {
         if (!property) return
         const updated = { ...property, status: newStatus }
         setProperty(updated)

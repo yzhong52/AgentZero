@@ -2,10 +2,13 @@ use crate::models::image::ImageEntry;
 use crate::models::open_house::OpenHouse;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+#[cfg(test)]
+use ts_rs::TS;
 
 /// The user-facing status of a listing.
 /// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub enum ListingStatus {
     /// Auto-added by Agent Zero; awaiting user review.
     Pending,
@@ -77,6 +80,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
 ///   derived; read-only  — recomputed server-side on every save
 ///   system              — managed entirely by the server / DB
 #[derive(Serialize, Clone)]
+#[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub struct Property {
     // ── System ──────────────────────────────────────────────────────────────
     pub id: i64,                // system

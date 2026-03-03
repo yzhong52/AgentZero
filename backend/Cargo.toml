@@ -23,3 +23,4 @@ object_store = "0.13"
 
 [dev-dependencies]
 insta = { version = "1", features = ["json"] }
+ts-rs = "9"

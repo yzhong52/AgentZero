@@ -25,7 +25,7 @@ use crate::ingest::fetch::fetch_html;
 use crate::ingest::html_snapshots::save_listing_html;
 use crate::ingest::url::parse_listing_url;
 use crate::models::property::Property;
-use crate::property::finance as property_finance;
+use crate::finance as property_finance;
 use crate::store::{image_store, open_house_store, property_store};
 use crate::{images, parsers, AppState};
 

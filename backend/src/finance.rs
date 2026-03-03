@@ -1,5 +1,7 @@
 //! Mortgage and monthly cost calculations.
 
+use crate::models::property::Property;
+
 /// Sums mortgage + monthly property tax + HOA into a total monthly cost.
 pub(crate) fn compute_monthly_total(
     mortgage_monthly: Option<i64>,
@@ -47,4 +49,41 @@ pub(crate) fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, year
     let r = annual_rate / 12.0;
     let payment = loan * r * (1.0 + r).powf(n) / ((1.0 + r).powf(n) - 1.0);
     payment.round() as i64
+}
+
+pub(crate) fn recompute_with_stored_terms(target: &mut Property, stored: &Property) {
+    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
+    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored.amortization_years.unwrap_or(25);
+
+    target.down_payment_pct = Some(down_pct);
+    target.mortgage_interest_rate = Some(rate);
+    target.amortization_years = Some(years);
+
+    recompute_from_explicit_terms(target, down_pct, rate, years);
+}
+
+pub(crate) fn recompute_from_explicit_terms(
+    target: &mut Property,
+    down_pct: f64,
+    rate: f64,
+    years: i64,
+) {
+    if let Some(price) = target.offer_price.or(target.price) {
+        target.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
+
+    target.monthly_total = compute_monthly_total(
+        target.mortgage_monthly,
+        target.property_tax,
+        target.hoa_monthly,
+    );
+
+    let initial_interest = target
+        .offer_price
+        .or(target.price)
+        .map(|price| compute_initial_monthly_interest(price, down_pct, rate));
+
+    target.monthly_cost =
+        compute_monthly_cost(initial_interest, target.property_tax, target.hoa_monthly);
 }

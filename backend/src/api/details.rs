@@ -14,7 +14,7 @@ use serde::Deserialize;
 use crate::ingest::url::parse_listing_url;
 use crate::models::history::HistoryEntry;
 use crate::models::property::{Property, UserDetails};
-use crate::property::finance as property_finance;
+use crate::finance as property_finance;
 use crate::store::{history_store, image_store, property_store};
 use crate::{parsers, AppState};
 

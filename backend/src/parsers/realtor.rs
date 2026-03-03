@@ -340,7 +340,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         open_houses,
         property: Property {
             id: 0,
-            search_criteria_id: 0, // overwritten by caller
+            search_profile_id: 0, // overwritten by caller
             title,
             description: product.description.unwrap_or_default(),
             price: product.price,

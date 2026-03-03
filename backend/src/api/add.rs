@@ -33,8 +33,8 @@ use crate::{images, parsers, AppState};
 pub struct AddRequest {
     /// The listing URL to add.
     pub url: String,
-    /// Search to assign this listing to.
-    pub search_criteria_id: i64,
+    /// Search profile to assign this listing to.
+    pub search_profile_id: i64,
 }
 
 pub(crate) async fn add_listing(
@@ -138,8 +138,8 @@ pub(crate) async fn add_listing(
         }
     }
 
-    // Assign to search.
-    property.search_criteria_id = body.search_criteria_id;
+    // Assign to search profile.
+    property.search_profile_id = body.search_profile_id;
 
     let saved = property_store::add_listing(&state.db, &property).await.map_err(|e| {
         (
@@ -198,7 +198,7 @@ fn is_blocked_host(site: parsers::ListingSite) -> bool {
 fn blank_stub() -> Property {
     Property {
         id: 0,
-        search_criteria_id: 0, // overwritten by the caller before insert
+        search_profile_id: 0, // overwritten by the caller before insert
         redfin_url: None,
         realtor_url: None,
         rew_url: None,

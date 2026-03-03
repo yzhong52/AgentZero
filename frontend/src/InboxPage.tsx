@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Property, SavedSearch } from './types'
+import type { Property, SearchProfile } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
 
 export function InboxPage() {
   const navigate = useNavigate()
-  const [searches, setSearches] = useState<SavedSearch[]>([])
+  const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
   const [listings, setListings] = useState<Property[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [dismissing, setDismissing] = useState<Set<number>>(new Set())
@@ -17,14 +17,14 @@ export function InboxPage() {
     async function load() {
       setLoading(true)
       try {
-        const searchResp = await fetch('/api/searches')
+        const searchResp = await fetch('/api/search-profiles')
         if (!searchResp.ok) return
-        const allSearches: SavedSearch[] = await searchResp.json()
-        setSearches(allSearches)
+        const allSearchProfiles: SearchProfile[] = await searchResp.json()
+        setSearchProfiles(allSearchProfiles)
 
         const results = await Promise.all(
-          allSearches.map(s =>
-            fetch(`/api/listings?search_criteria_id=${s.id}`)
+          allSearchProfiles.map(s =>
+            fetch(`/api/listings?search_profile_id=${s.id}`)
               .then(r => r.ok ? r.json() : [])
               .catch(() => [])
           )
@@ -92,7 +92,7 @@ export function InboxPage() {
   }, [selectedId, listings, dismissing, assign])
 
   const selected = listings.find(p => p.id === selectedId) ?? null
-  const searchMap = Object.fromEntries(searches.map(s => [s.id, s.title]))
+  const searchMap = Object.fromEntries(searchProfiles.map(s => [s.id, s.title]))
 
   return (
     <div className="inbox-page">
@@ -142,8 +142,8 @@ export function InboxPage() {
                   <div className="inbox-item-info">
                     <div className="inbox-item-price">{formatPriceCompact(p.price) ?? '—'}</div>
                     {p.street_address && <div className="inbox-item-address">{p.street_address}</div>}
-                    {searchMap[p.search_criteria_id] && (
-                      <div className="inbox-item-search">{searchMap[p.search_criteria_id]}</div>
+                    {searchMap[p.search_profile_id] && (
+                      <div className="inbox-item-search">{searchMap[p.search_profile_id]}</div>
                     )}
                   </div>
                 </div>
@@ -172,8 +172,8 @@ export function InboxPage() {
                   {selected.sqft != null && <span>{selected.sqft.toLocaleString()} sqft</span>}
                   {selected.year_built != null && <span>Built {selected.year_built}</span>}
                 </div>
-                {searchMap[selected.search_criteria_id] && (
-                  <div className="inbox-detail-search-tag">{searchMap[selected.search_criteria_id]}</div>
+                {searchMap[selected.search_profile_id] && (
+                  <div className="inbox-detail-search-tag">{searchMap[selected.search_profile_id]}</div>
                 )}
                 {selected.description && (
                   <p className="inbox-detail-desc">{selected.description}</p>

@@ -225,7 +225,7 @@ fn merge_property(
 ) -> Property {
     Property {
         id: primary.id,
-        search_criteria_id: primary.search_criteria_id,
+        search_profile_id: primary.search_profile_id,
 
         redfin_url: primary.redfin_url.or(fallback.redfin_url),
         realtor_url: primary.realtor_url.or(fallback.realtor_url),

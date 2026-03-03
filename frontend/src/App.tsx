@@ -6,7 +6,7 @@ import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import type { StatusOption } from './constants'
-import type { Property, SavedSearch } from './types'
+import type { Property, SearchProfile } from './types'
 
 function App() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -34,8 +34,8 @@ function App() {
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
 
-  // ── Searches ──────────────────────────────────────────────────────────────
-  const [searches, setSearches] = useState<SavedSearch[]>([])
+  // ── Search Profiles ───────────────────────────────────────────────────────
+  const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
   const [activeSearchId, setActiveSearchId] = useState<number | null>(() => {
     const p = searchParams.get('search')
     return p ? Number(p) : null
@@ -67,12 +67,12 @@ function App() {
     localStorage.setItem('az_view_mode', viewMode)
   }, [viewMode])
 
-  async function fetchSearches() {
+  async function fetchSearchProfiles() {
     try {
-      const resp = await fetch('/api/searches')
+      const resp = await fetch('/api/search-profiles')
       if (resp.ok) {
-        const data: SavedSearch[] = await resp.json()
-        setSearches(data)
+        const data: SearchProfile[] = await resp.json()
+        setSearchProfiles(data)
         // Auto-select first search if none selected or the selected one no longer exists
         if (data.length > 0) {
           const validId = activeSearchId !== null && data.some(s => s.id === activeSearchId)
@@ -84,9 +84,9 @@ function App() {
     }
   }
 
-  async function fetchListings(searchCriteriaId: number) {
+  async function fetchListings(searchProfileId: number) {
     const params = new URLSearchParams()
-    params.set('search_criteria_id', String(searchCriteriaId))
+    params.set('search_profile_id', String(searchProfileId))
     const qs = params.toString() ? '?' + params.toString() : ''
     try {
       const resp = await fetch(`/api/listings${qs}`)
@@ -96,7 +96,7 @@ function App() {
     }
   }
 
-  useEffect(() => { fetchSearches() }, [])
+  useEffect(() => { fetchSearchProfiles() }, [])
   useEffect(() => { if (activeSearchId !== null) fetchListings(activeSearchId) }, [activeSearchId])
 
   async function handleCreateSearch(e: React.FormEvent) {
@@ -104,17 +104,17 @@ function App() {
     if (!newSearchTitle.trim()) return
     setCreatingSrch(true)
     try {
-      const resp = await fetch('/api/searches', {
+      const resp = await fetch('/api/search-profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newSearchTitle.trim(), description: newSearchDesc.trim() }),
       })
       if (resp.ok) {
-        const created: SavedSearch = await resp.json()
+        const created: SearchProfile = await resp.json()
         setNewSearchTitle('')
         setNewSearchDesc('')
         setNewSearchOpen(false)
-        await fetchSearches()
+        await fetchSearchProfiles()
         setActiveSearchId(created.id)
       }
     } catch { /* non-fatal */ } finally {
@@ -160,7 +160,7 @@ function App() {
       const resp = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), search_criteria_id: activeSearchId }),
+        body: JSON.stringify({ url: url.trim(), search_profile_id: activeSearchId }),
       })
       if (!resp.ok) {
         const text = await resp.text()
@@ -179,7 +179,7 @@ function App() {
       setSavedInfo({ id: saved.id, title: saved.title || saved.redfin_url || saved.realtor_url || saved.zillow_url || `Listing #${saved.id}` })
       setUrl('')
       if (activeSearchId !== null) await fetchListings(activeSearchId)
-      await fetchSearches()
+      await fetchSearchProfiles()
     } catch (err: any) {
       setError(err?.message || String(err))
     } finally {
@@ -187,7 +187,7 @@ function App() {
     }
   }
 
-  const activeSearch = searches.find(s => s.id === activeSearchId) ?? null
+  const activeSearch = searchProfiles.find(s => s.id === activeSearchId) ?? null
 
   return (
     <div className="app-root">
@@ -217,7 +217,7 @@ function App() {
                 <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
                 <ul className="app-menu-dropdown">
                   <li>
-                    <button onClick={() => { setMenuOpen(false); navigate('/searches') }}>
+                    <button onClick={() => { setMenuOpen(false); navigate('/search-profiles') }}>
                       Manage Scenarios
                     </button>
                   </li>
@@ -231,7 +231,7 @@ function App() {
       {/* ── Search tabs (drag to reorder) ── */}
       <div className="search-tabs-wrap">
         <nav className="search-tabs">
-          {searches.map(s => (
+          {searchProfiles.map(s => (
             <button
               key={s.id}
               className={`search-tab${s.id === activeSearchId ? ' active' : ''}${dragOverId === s.id ? ' drag-over' : ''}`}
@@ -245,7 +245,7 @@ function App() {
                 e.preventDefault()
                 setDragOverId(null)
                 if (dragSrcId === null || dragSrcId === s.id) return
-                const ids = searches.map(x => x.id)
+                const ids = searchProfiles.map(x => x.id)
                 const fromIdx = ids.indexOf(dragSrcId)
                 const toIdx = ids.indexOf(s.id)
                 if (fromIdx < 0 || toIdx < 0) return
@@ -253,17 +253,17 @@ function App() {
                 ids.splice(toIdx, 0, dragSrcId)
                 // Optimistic reorder
                 const reordered = ids.map((id, i) => {
-                  const orig = searches.find(x => x.id === id)!
+                  const orig = searchProfiles.find(x => x.id === id)!
                   return { ...orig, position: i }
                 })
-                setSearches(reordered)
+                setSearchProfiles(reordered)
                 setDragSrcId(null)
-                await fetch('/api/searches/reorder', {
+                await fetch('/api/search-profiles/reorder', {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ ids }),
                 })
-                await fetchSearches()
+                await fetchSearchProfiles()
               }}
               onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
             >

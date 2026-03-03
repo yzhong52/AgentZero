@@ -5,4 +5,4 @@ pub mod listings;
 pub mod open_houses;
 pub mod parse;
 pub mod refresh;
-pub mod searches;
+pub mod search_profiles;

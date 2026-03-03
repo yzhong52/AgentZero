@@ -367,7 +367,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
 
     let property = Property {
         id: 0,
-        search_criteria_id: 0, // overwritten by caller
+        search_profile_id: 0, // overwritten by caller
         redfin_url: None,
         realtor_url: None,
         rew_url: Some(url.to_string()),

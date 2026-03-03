@@ -25,7 +25,7 @@ export type ImageEntry = {
   created_at: string
 }
 
-export type SavedSearch = {
+export type SearchProfile = {
   id: number
   title: string
   description: string
@@ -37,7 +37,7 @@ export type SavedSearch = {
 
 export type Property = {
   id: number
-  search_criteria_id: number
+  search_profile_id: number
   redfin_url: string | null
   realtor_url: string | null
   rew_url: string | null

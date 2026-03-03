@@ -46,7 +46,7 @@ pub struct NotesRequest {
 
 #[derive(Deserialize)]
 pub struct SearchIdRequest {
-    pub search_criteria_id: i64,
+    pub search_profile_id: i64,
 }
 
 /// PATCH /api/listings/:id/notes
@@ -68,15 +68,15 @@ pub(crate) async fn patch_notes(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// PATCH /api/listings/:id/search
+/// PATCH /api/listings/:id/search-profile
 ///
-/// Move a listing to a different search (or detach it by passing `null`).
-pub(crate) async fn patch_search(
+/// Move a listing to a different search profile (or detach it by passing `null`).
+pub(crate) async fn patch_search_profile(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(body): Json<SearchIdRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    property_store::update_search_criteria_id(&state.db, id, body.search_criteria_id)
+    property_store::update_search_profile_id(&state.db, id, body.search_profile_id)
         .await
         .map_err(|e| {
             (

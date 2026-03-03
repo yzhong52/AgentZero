@@ -1,31 +1,31 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './App.css'
-import type { SavedSearch } from './types'
+import type { SearchProfile } from './types'
 
-export function ManageSearches() {
+export function ManageSearchProfiles() {
     const navigate = useNavigate()
 
-    const [searches, setSearches] = useState<SavedSearch[]>([])
+    const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
     const [editingId, setEditingId] = useState<number | null>(null)
     const [editDraft, setEditDraft] = useState<{ title: string; desc: string }>({ title: '', desc: '' })
     const [savingId, setSavingId] = useState<number | null>(null)
     const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
     const [deletingId, setDeletingId] = useState<number | null>(null)
 
-    async function fetchSearches() {
+    async function fetchSearchProfiles() {
         try {
-            const resp = await fetch('/api/searches')
+            const resp = await fetch('/api/search-profiles')
             if (resp.ok) {
-                const data: SavedSearch[] = await resp.json()
-                setSearches(data)
+                const data: SearchProfile[] = await resp.json()
+                setSearchProfiles(data)
             }
         } catch { /* non-fatal */ }
     }
 
-    useEffect(() => { fetchSearches() }, [])
+    useEffect(() => { fetchSearchProfiles() }, [])
 
-    function startEdit(s: SavedSearch) {
+    function startEdit(s: SearchProfile) {
         setEditingId(s.id)
         setEditDraft({ title: s.title, desc: s.description ?? '' })
         setConfirmDeleteId(null)
@@ -35,16 +35,16 @@ export function ManageSearches() {
         setEditingId(null)
     }
 
-    async function handleSaveSearch(id: number) {
+    async function handleSaveSearchProfile(id: number) {
         setSavingId(id)
         try {
-            const resp = await fetch(`/api/searches/${id}`, {
+            const resp = await fetch(`/api/search-profiles/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title: editDraft.title.trim(), description: editDraft.desc.trim() }),
             })
             if (resp.ok) {
-                await fetchSearches()
+                await fetchSearchProfiles()
                 setEditingId(null)
             }
         } catch { /* non-fatal */ } finally {
@@ -52,11 +52,11 @@ export function ManageSearches() {
         }
     }
 
-    async function handleDeleteSearch(id: number) {
+    async function handleDeleteSearchProfile(id: number) {
         setDeletingId(id)
         try {
-            await fetch(`/api/searches/${id}`, { method: 'DELETE' })
-            await fetchSearches()
+            await fetch(`/api/search-profiles/${id}`, { method: 'DELETE' })
+            await fetchSearchProfiles()
             setConfirmDeleteId(null)
             if (editingId === id) setEditingId(null)
         } catch { /* non-fatal */ } finally {
@@ -74,18 +74,17 @@ export function ManageSearches() {
                 <span className="detail-nav-title">Manage Scenarios</span>
             </div>
             <div className="manage-page-content">
-                {searches.map(s => {
+                {searchProfiles.map(s => {
                     const isEditing = editingId === s.id
                     const isDirty = isEditing && (editDraft.title !== s.title || editDraft.desc !== (s.description ?? ''))
                     return (
                         <div key={s.id} className={`manage-search-card${isEditing ? ' editing' : ''}`}>
-                            {/* Delete button — upper right, edit mode only (hidden when confirm is showing) */}
                             {isEditing && confirmDeleteId !== s.id && (
                                 <div className="manage-search-delete-corner">
                                     <button
                                         className="delete-btn"
-                                        title={searches.length <= 1 ? 'Cannot delete the only scenario' : `Delete "${s.title}"`}
-                                        disabled={searches.length <= 1}
+                                        title={searchProfiles.length <= 1 ? 'Cannot delete the only scenario' : `Delete "${s.title}"`}
+                                        disabled={searchProfiles.length <= 1}
                                         onClick={() => setConfirmDeleteId(s.id)}
                                     >
                                         Delete
@@ -124,7 +123,7 @@ export function ManageSearches() {
                                         <button
                                             className="confirm-delete-btn"
                                             disabled={deletingId === s.id}
-                                            onClick={() => handleDeleteSearch(s.id)}
+                                            onClick={() => handleDeleteSearchProfile(s.id)}
                                         >
                                             {deletingId === s.id ? 'Deleting…' : 'Delete'}
                                         </button>
@@ -141,7 +140,7 @@ export function ManageSearches() {
                                                 <button
                                                     className="save-btn"
                                                     disabled={savingId === s.id || !isDirty || !editDraft.title.trim()}
-                                                    onClick={() => handleSaveSearch(s.id)}
+                                                    onClick={() => handleSaveSearchProfile(s.id)}
                                                 >
                                                     {savingId === s.id ? 'Saving…' : 'Save'}
                                                 </button>

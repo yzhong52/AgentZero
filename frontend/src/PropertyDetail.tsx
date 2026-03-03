@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
-import type { Property, SavedSearch } from './types'
+import type { Property, SearchProfile } from './types'
 import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
 import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
@@ -450,24 +450,24 @@ export function PropertyDetail() {
 
     useEffect(() => { loadProperty() }, [id])
 
-    // ── Searches (for move-to-search) ─────────────────────────────────────────
-    const [searches, setSearches] = useState<SavedSearch[]>([])
+    // ── Search profiles (for move-to-search-profile) ─────────────────────────
+    const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
     useEffect(() => {
-        fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
+        fetch('/api/search-profiles').then(r => r.ok ? r.json() : []).then(setSearchProfiles).catch(() => { })
     }, [])
 
-    async function handleMoveToSearch(searchId: number) {
+    async function handleMoveToSearchProfile(searchProfileId: number) {
         if (!property) return
         try {
-            const resp = await fetch(`/api/listings/${property.id}/search`, {
+            const resp = await fetch(`/api/listings/${property.id}/search-profile`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ search_criteria_id: searchId }),
+                body: JSON.stringify({ search_profile_id: searchProfileId }),
             })
             if (resp.ok) {
-                setProperty(prev => prev ? { ...prev, search_criteria_id: searchId } : prev)
-                // refresh search counts
-                fetch('/api/searches').then(r => r.ok ? r.json() : []).then(setSearches).catch(() => { })
+                setProperty(prev => prev ? { ...prev, search_profile_id: searchProfileId } : prev)
+                // refresh search profile counts
+                fetch('/api/search-profiles').then(r => r.ok ? r.json() : []).then(setSearchProfiles).catch(() => { })
             }
         } catch { /* non-fatal */ }
     }
@@ -1398,18 +1398,18 @@ export function PropertyDetail() {
                             </div>
                         </div>
 
-                        {searches.length > 0 && (
+                        {searchProfiles.length > 0 && (
                             <div className="search-picker right-panel-section">
-                                <h3 className="notes-heading">Search</h3>
+                                <h3 className="notes-heading">Search Profile</h3>
                                 <select
                                     className="search-picker-select"
-                                    value={property.search_criteria_id}
+                                    value={property.search_profile_id}
                                     onChange={e => {
                                         const val = Number(e.target.value)
-                                        if (val) handleMoveToSearch(val)
+                                        if (val) handleMoveToSearchProfile(val)
                                     }}
                                 >
-                                    {searches.map(s => (
+                                    {searchProfiles.map(s => (
                                         <option key={s.id} value={s.id}>{s.title}</option>
                                     ))}
                                 </select>

@@ -451,7 +451,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     Some(Property {
         id: 0,
-        search_criteria_id: 0, // overwritten by caller
+        search_profile_id: 0, // overwritten by caller
         redfin_url: Some(url.to_string()),
         realtor_url: None,
         rew_url: None,

@@ -64,15 +64,19 @@ pub async fn build_app() -> Router {
 	Router::new()
 		.route("/api/parse", get(api::parse::parse))
 		.route(
-			"/api/searches",
-			post(api::searches::create_search).get(api::searches::list_searches),
+			"/api/search-profiles",
+			post(api::search_profiles::create_search_profile)
+				.get(api::search_profiles::list_search_profiles),
 		)
-		.route("/api/searches/reorder", put(api::searches::reorder_searches))
 		.route(
-			"/api/searches/:id",
-			get(api::searches::get_search)
-				.patch(api::searches::update_search)
-				.delete(api::searches::delete_search),
+			"/api/search-profiles/reorder",
+			put(api::search_profiles::reorder_search_profiles),
+		)
+		.route(
+			"/api/search-profiles/:id",
+			get(api::search_profiles::get_search_profile)
+				.patch(api::search_profiles::update_search_profile)
+				.delete(api::search_profiles::delete_search_profile),
 		)
 		.route(
 			"/api/listings",
@@ -83,7 +87,7 @@ pub async fn build_app() -> Router {
 		.route("/api/listings/:id/refresh", put(api::refresh::refresh_listing))
 		.route("/api/listings/:id/preview", get(api::refresh::preview_refresh))
 		.route("/api/listings/:id/notes", patch(api::details::patch_notes))
-		.route("/api/listings/:id/search", patch(api::details::patch_search))
+		.route("/api/listings/:id/search-profile", patch(api::details::patch_search_profile))
 		.route("/api/listings/:id/details", patch(api::details::patch_details))
 		.route("/api/listings/:id/history", get(api::details::get_history))
 		.route(

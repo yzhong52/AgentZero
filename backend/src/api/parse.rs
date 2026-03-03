@@ -26,7 +26,8 @@ pub async fn parse(
         "Missing 'url' query parameter".to_string(),
     ))?;
     let url = url.trim();
-    let parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL".to_string()))?;
+    let mut parsed = safe_url(url).ok_or((StatusCode::BAD_REQUEST, "Invalid URL".to_string()))?;
+    parsed.set_query(None);
 
     let html = fetch_html(&state.client, &parsed).await.map_err(|e| {
         (

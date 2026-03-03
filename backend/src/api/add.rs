@@ -30,8 +30,8 @@ use crate::{
 
 #[derive(Deserialize)]
 pub struct AddRequest {
-    /// One or more listing URLs for the same property (e.g. redfin + rew).
-    pub urls: Vec<String>,
+    /// The listing URL to add.
+    pub url: String,
     /// Search to assign this listing to.
     pub search_criteria_id: i64,
 }
@@ -40,78 +40,61 @@ pub async fn add_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
 ) -> Result<Json<db::Property>, (StatusCode, String)> {
-    if body.urls.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "At least one URL is required".to_string(),
-        ));
-    }
-
-    // Validate all URLs upfront.
-    let parsed_urls: Vec<Url> = body
-        .urls
-        .iter()
-        .map(|raw| {
-            safe_url(raw.trim()).ok_or((
-                StatusCode::BAD_REQUEST,
-                format!("Invalid URL: {}", raw.trim()),
-            ))
-        })
-        .collect::<Result<_, _>>()?;
+    let mut parsed_url = safe_url(body.url.trim()).ok_or((
+        StatusCode::BAD_REQUEST,
+        format!("Invalid URL: {}", body.url.trim()),
+    ))?;
+    parsed_url.set_query(None);
 
     // Check for duplicate source URLs before fetching.
-    for url in &parsed_urls {
-        if let Ok(Some(existing)) = db::find_by_source_url(&state.db, url.as_str()).await {
-            let body = serde_json::json!({
-                "duplicate": true,
-                "existing_id": existing.id,
-                "existing_title": existing.title,
-                "mls_number": existing.mls_number,
-            });
-            return Err((StatusCode::CONFLICT, body.to_string()));
-        }
+    if let Ok(Some(existing)) = db::find_by_source_url(&state.db, parsed_url.as_str()).await {
+        let body = serde_json::json!({
+            "duplicate": true,
+            "existing_id": existing.id,
+            "existing_title": existing.title,
+            "mls_number": existing.mls_number,
+        });
+        return Err((StatusCode::CONFLICT, body.to_string()));
     }
 
-    // Fetch HTML for each URL.
+    // Fetch HTML.
     // `fetch_html` tries a direct HTTP request first.  For bot-protected
-    // hosts (Zillow, Realtor.ca)
-    // it automatically falls back to Safari via AppleScript.  If even that
-    // fails, we save an empty stub so the user can fill in details manually.
-    let mut sources: Vec<parsers::SourceInput> = Vec::new();
-    for url in &parsed_urls {
-        match fetch_html(&state.client, url).await {
-            Ok(html) => sources.push(parsers::SourceInput {
-                url: url.to_string(),
-                html,
-            }),
-            Err(e) if is_blocked_host(url) => {
-                tracing::info!(
-                    "add_listing: fetch failed for {} ({}), saving stub",
-                    url,
-                    e
-                );
-                sources.push(parsers::SourceInput {
-                    url: url.to_string(),
-                    html: String::new(),
-                });
-            }
-            Err(e) => {
-                return Err((
-                    StatusCode::BAD_GATEWAY,
-                    format!("Failed to fetch {}: {}", url, e),
-                ))
+    // hosts (Zillow, Realtor.ca) it automatically falls back to Safari via
+    // AppleScript.  If even that fails, we save an empty stub so the user
+    // can fill in details manually.
+    let source = match fetch_html(&state.client, &parsed_url).await {
+        Ok(html) => parsers::SourceInput {
+            url: parsed_url.to_string(),
+            html,
+        },
+        Err(e) if is_blocked_host(&parsed_url) => {
+            tracing::info!(
+                "add_listing: fetch failed for {} ({}), saving stub",
+                parsed_url,
+                e
+            );
+            parsers::SourceInput {
+                url: parsed_url.to_string(),
+                html: String::new(),
             }
         }
-    }
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                format!("Failed to fetch {}: {}", parsed_url, e),
+            ))
+        }
+    };
+    let sources = std::slice::from_ref(&source);
 
     let listing_opt = parsers::parse_multi(&sources);
 
     let (mut property, image_urls, open_houses) = match listing_opt {
         Some(listing) => (listing.property, listing.image_urls, listing.open_houses),
         None => {
-            // Parsing yielded nothing.  Only save a stub when ALL URLs are
-            // from known-blocked hosts — for unrecognised URLs return 422.
-            if !parsed_urls.iter().all(is_blocked_host) {
+            // Parsing yielded nothing.  Only save a stub for known-blocked hosts;
+            // for unrecognised URLs return 422.
+            if !is_blocked_host(&parsed_url) {
                 return Err((
                     StatusCode::UNPROCESSABLE_ENTITY,
                     "No recognized listing format found in page".to_string(),
@@ -119,16 +102,14 @@ pub async fn add_listing(
             }
             tracing::info!(
                 "add_listing: all URLs are from blocked hosts, saving stub for {:?}",
-                parsed_urls.iter().map(|u| u.as_str()).collect::<Vec<_>>(),
+                parsed_url.as_str(),
             );
             let mut stub = blank_stub();
             // Populate whichever URL fields we know about.
-            for u in &parsed_urls {
-                match u.host_str().unwrap_or("") {
-                    h if h.contains("zillow.com") => stub.zillow_url = Some(u.to_string()),
-                    h if h.contains("realtor.ca") => stub.realtor_url = Some(u.to_string()),
-                    _ => {}
-                }
+            match parsed_url.host_str().unwrap_or("") {
+                h if h.contains("zillow.com") => stub.zillow_url = Some(parsed_url.to_string()),
+                h if h.contains("realtor.ca") => stub.realtor_url = Some(parsed_url.to_string()),
+                _ => {}
             }
             (stub, vec![], vec![])
         }
@@ -195,7 +176,7 @@ pub async fn add_listing(
     );
 
     // Save raw HTML snapshots for offline inspection / parser backfills.
-    for source in &sources {
+    for source in sources {
         crate::html_snapshots::save(saved.id, &source.url, &source.html).await;
     }
 

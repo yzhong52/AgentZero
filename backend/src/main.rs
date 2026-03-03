@@ -6,6 +6,9 @@ mod images;
 mod models;
 mod parsers;
 mod store;
+mod utils;
+
+pub(crate) use utils::safe_url;
 
 use axum::{
     routing::{delete, get, patch, post, put},
@@ -78,17 +81,6 @@ pub(crate) fn compute_mortgage(price: i64, down_pct: f64, annual_rate: f64, year
     let r = annual_rate / 12.0;
     let payment = loan * r * (1.0 + r).powf(n) / ((1.0 + r).powf(n) - 1.0);
     payment.round() as i64
-}
-
-pub(crate) fn safe_url(input: &str) -> Option<Url> {
-    if let Ok(u) = Url::parse(input) {
-        match u.scheme() {
-            "http" | "https" => Some(u),
-            _ => None,
-        }
-    } else {
-        None
-    }
 }
 
 /// Fetch HTML using the reqwest HTTP client.

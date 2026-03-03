@@ -160,7 +160,7 @@ function App() {
       const resp = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls: [url.trim()], search_criteria_id: activeSearchId }),
+        body: JSON.stringify({ url: url.trim(), search_criteria_id: activeSearchId }),
       })
       if (!resp.ok) {
         const text = await resp.text()

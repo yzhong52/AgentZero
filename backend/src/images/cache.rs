@@ -1,5 +1,5 @@
 use crate::db;
-use crate::image_paths;
+use crate::images::paths;
 use image::imageops::FilterType;
 use object_store::{path::Path as ObjectPath, ObjectStore, ObjectStoreExt};
 use reqwest::Client;
@@ -73,7 +73,7 @@ pub async fn cache_images(
     };
 
     tracing::info!(
-        "cache_images: listing_id={} pending={} already_cached={}",
+        "cache_images: listing_id={} pending={} already_cached= {}",
         listing_id,
         pending.len(),
         cached.len()
@@ -143,7 +143,7 @@ pub async fn cache_images(
 
         // Write to object store.
         let ext = image_ext(&bytes);
-        let object_key = ObjectPath::from(image_paths::object_key(listing_id, &sha256, ext));
+        let object_key = ObjectPath::from(paths::object_key(listing_id, &sha256, ext));
 
         if let Err(e) = store.put(&object_key, bytes.clone().into()).await {
             tracing::warn!("Failed to write image to store {}: {}", object_key, e);

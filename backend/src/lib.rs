@@ -5,6 +5,7 @@ mod finance;
 pub mod html_snapshots;
 pub mod image_paths;
 pub mod images;
+pub mod ingest;
 pub mod models;
 pub mod parsers;
 pub mod store;

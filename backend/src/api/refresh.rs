@@ -22,6 +22,123 @@ fn is_title_exist(title: &str) -> bool {
     !title.is_empty()
 }
 
+fn stored_source_urls(stored: &Property) -> Vec<String> {
+    [
+        stored.redfin_url.clone(),
+        stored.realtor_url.clone(),
+        stored.rew_url.clone(),
+        stored.zillow_url.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
+}
+
+async fn fetch_sources(
+    state: &AppState,
+    urls: &[String],
+    context: &str,
+    log_success: bool,
+) -> Result<Vec<parsers::SourceInput>, (StatusCode, String)> {
+    if urls.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "No source URL stored for this listing".to_string(),
+        ));
+    }
+
+    let mut sources: Vec<parsers::SourceInput> = Vec::new();
+    for url in urls {
+        let parsed_url = parse_listing_url(url).ok_or((
+            StatusCode::BAD_REQUEST,
+            format!("Invalid stored URL: {url}"),
+        ))?.url;
+        match fetch_html(&state.client, &parsed_url).await {
+            Ok(html) => {
+                if log_success {
+                    tracing::info!(
+                        "{}: fetched source url={}",
+                        context,
+                        parsed_url.as_str()
+                    );
+                }
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html,
+                });
+            }
+            Err(e) => {
+                tracing::warn!("{}: failed to fetch {}: {}", context, url, e);
+                sources.push(parsers::SourceInput {
+                    url: parsed_url.to_string(),
+                    html: String::new(),
+                });
+            }
+        }
+    }
+
+    Ok(sources)
+}
+
+fn apply_shared_preserved_fields(target: &mut Property, stored: &Property) {
+    target.school_elementary = target
+        .school_elementary
+        .clone()
+        .or(stored.school_elementary.clone());
+    target.school_elementary_rating = target
+        .school_elementary_rating
+        .or(stored.school_elementary_rating);
+    target.school_middle = target.school_middle.clone().or(stored.school_middle.clone());
+    target.school_middle_rating = target.school_middle_rating.or(stored.school_middle_rating);
+    target.school_secondary = target
+        .school_secondary
+        .clone()
+        .or(stored.school_secondary.clone());
+    target.school_secondary_rating = target
+        .school_secondary_rating
+        .or(stored.school_secondary_rating);
+
+    target.hoa_monthly = target.hoa_monthly.or(stored.hoa_monthly);
+    target.offer_price = stored.offer_price;
+
+    if is_title_exist(&stored.title) {
+        target.title = stored.title.clone();
+    }
+}
+
+fn apply_refresh_identity_fields(target: &mut Property, stored: &Property, id: i64) {
+    target.id = id;
+    target.redfin_url = stored.redfin_url.clone();
+    target.realtor_url = stored.realtor_url.clone();
+    target.rew_url = stored.rew_url.clone();
+    target.zillow_url = stored.zillow_url.clone();
+}
+
+fn recompute_mortgage_fields(target: &mut Property, stored: &Property) {
+    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
+    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored.amortization_years.unwrap_or(25);
+    target.down_payment_pct = Some(down_pct);
+    target.mortgage_interest_rate = Some(rate);
+    target.amortization_years = Some(years);
+    if let Some(price) = target.offer_price.or(target.price) {
+        target.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
+    }
+    target.monthly_total = compute_monthly_total(
+        target.mortgage_monthly,
+        target.property_tax,
+        target.hoa_monthly,
+    );
+    target.monthly_cost = compute_monthly_cost(
+        target
+            .offer_price
+            .or(target.price)
+            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
+        target.property_tax,
+        target.hoa_monthly,
+    );
+}
+
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
@@ -39,47 +156,8 @@ pub(crate) async fn refresh_listing(
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
     // ── 2. Fetch HTML for each stored source URL ───────────────────────────────
-    let source_urls: Vec<String> = [
-        stored.redfin_url.clone(),
-        stored.realtor_url.clone(),
-        stored.rew_url.clone(),
-        stored.zillow_url.clone(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-
-    if source_urls.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "No source URL stored for this listing".to_string(),
-        ));
-    }
-
-    let mut sources: Vec<parsers::SourceInput> = Vec::new();
-    for url in &source_urls {
-        let parsed_url = parse_listing_url(url).ok_or((
-            StatusCode::BAD_REQUEST,
-            format!("Invalid stored URL: {url}"),
-        ))?.url;
-        match fetch_html(&state.client, &parsed_url).await {
-            Ok(html) => {
-                tracing::info!("refresh_listing: fetched source url={}", parsed_url.as_str());
-                sources.push(parsers::SourceInput {
-                    url: parsed_url.to_string(),
-                    html,
-                });
-            }
-            Err(e) => {
-                tracing::warn!("refresh_listing: failed to fetch {}: {}", url, e);
-                // Skip this source but continue with others.
-                sources.push(parsers::SourceInput {
-                    url: parsed_url.to_string(),
-                    html: String::new(),
-                });
-            }
-        }
-    }
+    let source_urls = stored_source_urls(&stored);
+    let sources = fetch_sources(&state, &source_urls, "refresh_listing", true).await?;
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
     let listing = parsers::parse_multi(&sources).ok_or((
@@ -98,65 +176,13 @@ pub(crate) async fn refresh_listing(
     // ── 4. Merge identity and user-preserved fields ────────────────────────────
     // Keep the DB id and the stored source URLs — users may link additional
     // sources that the parser cannot re-derive.
-    updated.id = id;
-    updated.redfin_url = stored.redfin_url.clone();
-    updated.realtor_url = stored.realtor_url.clone();
-    updated.rew_url = stored.rew_url.clone();
-    updated.zillow_url = stored.zillow_url.clone();
-
-    // Parsers currently do not populate school fields — users enter them manually.
-    // Fall back to whatever the user already stored.
-    updated.school_elementary = updated
-        .school_elementary
-        .or(stored.school_elementary.clone());
-    updated.school_elementary_rating = updated
-        .school_elementary_rating
-        .or(stored.school_elementary_rating);
-    updated.school_middle = updated.school_middle.or(stored.school_middle.clone());
-    updated.school_middle_rating = updated.school_middle_rating.or(stored.school_middle_rating);
-    updated.school_secondary = updated.school_secondary.or(stored.school_secondary.clone());
-    updated.school_secondary_rating = updated
-        .school_secondary_rating
-        .or(stored.school_secondary_rating);
-
-    // Preserve the user's HOA fee when the parser finds nothing (strata fees are
-    // sometimes scraped but often absent — don't clobber a manually entered value).
-    updated.hoa_monthly = updated.hoa_monthly.or(stored.hoa_monthly);
-
-    // Preserve the user's offer price — parser never sets this.
-    updated.offer_price = stored.offer_price;
-
-    // Preserve a user-edited title; only let the parser title through when the
-    // stored title is blank (i.e. the user never set one, or cleared it).
-    if is_title_exist(&stored.title) {
-        updated.title = stored.title.clone();
-    }
+    apply_refresh_identity_fields(&mut updated, &stored, id);
+    apply_shared_preserved_fields(&mut updated, &stored);
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     // Carry forward the user's saved mortgage parameters and recompute the monthly
     // payment against the (potentially updated) price.
-    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years = stored.amortization_years.unwrap_or(25);
-    updated.down_payment_pct = Some(down_pct);
-    updated.mortgage_interest_rate = Some(rate);
-    updated.amortization_years = Some(years);
-    if let Some(price) = updated.offer_price.or(updated.price) {
-        updated.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    updated.monthly_total = compute_monthly_total(
-        updated.mortgage_monthly,
-        updated.property_tax,
-        updated.hoa_monthly,
-    );
-    updated.monthly_cost = compute_monthly_cost(
-        updated
-            .offer_price
-            .or(updated.price)
-            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
-        updated.property_tax,
-        updated.hoa_monthly,
-    );
+    recompute_mortgage_fields(&mut updated, &stored);
 
     // ── 6. Record price-change history ────────────────────────────────────────
     if stored.price != updated.price {
@@ -233,45 +259,8 @@ pub(crate) async fn preview_refresh(
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {}", e)))?;
 
     // ── 2. Fetch HTML for each stored source URL ───────────────────────────────
-    let stored_urls: Vec<String> = [
-        stored.redfin_url.clone(),
-        stored.realtor_url.clone(),
-        stored.rew_url.clone(),
-        stored.zillow_url.clone(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-
-    if stored_urls.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "No source URL stored for this listing".to_string(),
-        ));
-    }
-
-    let mut sources: Vec<parsers::SourceInput> = Vec::new();
-    for url in &stored_urls {
-        let parsed_url = parse_listing_url(url).ok_or((
-            StatusCode::BAD_REQUEST,
-            format!("Invalid stored URL: {url}"),
-        ))?.url;
-        match fetch_html(&state.client, &parsed_url).await {
-            Ok(html) => {
-                sources.push(parsers::SourceInput {
-                    url: parsed_url.to_string(),
-                    html,
-                });
-            }
-            Err(e) => {
-                tracing::warn!("preview_refresh: failed to fetch {}: {}", url, e);
-                sources.push(parsers::SourceInput {
-                    url: parsed_url.to_string(),
-                    html: String::new(),
-                });
-            }
-        }
-    }
+    let stored_urls = stored_source_urls(&stored);
+    let sources = fetch_sources(&state, &stored_urls, "preview_refresh", false).await?;
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
     let listing = parsers::parse_multi(&sources).ok_or((
@@ -281,54 +270,10 @@ pub(crate) async fn preview_refresh(
     let mut preview = listing.property;
 
     // ── 4. Apply the same field-preservation rules as refresh ─────────────────
-    // School fields are user-entered; parsers never populate them.
-    preview.school_elementary = preview
-        .school_elementary
-        .or(stored.school_elementary.clone());
-    preview.school_elementary_rating = preview
-        .school_elementary_rating
-        .or(stored.school_elementary_rating);
-    preview.school_middle = preview.school_middle.or(stored.school_middle.clone());
-    preview.school_middle_rating = preview.school_middle_rating.or(stored.school_middle_rating);
-    preview.school_secondary = preview.school_secondary.or(stored.school_secondary.clone());
-    preview.school_secondary_rating = preview
-        .school_secondary_rating
-        .or(stored.school_secondary_rating);
-
-    // Keep a manually-entered HOA fee when the parser has nothing to say.
-    preview.hoa_monthly = preview.hoa_monthly.or(stored.hoa_monthly);
-
-    // Preserve the user's offer price — the parser never sets this.
-    preview.offer_price = stored.offer_price;
-
-    // Preserve a user-edited title (same rule as refresh_listing).
-    if is_title_exist(&stored.title) {
-        preview.title = stored.title.clone();
-    }
+    apply_shared_preserved_fields(&mut preview, &stored);
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
-    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years = stored.amortization_years.unwrap_or(25);
-    preview.down_payment_pct = Some(down_pct);
-    preview.mortgage_interest_rate = Some(rate);
-    preview.amortization_years = Some(years);
-    if let Some(price) = preview.offer_price.or(preview.price) {
-        preview.mortgage_monthly = Some(compute_mortgage(price, down_pct, rate, years));
-    }
-    preview.monthly_total = compute_monthly_total(
-        preview.mortgage_monthly,
-        preview.property_tax,
-        preview.hoa_monthly,
-    );
-    preview.monthly_cost = compute_monthly_cost(
-        preview
-            .offer_price
-            .or(preview.price)
-            .map(|price| compute_initial_monthly_interest(price, down_pct, rate)),
-        preview.property_tax,
-        preview.hoa_monthly,
-    );
+    recompute_mortgage_fields(&mut preview, &stored);
 
     Ok(Json(preview))
 }

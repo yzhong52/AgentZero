@@ -233,7 +233,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             Ok(resp) if !resp.status().is_success() => {
-                println!(" {} — skipping", resp.status());
+                let status = resp.status().as_u16();
+                let body = resp.text().await.unwrap_or_default();
+                println!(" FAILED (HTTP {status}): {body}");
                 skipped += 1;
                 continue;
             }
@@ -282,7 +284,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 refreshed += 1;
             }
             Ok(resp) => {
-                eprintln!("  FAILED (HTTP {})", resp.status().as_u16());
+                let status = resp.status().as_u16();
+                let body = resp.text().await.unwrap_or_default();
+                eprintln!("  FAILED (HTTP {status}): {body}");
                 failed += 1;
             }
             Err(e) => {

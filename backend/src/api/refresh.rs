@@ -110,6 +110,7 @@ fn apply_refresh_identity_fields(target: &mut Property, stored: &Property, id: i
     target.realtor_url = stored.realtor_url.clone();
     target.rew_url = stored.rew_url.clone();
     target.zillow_url = stored.zillow_url.clone();
+    target.search_profile_id = stored.search_profile_id;
 }
 
 /// PUT /api/listings/:id/refresh

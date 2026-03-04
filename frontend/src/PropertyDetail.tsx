@@ -1218,9 +1218,9 @@ export function PropertyDetail() {
                                                 }}
                                                 placeholder="Defaults to listing price"
                                             />
-                                            {hasCustomOfferPrice && (
-                                                <span className="offer-price-original">
-                                                    {formatPriceFull(finance.price, finance.price_currency)}
+                                            {finance.price != null && (
+                                                <span className="offer-price-asking-hint">
+                                                    Asking: {formatPriceFull(finance.price, finance.price_currency)}
                                                 </span>
                                             )}
                                         </div>

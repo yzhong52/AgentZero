@@ -2521,22 +2521,19 @@
 }
 
 .target-offer-edit-row {
-  position: relative;
   display: block;
   width: 100%;
-  overflow: visible;
 }
 
 .target-offer-edit-row .target-offer-input {
   width: 100%;
 }
 
-.target-offer-edit-row .offer-price-original {
-  position: absolute;
-  left: calc(100% + 0.45rem);
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
+.offer-price-asking-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 0.3rem;
 }
 
 .offer-finance-row-2 {

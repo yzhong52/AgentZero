@@ -82,6 +82,7 @@ pub async fn build_app() -> Router {
 			"/api/listings",
 			post(api::add::add_listing).get(api::listings::list_listings),
 		)
+		.route("/api/listings/suggest", post(api::add::suggest_listing))
 		.route("/api/listings/:id", get(api::listings::get_listing))
 		.route("/api/listings/:id/delete", delete(api::listings::delete_listing))
 		.route("/api/listings/:id/refresh", put(api::refresh::refresh_listing))

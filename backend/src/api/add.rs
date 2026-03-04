@@ -1,4 +1,4 @@
-//! POST /api/listings — add a new listing.
+//! Listing ingest endpoints — add and suggest new listings.
 //!
 //! Fetches and parses the given listing URL, saves the result to the DB,
 //! downloads images, and returns the saved record.
@@ -17,6 +17,10 @@
 //! When the submitted URL is from a known-blocked host (Zillow, Realtor.ca),
 //! a stub listing is saved containing only the URL so the user can fill in
 //! details manually via the edit panel.
+//!
+//! Endpoints:
+//! - `POST /api/listings`         — human-driven add (defaults to Interested)
+//! - `POST /api/listings/suggest` — AI-driven suggest (must be Pending)
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
@@ -24,9 +28,9 @@ use serde::Deserialize;
 use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
-use crate::models::property::Property;
+use crate::models::property::{ListingStatus, Property};
 use crate::finance as property_finance;
-use crate::store::{image_store, open_house_store, property_store};
+use crate::store::{image_store, open_house_store, property_store, search_profile_store};
 use crate::{images, parsers, AppState};
 
 #[derive(Deserialize)]
@@ -37,13 +41,50 @@ pub struct AddRequest {
     pub search_profile_id: i64,
 }
 
+/// POST /api/listings
+///
+/// Human-driven listing ingest endpoint. Saves the property with `Interested`
+/// status and requires a valid `search_profile_id`.
 pub(crate) async fn add_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
 ) -> Result<Json<Property>, (StatusCode, String)> {
-    let listing_url = parse_listing_url(body.url.trim()).ok_or((
+    let property = add_listing_impl(state, body, ListingStatus::Interested).await?;
+    Ok(Json(property))
+}
+
+/// POST /api/listings/suggest
+///
+/// AI-facing listing ingest endpoint. Behaves like `add_listing` but enforces
+/// `Pending` status for newly ingested properties.
+pub(crate) async fn suggest_listing(
+    State(state): State<AppState>,
+    Json(body): Json<AddRequest>,
+) -> Result<Json<Property>, (StatusCode, String)> {
+    let property = add_listing_impl(state, body, ListingStatus::Pending).await?;
+    Ok(Json(property))
+}
+
+async fn add_listing_impl(
+    state: AppState,
+    body: AddRequest,
+    initial_status: ListingStatus,
+) -> Result<Property, (StatusCode, String)> {
+    // Validate search profile exists before doing any expensive work.
+    search_profile_store::get_by_id(&state.db, body.search_profile_id)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => (
+                StatusCode::BAD_REQUEST,
+                format!("search_profile_id {} does not exist", body.search_profile_id),
+            ),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")),
+        })?;
+
+    let trimmed_url = body.url.trim();
+    let listing_url = parse_listing_url(trimmed_url).ok_or((
         StatusCode::BAD_REQUEST,
-        format!("Invalid URL: {}", body.url.trim()),
+        format!("Invalid URL: {trimmed_url}"),
     ))?;
     let site = listing_url.site;
     let parsed_url = listing_url.url;
@@ -140,6 +181,7 @@ pub(crate) async fn add_listing(
 
     // Assign to search profile.
     property.search_profile_id = body.search_profile_id;
+    property.status = initial_status;
 
     let saved = property_store::add_listing(&state.db, &property).await.map_err(|e| {
         (
@@ -179,7 +221,7 @@ pub(crate) async fn add_listing(
     let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
         .await
         .unwrap_or_default();
-    Ok(Json(Property { images, open_houses, ..saved }))
+    Ok(Property { images, open_houses, ..saved })
 }
 
 /// Returns `true` for hosts that are known to block programmatic HTTP
@@ -243,7 +285,7 @@ fn blank_stub() -> Property {
         monthly_cost: None,
         has_rental_suite: None,
         rental_income: None,
-        status: crate::models::property::ListingStatus::Interested,
+        status: ListingStatus::Interested,
         school_elementary: None,
         school_elementary_rating: None,
         school_middle: None,

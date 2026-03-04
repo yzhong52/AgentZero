@@ -239,14 +239,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Ok(resp) => {
                 println!();
-                match resp.json::<Listing>().await {
+                let has_changes = match resp.json::<Listing>().await {
                     Ok(preview) => {
                         let changes = compute_diff(listing, &preview);
                         print_diff(&changes);
+                        !changes.is_empty()
                     }
                     Err(e) => {
                         println!("  (could not parse preview: {e})");
+                        true // assume changes if we couldn't diff
                     }
+                };
+
+                if !has_changes {
+                    println!("  skipped");
+                    skipped += 1;
+                    continue;
                 }
 
                 if cli.dry_run {

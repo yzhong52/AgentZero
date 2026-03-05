@@ -8,7 +8,7 @@ set -e
 AGENT_ZERO_PATH="$(cd "$(dirname "$0")" && pwd)"
 TOOLS_FILE="$HOME/.openclaw/workspace/TOOLS.md"
 JOB_NAME="agent-zero-listing-ingest"
-JOB_TASK="Use the agent-zero skill to check Gmail for new real estate alert emails (Redfin, Zillow, REALTOR.ca, REW, etc.). AgentZero is at $AGENT_ZERO_PATH — start the backend if not running. For each email: open it in the browser, click the primary listing image to get the real URL, match the email to a search profile, then POST to http://localhost:8000/api/listings/suggest. Skip duplicates silently. Notify Yz on Slack only if new listings were added."
+JOB_TASK="Check Gmail for new real estate alert emails and ingest new listings into AgentZero at $AGENT_ZERO_PATH. Start the backend if not running. For each email: open in browser, click the primary listing image to get the real URL, match to a search profile, POST to http://localhost:8000/api/listings/suggest. Skip duplicates silently. After processing each email, apply the Gmail label '_open_claw/processed_by_agent_zero' to it using the himalaya skill. At the end, send Yz a summary on Slack of what was processed (new listings added, duplicates skipped, emails labeled). If nothing new, still send a brief summary."
 
 echo "🦞 Setting up AgentZero with OpenClaw..."
 echo "   Repo path: $AGENT_ZERO_PATH"

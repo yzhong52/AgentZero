@@ -31,10 +31,9 @@ fi
 openclaw cron add \
   --name "$JOB_NAME" \
   --every "1h" \
-  --message "$JOB_TASK" \
+  --system-event "$JOB_TASK" \
   --description "Check real estate emails and ingest new listings into AgentZero" \
   --model "github-copilot/claude-sonnet-4.6" \
-  --channel "slack" \
   --session "main"
 
 echo "✅ Cron job registered: $JOB_NAME (every 1h)"

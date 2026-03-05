@@ -20,6 +20,9 @@ fn is_title_exist(title: &str) -> bool {
     !title.is_empty()
 }
 
+/// Collects all non-`None` source URLs from a stored property in a consistent
+/// order (Redfin → Realtor → REW → Zillow). The resulting slice is passed to
+/// [`fetch_sources`] to re-fetch and re-parse during a refresh or preview.
 fn stored_source_urls(stored: &Property) -> Vec<String> {
     [
         stored.redfin_url.clone(),
@@ -78,6 +81,19 @@ async fn fetch_sources(
     Ok(sources)
 }
 
+/// Merges user-curated data back into a freshly parsed property.
+///
+/// Some fields can originate from both the parser and the user:
+///
+/// - **Schools / ratings** — the parser value wins when present; the stored
+///   value is kept as a fallback so manual entries survive a re-parse that
+///   does not include school data.
+/// - **HOA fee** — same fallback rule as schools.
+/// - **`offer_price`** — always taken from `stored`; the parser never sets
+///   this field and the user's intended offer must survive every refresh.
+/// - **`title`** — if the stored title is non-empty (the user has typed a
+///   custom title), it is preserved; an empty stored title means the parser
+///   title is used.
 fn apply_shared_preserved_fields(target: &mut Property, stored: &Property) {
     target.school_elementary = target
         .school_elementary
@@ -104,6 +120,15 @@ fn apply_shared_preserved_fields(target: &mut Property, stored: &Property) {
     }
 }
 
+/// Restores fields from the stored record that must survive every refresh and
+/// cannot be derived from parser output.
+///
+/// - `id` is forced to the DB row id (parsers always produce `0`).
+/// - Source URLs are kept from `stored` because the user may have manually
+///   linked additional sources that a parser cannot re-derive from a single page.
+/// - `search_profile_id` is kept from `stored`; the parsed `Property` carries
+///   no search-profile context, and writing `0` (the struct default) would
+///   violate the FK constraint on the `search_profiles` table.
 fn apply_refresh_identity_fields(target: &mut Property, stored: &Property, id: i64) {
     target.id = id;
     target.redfin_url = stored.redfin_url.clone();
@@ -250,4 +275,279 @@ pub(crate) async fn preview_refresh(
     property_finance::recompute_with_stored_terms(&mut preview, &stored);
 
     Ok(Json(preview))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::property::ListingStatus;
+
+    /// Minimal valid `Property` with every field at its zero/None value.
+    /// Tests should override only the fields they care about.
+    fn base_property() -> Property {
+        Property {
+            id: 0,
+            search_profile_id: 1,
+            title: String::new(),
+            description: String::new(),
+            price: None,
+            price_currency: None,
+            offer_price: None,
+            street_address: None,
+            city: None,
+            region: None,
+            postal_code: None,
+            country: None,
+            lat: None,
+            lon: None,
+            property_type: None,
+            bedrooms: None,
+            bathrooms: None,
+            sqft: None,
+            land_sqft: None,
+            year_built: None,
+            parking_total: None,
+            parking_garage: None,
+            parking_carport: None,
+            parking_pad: None,
+            radiant_floor_heating: None,
+            ac: None,
+            laundry_in_unit: None,
+            skytrain_station: None,
+            skytrain_walk_min: None,
+            property_tax: None,
+            hoa_monthly: None,
+            down_payment_pct: None,
+            mortgage_interest_rate: None,
+            amortization_years: None,
+            mortgage_monthly: None,
+            monthly_total: None,
+            monthly_cost: None,
+            has_rental_suite: None,
+            rental_income: None,
+            school_elementary: None,
+            school_elementary_rating: None,
+            school_middle: None,
+            school_middle_rating: None,
+            school_secondary: None,
+            school_secondary_rating: None,
+            redfin_url: None,
+            realtor_url: None,
+            rew_url: None,
+            zillow_url: None,
+            mls_number: None,
+            listed_date: None,
+            status: ListingStatus::Interested,
+            notes: None,
+            images: vec![],
+            open_houses: vec![],
+            created_at: String::new(),
+            updated_at: None,
+        }
+    }
+
+    // ── is_title_exist ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_is_title_exist_empty_string() {
+        assert!(!is_title_exist(""));
+    }
+
+    #[test]
+    fn test_is_title_exist_non_empty_string() {
+        assert!(is_title_exist("123 Main St"));
+    }
+
+    // ── stored_source_urls ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_stored_source_urls_all_set() {
+        let p = Property {
+            redfin_url: Some("https://redfin.ca/1".to_string()),
+            realtor_url: Some("https://realtor.ca/1".to_string()),
+            rew_url: Some("https://rew.ca/1".to_string()),
+            zillow_url: Some("https://zillow.com/1".to_string()),
+            ..base_property()
+        };
+        let urls = stored_source_urls(&p);
+        assert_eq!(urls.len(), 4);
+        assert_eq!(urls[0], "https://redfin.ca/1");
+        assert_eq!(urls[1], "https://realtor.ca/1");
+        assert_eq!(urls[2], "https://rew.ca/1");
+        assert_eq!(urls[3], "https://zillow.com/1");
+    }
+
+    #[test]
+    fn test_stored_source_urls_partial() {
+        let p = Property {
+            redfin_url: Some("https://redfin.ca/1".to_string()),
+            zillow_url: Some("https://zillow.com/1".to_string()),
+            ..base_property()
+        };
+        let urls = stored_source_urls(&p);
+        assert_eq!(urls.len(), 2);
+        assert_eq!(urls[0], "https://redfin.ca/1");
+        assert_eq!(urls[1], "https://zillow.com/1");
+    }
+
+    #[test]
+    fn test_stored_source_urls_none() {
+        let urls = stored_source_urls(&base_property());
+        assert!(urls.is_empty());
+    }
+
+    // ── apply_refresh_identity_fields ─────────────────────────────────────────
+
+    #[test]
+    fn test_identity_fields_copies_id_and_urls() {
+        let mut target = Property {
+            redfin_url: Some("https://wrong.com".to_string()),
+            ..base_property()
+        };
+        let stored = Property {
+            redfin_url: Some("https://redfin.ca/correct".to_string()),
+            realtor_url: Some("https://realtor.ca/correct".to_string()),
+            rew_url: None,
+            zillow_url: Some("https://zillow.com/correct".to_string()),
+            search_profile_id: 3,
+            ..base_property()
+        };
+
+        apply_refresh_identity_fields(&mut target, &stored, 42);
+
+        assert_eq!(target.id, 42);
+        assert_eq!(target.redfin_url, stored.redfin_url);
+        assert_eq!(target.realtor_url, stored.realtor_url);
+        assert_eq!(target.rew_url, stored.rew_url);
+        assert_eq!(target.zillow_url, stored.zillow_url);
+    }
+
+    /// Regression test for the FK constraint failure: the parser produces
+    /// `search_profile_id = 0` (struct default), which has no matching row in
+    /// `search_profiles`. The fix copies it from the stored record.
+    #[test]
+    fn test_identity_fields_preserves_search_profile_id() {
+        let mut target = base_property(); // search_profile_id = 1 (base default)
+        let stored = Property { search_profile_id: 5, ..base_property() };
+
+        apply_refresh_identity_fields(&mut target, &stored, 1);
+
+        assert_eq!(target.search_profile_id, 5);
+    }
+
+    #[test]
+    fn test_identity_fields_does_not_touch_parsed_fields() {
+        let mut target = Property {
+            price: Some(1_000_000),
+            title: "Parser Title".to_string(),
+            ..base_property()
+        };
+        apply_refresh_identity_fields(&mut target, &base_property(), 1);
+
+        assert_eq!(target.price, Some(1_000_000));
+        assert_eq!(target.title, "Parser Title");
+    }
+
+    // ── apply_shared_preserved_fields ─────────────────────────────────────────
+
+    #[test]
+    fn test_shared_fields_parser_school_wins_over_stored() {
+        let mut target = Property {
+            school_elementary: Some("Parser Elementary".to_string()),
+            school_elementary_rating: Some(9.0),
+            ..base_property()
+        };
+        let stored = Property {
+            school_elementary: Some("Stored Elementary".to_string()),
+            school_elementary_rating: Some(7.0),
+            ..base_property()
+        };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.school_elementary.as_deref(), Some("Parser Elementary"));
+        assert_eq!(target.school_elementary_rating, Some(9.0));
+    }
+
+    #[test]
+    fn test_shared_fields_stored_school_fallback_when_parser_empty() {
+        let mut target = base_property(); // all school fields None
+        let stored = Property {
+            school_elementary: Some("Stored Elementary".to_string()),
+            school_elementary_rating: Some(7.0),
+            school_middle: Some("Stored Middle".to_string()),
+            school_middle_rating: Some(6.5),
+            school_secondary: Some("Stored Secondary".to_string()),
+            school_secondary_rating: Some(8.0),
+            ..base_property()
+        };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.school_elementary.as_deref(), Some("Stored Elementary"));
+        assert_eq!(target.school_elementary_rating, Some(7.0));
+        assert_eq!(target.school_middle.as_deref(), Some("Stored Middle"));
+        assert_eq!(target.school_middle_rating, Some(6.5));
+        assert_eq!(target.school_secondary.as_deref(), Some("Stored Secondary"));
+        assert_eq!(target.school_secondary_rating, Some(8.0));
+    }
+
+    #[test]
+    fn test_shared_fields_hoa_parser_wins() {
+        let mut target = Property { hoa_monthly: Some(500), ..base_property() };
+        let stored = Property { hoa_monthly: Some(300), ..base_property() };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.hoa_monthly, Some(500));
+    }
+
+    #[test]
+    fn test_shared_fields_hoa_stored_fallback_when_parser_empty() {
+        let mut target = base_property(); // hoa_monthly = None
+        let stored = Property { hoa_monthly: Some(300), ..base_property() };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.hoa_monthly, Some(300));
+    }
+
+    #[test]
+    fn test_shared_fields_offer_price_always_from_stored() {
+        let mut target = Property { offer_price: Some(999_999), ..base_property() };
+        let stored = Property { offer_price: Some(500_000), ..base_property() };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.offer_price, Some(500_000));
+    }
+
+    #[test]
+    fn test_shared_fields_offer_price_none_when_stored_is_none() {
+        let mut target = Property { offer_price: Some(999_999), ..base_property() };
+
+        apply_shared_preserved_fields(&mut target, &base_property());
+
+        assert_eq!(target.offer_price, None);
+    }
+
+    #[test]
+    fn test_shared_fields_title_preserved_when_user_set() {
+        let mut target = Property { title: "Parser Title".to_string(), ..base_property() };
+        let stored = Property { title: "User Title".to_string(), ..base_property() };
+
+        apply_shared_preserved_fields(&mut target, &stored);
+
+        assert_eq!(target.title, "User Title");
+    }
+
+    #[test]
+    fn test_shared_fields_title_uses_parser_when_stored_empty() {
+        let mut target = Property { title: "Parser Title".to_string(), ..base_property() };
+        // stored.title is "" (base default — user never set a title)
+
+        apply_shared_preserved_fields(&mut target, &base_property());
+
+        assert_eq!(target.title, "Parser Title");
+    }
 }

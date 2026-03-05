@@ -164,7 +164,13 @@ async fn add_listing_impl(
     property.down_payment_pct = Some(down_pct);
     property.mortgage_interest_rate = Some(rate);
     property.amortization_years = Some(years);
-    property_finance::recompute_from_explicit_terms(&mut property, down_pct, rate, years);
+    let finance = property_finance::compute(
+        property.price, property.offer_price, down_pct, rate, years,
+        property.property_tax, property.hoa_monthly,
+    );
+    property.mortgage_monthly = finance.mortgage_monthly;
+    property.monthly_total = finance.monthly_total;
+    property.monthly_cost = finance.monthly_cost;
 
     // Check for duplicate MLS number before inserting.
     if let Some(ref mls) = property.mls_number {

@@ -135,7 +135,7 @@ pub struct Property {
     pub down_payment_pct: Option<f64>, // editable (Finance panel)
     pub mortgage_interest_rate: Option<f64>, // editable (Finance panel)
     pub amortization_years: Option<i64>, // editable (Finance panel)
-    pub mortgage_monthly: Option<i64>, // editable (Finance panel, overrides computed value)
+    pub mortgage_monthly: Option<i64>, // derived; read-only (amortised monthly payment)
     pub monthly_total: Option<i64>, // derived; read-only (mortgage + tax + HOA)
     pub monthly_cost: Option<i64>, // derived; read-only (initial interest + tax + HOA)
 
@@ -224,7 +224,6 @@ pub struct UserDetails {
     pub down_payment_pct: Option<f64>,
     pub mortgage_interest_rate: Option<f64>,
     pub amortization_years: Option<i64>,
-    pub mortgage_monthly: Option<i64>,
     pub monthly_total: Option<i64>,
     pub monthly_cost: Option<i64>,
 

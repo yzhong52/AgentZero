@@ -163,7 +163,6 @@ pub(crate) async fn patch_details(
         .mortgage_interest_rate
         .or(updated.mortgage_interest_rate);
     updated.amortization_years = body.amortization_years.or(updated.amortization_years);
-    updated.mortgage_monthly = body.mortgage_monthly.or(updated.mortgage_monthly);
     updated.hoa_monthly = body.hoa_monthly.or(updated.hoa_monthly);
     updated.monthly_total = body.monthly_total.or(updated.monthly_total);
     updated.monthly_cost = body.monthly_cost.or(updated.monthly_cost);
@@ -205,11 +204,20 @@ pub(crate) async fn patch_details(
     let down_pct = updated.down_payment_pct.unwrap_or(0.20);
     let rate = updated.mortgage_interest_rate.unwrap_or(0.05);
     let years = updated.amortization_years.unwrap_or(25);
-    property_finance::recompute_from_explicit_terms(&mut updated, down_pct, rate, years);
+    let finance = property_finance::compute(
+        updated.price, updated.offer_price, down_pct, rate, years,
+        updated.property_tax, updated.hoa_monthly,
+    );
+    updated.mortgage_monthly = finance.mortgage_monthly;
+    updated.monthly_total = finance.monthly_total;
+    updated.monthly_cost = finance.monthly_cost;
 
-    let _ = sqlx::query("UPDATE listings SET monthly_total = ?, monthly_cost = ? WHERE id = ?")
-        .bind(updated.monthly_total)
-        .bind(updated.monthly_cost)
+    let _ = sqlx::query(
+        "UPDATE listings SET mortgage_monthly = ?, monthly_total = ?, monthly_cost = ? WHERE id = ?",
+    )
+    .bind(updated.mortgage_monthly)
+    .bind(updated.monthly_total)
+    .bind(updated.monthly_cost)
         .bind(id)
         .execute(&state.db)
         .await;

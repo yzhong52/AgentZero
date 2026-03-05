@@ -97,6 +97,22 @@ async fn fetch_sources(
 /// `id` is passed separately because callers know the DB row id while the
 /// parsed struct always carries `0`.
 fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
+    // Pre-compute fields that are both stored in the struct and fed into the
+    // mortgage calculation, so each value is stated exactly once.
+    let hoa_monthly = parsed.hoa_monthly.or(stored.hoa_monthly);
+    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
+    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored.amortization_years.unwrap_or(25);
+    let finance = property_finance::compute(
+        parsed.price,
+        stored.offer_price,
+        down_pct,
+        rate,
+        years,
+        parsed.property_tax,
+        hoa_monthly,
+    );
+
     Property {
         // ── Identity ──────────────────────────────────────────────────────────
         // These fields have no representation in the parsed HTML.
@@ -122,11 +138,9 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         rental_income: stored.rental_income,
 
         // ── User-set mortgage parameters ──────────────────────────────────────
-        // Carried forward so recompute_with_stored_terms can recalculate monthly
-        // payments against the (potentially updated) price.
-        down_payment_pct: stored.down_payment_pct,
-        mortgage_interest_rate: stored.mortgage_interest_rate,
-        amortization_years: stored.amortization_years,
+        down_payment_pct: Some(down_pct),
+        mortgage_interest_rate: Some(rate),
+        amortization_years: Some(years),
 
         // ── Parser wins, stored as fallback ───────────────────────────────────
         title: if is_title_exist(&stored.title) { stored.title.clone() } else { parsed.title },
@@ -136,7 +150,7 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         school_middle_rating: parsed.school_middle_rating.or(stored.school_middle_rating),
         school_secondary: parsed.school_secondary.or(stored.school_secondary.clone()),
         school_secondary_rating: parsed.school_secondary_rating.or(stored.school_secondary_rating),
-        hoa_monthly: parsed.hoa_monthly.or(stored.hoa_monthly),
+        hoa_monthly,
 
         // ── Parser wins ───────────────────────────────────────────────────────
         description: parsed.description,
@@ -166,10 +180,10 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         mls_number: parsed.mls_number,
         listed_date: parsed.listed_date,
 
-        // ── Computed (recalculated by caller after merge) ─────────────────────
-        mortgage_monthly: parsed.mortgage_monthly,
-        monthly_total: parsed.monthly_total,
-        monthly_cost: parsed.monthly_cost,
+        // ── Computed ──────────────────────────────────────────────────────────
+        mortgage_monthly: finance.mortgage_monthly,
+        monthly_total: finance.monthly_total,
+        monthly_cost: finance.monthly_cost,
 
         // ── System metadata ───────────────────────────────────────────────────
         created_at: stored.created_at.clone(),
@@ -213,12 +227,9 @@ pub(crate) async fn refresh_listing(
     );
 
     // ── 4. Merge parsed result with stored record ──────────────────────────────
-    let mut updated = merge_with_stored(listing.property, &stored, id);
-
-    // ── 5. Recalculate mortgage ────────────────────────────────────────────────
-    // Recompute monthly payments against the (potentially updated) price using
-    // the user's saved mortgage parameters carried forward by merge_with_stored.
-    property_finance::recompute_with_stored_terms(&mut updated, &stored);
+    // merge_with_stored carries forward user-owned fields and computes mortgage
+    // values inline — no further mutation needed.
+    let updated = merge_with_stored(listing.property, &stored, id);
 
     // ── 6. Record price-change history ────────────────────────────────────────
     if stored.price != updated.price {
@@ -304,10 +315,7 @@ pub(crate) async fn preview_refresh(
         "No recognized listing format found in page".to_string(),
     ))?;
     // ── 4. Merge using the same rules as refresh ──────────────────────────────
-    let mut preview = merge_with_stored(listing.property, &stored, stored.id);
-
-    // ── 5. Recalculate mortgage ────────────────────────────────────────────────
-    property_finance::recompute_with_stored_terms(&mut preview, &stored);
+    let preview = merge_with_stored(listing.property, &stored, stored.id);
 
     Ok(Json(preview))
 }

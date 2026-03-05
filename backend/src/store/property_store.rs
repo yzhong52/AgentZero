@@ -698,7 +698,6 @@ mod tests {
             down_payment_pct: Some(0.2),
             mortgage_interest_rate: Some(0.035),
             amortization_years: Some(25),
-            mortgage_monthly: Some(1500),
             monthly_total: Some(1750),
             monthly_cost: Some(1370),
             // Rental
@@ -778,7 +777,6 @@ mod tests {
             .mortgage_interest_rate
             .or(merged.mortgage_interest_rate);
         merged.amortization_years = details.amortization_years.or(merged.amortization_years);
-        merged.mortgage_monthly = details.mortgage_monthly.or(merged.mortgage_monthly);
         merged.monthly_total = details.monthly_total.or(merged.monthly_total);
         merged.monthly_cost = details.monthly_cost.or(merged.monthly_cost);
         merged.has_rental_suite = details.has_rental_suite.or(merged.has_rental_suite);
@@ -850,7 +848,6 @@ mod tests {
         assert!((updated.down_payment_pct.unwrap() - 0.2).abs() < 1e-9);
         assert!((updated.mortgage_interest_rate.unwrap() - 0.035).abs() < 1e-9);
         assert_eq!(updated.amortization_years, Some(25));
-        assert_eq!(updated.mortgage_monthly, Some(1500));
         assert_eq!(updated.monthly_total, Some(1750));
         assert_eq!(updated.monthly_cost, Some(1370));
         // Rental

@@ -315,7 +315,6 @@ function toUserDetails(p: Property) {
         down_payment_pct: p.down_payment_pct,
         mortgage_interest_rate: p.mortgage_interest_rate,
         amortization_years: p.amortization_years,
-        mortgage_monthly: p.mortgage_monthly,
         hoa_monthly: p.hoa_monthly,
         monthly_total: p.monthly_total,
         monthly_cost: p.monthly_cost,

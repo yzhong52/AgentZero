@@ -6,40 +6,38 @@
 set -e
 
 AGENT_ZERO_PATH="$(cd "$(dirname "$0")" && pwd)"
-CRON_FILE="$HOME/.openclaw/cron/jobs.json"
 TOOLS_FILE="$HOME/.openclaw/workspace/TOOLS.md"
-JOB_ID="agent-zero-listing-ingest"
+JOB_NAME="agent-zero-listing-ingest"
+JOB_TASK="Use the agent-zero skill to check Gmail for new real estate alert emails (Redfin, Zillow, REALTOR.ca, REW, etc.). AgentZero is at $AGENT_ZERO_PATH — start the backend if not running. For each email: open it in the browser, click the primary listing image to get the real URL, match the email to a search profile, then POST to http://localhost:8000/api/listings/suggest. Skip duplicates silently. Notify Yz on Slack only if new listings were added."
 
 echo "🦞 Setting up AgentZero with OpenClaw..."
 echo "   Repo path: $AGENT_ZERO_PATH"
 
 # ── 1. Register hourly cron job ─────────────────────────────────────────────
 
-mkdir -p "$(dirname "$CRON_FILE")"
-[ -f "$CRON_FILE" ] || echo "[]" > "$CRON_FILE"
+# Remove existing job if present (upsert)
+EXISTING_ID=$(openclaw cron list --json 2>/dev/null | python3 -c "
+import json, sys
+jobs = json.load(sys.stdin)
+match = next((j for j in jobs if j.get('name') == '$JOB_NAME'), None)
+print(match['id'] if match else '')
+" 2>/dev/null || echo "")
 
-# Remove existing job (upsert)
-python3 -c "
-import json
-jobs = json.load(open('$CRON_FILE'))
-jobs = [j for j in jobs if j.get('id') != '$JOB_ID']
-json.dump(jobs, open('$CRON_FILE', 'w'), indent=2)
-"
+if [ -n "$EXISTING_ID" ]; then
+  openclaw cron rm "$EXISTING_ID" 2>/dev/null || true
+  echo "   Removed existing job: $EXISTING_ID"
+fi
 
-# Add updated job
-python3 -c "
-import json
-jobs = json.load(open('$CRON_FILE'))
-jobs.append({
-  'id': '$JOB_ID',
-  'schedule': '0 * * * *',
-  'description': 'Check real estate emails and ingest new listings into AgentZero',
-  'task': 'Use the agent-zero skill to check Gmail for new real estate alert emails (Redfin, Zillow, REALTOR.ca, REW, etc.). AgentZero is at $AGENT_ZERO_PATH — start the backend if not running. For each email: open it in the browser, click the primary listing image to get the real URL, match the email to a search profile, then POST to http://localhost:8000/api/listings/suggest. Skip duplicates silently. Notify Yz on Slack only if new listings were added.',
-  'model': 'github-copilot/claude-sonnet-4.6'
-})
-json.dump(jobs, open('$CRON_FILE', 'w'), indent=2)
-print('✅ Cron job registered: $JOB_ID (hourly)')
-"
+openclaw cron add \
+  --name "$JOB_NAME" \
+  --every "1h" \
+  --message "$JOB_TASK" \
+  --description "Check real estate emails and ingest new listings into AgentZero" \
+  --model "github-copilot/claude-sonnet-4.6" \
+  --channel "slack" \
+  --session "main"
+
+echo "✅ Cron job registered: $JOB_NAME (every 1h)"
 
 # ── 2. Add TOOLS.md entry ────────────────────────────────────────────────────
 

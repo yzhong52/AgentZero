@@ -16,7 +16,7 @@ For each email:\n\
 - Match it to a search profile.\n\
 - POST it to http://localhost:8000/api/listings/suggest.\n\
 - Skip duplicates silently.\n\
-- After processing, apply the Gmail label '_open_claw_agent_zero' to it using the Himalaya skill.\n\
+- After processing, apply the Gmail label 'AgentZero' to it using the Himalaya skill.\n\
 At the end:\n\
 - Send Yz a summary on Slack of what was processed (new listings added, duplicates skipped, emails labeled).\n\
 - If nothing new, still send a brief summary."

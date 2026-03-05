@@ -81,70 +81,111 @@ async fn fetch_sources(
     Ok(sources)
 }
 
-/// Merges user-curated data back into a freshly parsed property.
+/// Merges a freshly parsed property with the stored record into the final value
+/// that gets written back to the DB (or returned as a preview).
 ///
-/// Some fields can originate from both the parser and the user:
+/// Every field of [`Property`] is listed explicitly so that adding a new field
+/// to the struct produces a compile error here, forcing a conscious merge decision.
 ///
-/// - **Schools / ratings** — the parser value wins when present; the stored
-///   value is kept as a fallback so manual entries survive a re-parse that
-///   does not include school data.
-/// - **HOA fee** — same fallback rule as schools.
-/// - **`offer_price`** — always taken from `stored`; the parser never sets
-///   this field and the user's intended offer must survive every refresh.
-/// - **`title`** — if the stored title is non-empty (the user has typed a
-///   custom title), it is preserved; an empty stored title means the parser
-///   title is used.
-fn apply_shared_preserved_fields(target: &mut Property, stored: &Property) {
-    target.school_elementary = target
-        .school_elementary
-        .clone()
-        .or(stored.school_elementary.clone());
-    target.school_elementary_rating = target
-        .school_elementary_rating
-        .or(stored.school_elementary_rating);
-    target.school_middle = target.school_middle.clone().or(stored.school_middle.clone());
-    target.school_middle_rating = target.school_middle_rating.or(stored.school_middle_rating);
-    target.school_secondary = target
-        .school_secondary
-        .clone()
-        .or(stored.school_secondary.clone());
-    target.school_secondary_rating = target
-        .school_secondary_rating
-        .or(stored.school_secondary_rating);
+/// The three merge rules used below are:
+/// - **Identity / user-owned** — always taken from `stored`; the parser has no
+///   knowledge of these (e.g. `search_profile_id`, `status`, skytrain data).
+/// - **Parser wins, stored as fallback** — parser value used when present;
+///   stored value kept when the parser returns `None` (schools, HOA fee).
+/// - **Parser wins** — everything else; the fresh parse is the source of truth.
+///
+/// `id` is passed separately because callers know the DB row id while the
+/// parsed struct always carries `0`.
+fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
+    Property {
+        // ── Identity ──────────────────────────────────────────────────────────
+        // These fields have no representation in the parsed HTML.
+        // search_profile_id must come from stored; writing the struct default (0)
+        // violates the FK constraint on the search_profiles table.
+        id,
+        search_profile_id: stored.search_profile_id,
 
-    target.hoa_monthly = target.hoa_monthly.or(stored.hoa_monthly);
-    target.offer_price = stored.offer_price;
+        // ── Source URLs ───────────────────────────────────────────────────────
+        // Users may manually link additional sources; preserve them all.
+        redfin_url: stored.redfin_url.clone(),
+        realtor_url: stored.realtor_url.clone(),
+        rew_url: stored.rew_url.clone(),
+        zillow_url: stored.zillow_url.clone(),
 
-    if is_title_exist(&stored.title) {
-        target.title = stored.title.clone();
+        // ── User-owned: parser never produces these ───────────────────────────
+        status: stored.status,
+        notes: stored.notes.clone(),
+        offer_price: stored.offer_price,
+        skytrain_station: stored.skytrain_station.clone(),
+        skytrain_walk_min: stored.skytrain_walk_min,
+        has_rental_suite: stored.has_rental_suite,
+        rental_income: stored.rental_income,
+
+        // ── User-set mortgage parameters ──────────────────────────────────────
+        // Carried forward so recompute_with_stored_terms can recalculate monthly
+        // payments against the (potentially updated) price.
+        down_payment_pct: stored.down_payment_pct,
+        mortgage_interest_rate: stored.mortgage_interest_rate,
+        amortization_years: stored.amortization_years,
+
+        // ── Parser wins, stored as fallback ───────────────────────────────────
+        title: if is_title_exist(&stored.title) { stored.title.clone() } else { parsed.title },
+        school_elementary: parsed.school_elementary.or(stored.school_elementary.clone()),
+        school_elementary_rating: parsed.school_elementary_rating.or(stored.school_elementary_rating),
+        school_middle: parsed.school_middle.or(stored.school_middle.clone()),
+        school_middle_rating: parsed.school_middle_rating.or(stored.school_middle_rating),
+        school_secondary: parsed.school_secondary.or(stored.school_secondary.clone()),
+        school_secondary_rating: parsed.school_secondary_rating.or(stored.school_secondary_rating),
+        hoa_monthly: parsed.hoa_monthly.or(stored.hoa_monthly),
+
+        // ── Parser wins ───────────────────────────────────────────────────────
+        description: parsed.description,
+        price: parsed.price,
+        price_currency: parsed.price_currency,
+        street_address: parsed.street_address,
+        city: parsed.city,
+        region: parsed.region,
+        postal_code: parsed.postal_code,
+        country: parsed.country,
+        lat: parsed.lat,
+        lon: parsed.lon,
+        property_type: parsed.property_type,
+        bedrooms: parsed.bedrooms,
+        bathrooms: parsed.bathrooms,
+        sqft: parsed.sqft,
+        land_sqft: parsed.land_sqft,
+        year_built: parsed.year_built,
+        parking_total: parsed.parking_total,
+        parking_garage: parsed.parking_garage,
+        parking_carport: parsed.parking_carport,
+        parking_pad: parsed.parking_pad,
+        radiant_floor_heating: parsed.radiant_floor_heating,
+        ac: parsed.ac,
+        laundry_in_unit: parsed.laundry_in_unit,
+        property_tax: parsed.property_tax,
+        mls_number: parsed.mls_number,
+        listed_date: parsed.listed_date,
+
+        // ── Computed (recalculated by caller after merge) ─────────────────────
+        mortgage_monthly: parsed.mortgage_monthly,
+        monthly_total: parsed.monthly_total,
+        monthly_cost: parsed.monthly_cost,
+
+        // ── System metadata ───────────────────────────────────────────────────
+        created_at: stored.created_at.clone(),
+        updated_at: stored.updated_at.clone(),
+        images: vec![],      // repopulated from images_cache after save
+        open_houses: vec![], // repopulated from open_houses table after save
     }
-}
-
-/// Restores fields from the stored record that must survive every refresh and
-/// cannot be derived from parser output.
-///
-/// - `id` is forced to the DB row id (parsers always produce `0`).
-/// - Source URLs are kept from `stored` because the user may have manually
-///   linked additional sources that a parser cannot re-derive from a single page.
-/// - `search_profile_id` is kept from `stored`; the parsed `Property` carries
-///   no search-profile context, and writing `0` (the struct default) would
-///   violate the FK constraint on the `search_profiles` table.
-fn apply_refresh_identity_fields(target: &mut Property, stored: &Property, id: i64) {
-    target.id = id;
-    target.redfin_url = stored.redfin_url.clone();
-    target.realtor_url = stored.realtor_url.clone();
-    target.rew_url = stored.rew_url.clone();
-    target.zillow_url = stored.zillow_url.clone();
-    target.search_profile_id = stored.search_profile_id;
 }
 
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
-/// Parser-produced fields are overwritten. User-only fields (notes, status,
-/// skytrain info, rental details) are never touched by `update_by_id` and remain intact.
-/// Fields the parser may produce but that users can also set manually (schools, HOA fee)
-/// are preserved from the stored record when the parser returns nothing for them.
+/// The parsed result is merged with the stored record via [`merge_with_stored`]
+/// before saving: user-owned fields survive, parser fields are overwritten, and
+/// shared fields (schools, HOA) fall back to the stored value when the parser
+/// returns nothing.
 pub(crate) async fn refresh_listing(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -163,24 +204,20 @@ pub(crate) async fn refresh_listing(
         StatusCode::UNPROCESSABLE_ENTITY,
         "No recognized listing format found in page".to_string(),
     ))?;
-    let mut updated = listing.property;
     let image_urls = listing.image_urls;
     let open_houses = listing.open_houses;
     tracing::info!(
         "refresh_listing: parse result property_tax={:?}, price={:?}",
-        updated.property_tax,
-        updated.price
+        listing.property.property_tax,
+        listing.property.price
     );
 
-    // ── 4. Merge identity and user-preserved fields ────────────────────────────
-    // Keep the DB id and the stored source URLs — users may link additional
-    // sources that the parser cannot re-derive.
-    apply_refresh_identity_fields(&mut updated, &stored, id);
-    apply_shared_preserved_fields(&mut updated, &stored);
+    // ── 4. Merge parsed result with stored record ──────────────────────────────
+    let mut updated = merge_with_stored(listing.property, &stored, id);
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
-    // Carry forward the user's saved mortgage parameters and recompute the monthly
-    // payment against the (potentially updated) price.
+    // Recompute monthly payments against the (potentially updated) price using
+    // the user's saved mortgage parameters carried forward by merge_with_stored.
     property_finance::recompute_with_stored_terms(&mut updated, &stored);
 
     // ── 6. Record price-change history ────────────────────────────────────────
@@ -266,10 +303,8 @@ pub(crate) async fn preview_refresh(
         StatusCode::UNPROCESSABLE_ENTITY,
         "No recognized listing format found in page".to_string(),
     ))?;
-    let mut preview = listing.property;
-
-    // ── 4. Apply the same field-preservation rules as refresh ─────────────────
-    apply_shared_preserved_fields(&mut preview, &stored);
+    // ── 4. Merge using the same rules as refresh ──────────────────────────────
+    let mut preview = merge_with_stored(listing.property, &stored, stored.id);
 
     // ── 5. Recalculate mortgage ────────────────────────────────────────────────
     property_finance::recompute_with_stored_terms(&mut preview, &stored);
@@ -396,12 +431,13 @@ mod tests {
         assert!(urls.is_empty());
     }
 
-    // ── apply_refresh_identity_fields ─────────────────────────────────────────
+    // ── merge_with_stored ─────────────────────────────────────────────────────
 
     #[test]
-    fn test_identity_fields_copies_id_and_urls() {
-        let mut target = Property {
+    fn test_merge_identity_fields_from_stored() {
+        let parsed = Property {
             redfin_url: Some("https://wrong.com".to_string()),
+            search_profile_id: 0,
             ..base_property()
         };
         let stored = Property {
@@ -413,46 +449,82 @@ mod tests {
             ..base_property()
         };
 
-        apply_refresh_identity_fields(&mut target, &stored, 42);
+        let result = merge_with_stored(parsed, &stored, 42);
 
-        assert_eq!(target.id, 42);
-        assert_eq!(target.redfin_url, stored.redfin_url);
-        assert_eq!(target.realtor_url, stored.realtor_url);
-        assert_eq!(target.rew_url, stored.rew_url);
-        assert_eq!(target.zillow_url, stored.zillow_url);
+        assert_eq!(result.id, 42);
+        assert_eq!(result.redfin_url.as_deref(), Some("https://redfin.ca/correct"));
+        assert_eq!(result.realtor_url.as_deref(), Some("https://realtor.ca/correct"));
+        assert_eq!(result.rew_url, None);
+        assert_eq!(result.zillow_url.as_deref(), Some("https://zillow.com/correct"));
     }
 
-    /// Regression test for the FK constraint failure: the parser produces
-    /// `search_profile_id = 0` (struct default), which has no matching row in
-    /// `search_profiles`. The fix copies it from the stored record.
+    /// Regression: parser produces search_profile_id = 0 (struct default),
+    /// which has no matching row in search_profiles → FK constraint failure.
     #[test]
-    fn test_identity_fields_preserves_search_profile_id() {
-        let mut target = base_property(); // search_profile_id = 1 (base default)
+    fn test_merge_preserves_search_profile_id() {
+        let parsed = Property { search_profile_id: 0, ..base_property() };
         let stored = Property { search_profile_id: 5, ..base_property() };
 
-        apply_refresh_identity_fields(&mut target, &stored, 1);
+        let result = merge_with_stored(parsed, &stored, 1);
 
-        assert_eq!(target.search_profile_id, 5);
+        assert_eq!(result.search_profile_id, 5);
     }
 
     #[test]
-    fn test_identity_fields_does_not_touch_parsed_fields() {
-        let mut target = Property {
-            price: Some(1_000_000),
-            title: "Parser Title".to_string(),
+    fn test_merge_user_owned_fields_from_stored() {
+        let parsed = Property {
+            status: ListingStatus::Interested,
+            skytrain_station: None,
+            skytrain_walk_min: None,
+            has_rental_suite: None,
+            rental_income: None,
+            offer_price: None,
+            notes: None,
             ..base_property()
         };
-        apply_refresh_identity_fields(&mut target, &base_property(), 1);
+        let stored = Property {
+            status: ListingStatus::Buyable,
+            skytrain_station: Some("Main St".to_string()),
+            skytrain_walk_min: Some(5),
+            has_rental_suite: Some(true),
+            rental_income: Some(1500),
+            offer_price: Some(800_000),
+            notes: Some("Great location".to_string()),
+            ..base_property()
+        };
 
-        assert_eq!(target.price, Some(1_000_000));
-        assert_eq!(target.title, "Parser Title");
+        let result = merge_with_stored(parsed, &stored, 1);
+
+        assert_eq!(result.status, ListingStatus::Buyable);
+        assert_eq!(result.skytrain_station.as_deref(), Some("Main St"));
+        assert_eq!(result.skytrain_walk_min, Some(5));
+        assert_eq!(result.has_rental_suite, Some(true));
+        assert_eq!(result.rental_income, Some(1500));
+        assert_eq!(result.offer_price, Some(800_000));
+        assert_eq!(result.notes.as_deref(), Some("Great location"));
     }
 
-    // ── apply_shared_preserved_fields ─────────────────────────────────────────
+    #[test]
+    fn test_merge_parser_fields_win() {
+        let parsed = Property {
+            price: Some(1_200_000),
+            bedrooms: Some(4),
+            bathrooms: Some(3),
+            property_tax: Some(7_000),
+            ..base_property()
+        };
+
+        let result = merge_with_stored(parsed, &base_property(), 1);
+
+        assert_eq!(result.price, Some(1_200_000));
+        assert_eq!(result.bedrooms, Some(4));
+        assert_eq!(result.bathrooms, Some(3));
+        assert_eq!(result.property_tax, Some(7_000));
+    }
 
     #[test]
-    fn test_shared_fields_parser_school_wins_over_stored() {
-        let mut target = Property {
+    fn test_merge_school_parser_wins_over_stored() {
+        let parsed = Property {
             school_elementary: Some("Parser Elementary".to_string()),
             school_elementary_rating: Some(9.0),
             ..base_property()
@@ -463,15 +535,14 @@ mod tests {
             ..base_property()
         };
 
-        apply_shared_preserved_fields(&mut target, &stored);
+        let result = merge_with_stored(parsed, &stored, 1);
 
-        assert_eq!(target.school_elementary.as_deref(), Some("Parser Elementary"));
-        assert_eq!(target.school_elementary_rating, Some(9.0));
+        assert_eq!(result.school_elementary.as_deref(), Some("Parser Elementary"));
+        assert_eq!(result.school_elementary_rating, Some(9.0));
     }
 
     #[test]
-    fn test_shared_fields_stored_school_fallback_when_parser_empty() {
-        let mut target = base_property(); // all school fields None
+    fn test_merge_school_stored_fallback_when_parser_empty() {
         let stored = Property {
             school_elementary: Some("Stored Elementary".to_string()),
             school_elementary_rating: Some(7.0),
@@ -482,72 +553,43 @@ mod tests {
             ..base_property()
         };
 
-        apply_shared_preserved_fields(&mut target, &stored);
+        let result = merge_with_stored(base_property(), &stored, 1);
 
-        assert_eq!(target.school_elementary.as_deref(), Some("Stored Elementary"));
-        assert_eq!(target.school_elementary_rating, Some(7.0));
-        assert_eq!(target.school_middle.as_deref(), Some("Stored Middle"));
-        assert_eq!(target.school_middle_rating, Some(6.5));
-        assert_eq!(target.school_secondary.as_deref(), Some("Stored Secondary"));
-        assert_eq!(target.school_secondary_rating, Some(8.0));
+        assert_eq!(result.school_elementary.as_deref(), Some("Stored Elementary"));
+        assert_eq!(result.school_elementary_rating, Some(7.0));
+        assert_eq!(result.school_middle.as_deref(), Some("Stored Middle"));
+        assert_eq!(result.school_middle_rating, Some(6.5));
+        assert_eq!(result.school_secondary.as_deref(), Some("Stored Secondary"));
+        assert_eq!(result.school_secondary_rating, Some(8.0));
     }
 
     #[test]
-    fn test_shared_fields_hoa_parser_wins() {
-        let mut target = Property { hoa_monthly: Some(500), ..base_property() };
+    fn test_merge_hoa_parser_wins() {
+        let parsed = Property { hoa_monthly: Some(500), ..base_property() };
         let stored = Property { hoa_monthly: Some(300), ..base_property() };
 
-        apply_shared_preserved_fields(&mut target, &stored);
-
-        assert_eq!(target.hoa_monthly, Some(500));
+        assert_eq!(merge_with_stored(parsed, &stored, 1).hoa_monthly, Some(500));
     }
 
     #[test]
-    fn test_shared_fields_hoa_stored_fallback_when_parser_empty() {
-        let mut target = base_property(); // hoa_monthly = None
+    fn test_merge_hoa_stored_fallback_when_parser_empty() {
         let stored = Property { hoa_monthly: Some(300), ..base_property() };
 
-        apply_shared_preserved_fields(&mut target, &stored);
-
-        assert_eq!(target.hoa_monthly, Some(300));
+        assert_eq!(merge_with_stored(base_property(), &stored, 1).hoa_monthly, Some(300));
     }
 
     #[test]
-    fn test_shared_fields_offer_price_always_from_stored() {
-        let mut target = Property { offer_price: Some(999_999), ..base_property() };
-        let stored = Property { offer_price: Some(500_000), ..base_property() };
-
-        apply_shared_preserved_fields(&mut target, &stored);
-
-        assert_eq!(target.offer_price, Some(500_000));
-    }
-
-    #[test]
-    fn test_shared_fields_offer_price_none_when_stored_is_none() {
-        let mut target = Property { offer_price: Some(999_999), ..base_property() };
-
-        apply_shared_preserved_fields(&mut target, &base_property());
-
-        assert_eq!(target.offer_price, None);
-    }
-
-    #[test]
-    fn test_shared_fields_title_preserved_when_user_set() {
-        let mut target = Property { title: "Parser Title".to_string(), ..base_property() };
+    fn test_merge_title_preserved_when_user_set() {
+        let parsed = Property { title: "Parser Title".to_string(), ..base_property() };
         let stored = Property { title: "User Title".to_string(), ..base_property() };
 
-        apply_shared_preserved_fields(&mut target, &stored);
-
-        assert_eq!(target.title, "User Title");
+        assert_eq!(merge_with_stored(parsed, &stored, 1).title, "User Title");
     }
 
     #[test]
-    fn test_shared_fields_title_uses_parser_when_stored_empty() {
-        let mut target = Property { title: "Parser Title".to_string(), ..base_property() };
-        // stored.title is "" (base default — user never set a title)
+    fn test_merge_title_uses_parser_when_stored_empty() {
+        let parsed = Property { title: "Parser Title".to_string(), ..base_property() };
 
-        apply_shared_preserved_fields(&mut target, &base_property());
-
-        assert_eq!(target.title, "Parser Title");
+        assert_eq!(merge_with_stored(parsed, &base_property(), 1).title, "Parser Title");
     }
 }

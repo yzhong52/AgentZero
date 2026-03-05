@@ -15,7 +15,7 @@ echo "   Repo path: $AGENT_ZERO_PATH"
 
 # ── 1. Register hourly cron job ─────────────────────────────────────────────
 
-# Remove existing job if present (upsert)
+# Upsert: edit if exists, add if not
 EXISTING_ID=$(openclaw cron list --json 2>/dev/null | python3 -c "
 import json, sys
 jobs = json.load(sys.stdin)
@@ -24,17 +24,22 @@ print(match['id'] if match else '')
 " 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_ID" ]; then
-  openclaw cron rm "$EXISTING_ID" 2>/dev/null || true
-  echo "   Removed existing job: $EXISTING_ID"
+  openclaw cron edit "$EXISTING_ID" \
+    --every "1h" \
+    --system-event "$JOB_TASK" \
+    --description "Check real estate emails and ingest new listings into AgentZero" \
+    --model "github-copilot/claude-sonnet-4.6" \
+    --session "main"
+  echo "✅ Cron job updated: $JOB_NAME ($EXISTING_ID)"
+else
+  openclaw cron add \
+    --name "$JOB_NAME" \
+    --every "1h" \
+    --system-event "$JOB_TASK" \
+    --description "Check real estate emails and ingest new listings into AgentZero" \
+    --model "github-copilot/claude-sonnet-4.6" \
+    --session "main"
 fi
-
-openclaw cron add \
-  --name "$JOB_NAME" \
-  --every "1h" \
-  --system-event "$JOB_TASK" \
-  --description "Check real estate emails and ingest new listings into AgentZero" \
-  --model "github-copilot/claude-sonnet-4.6" \
-  --session "main"
 
 echo "✅ Cron job registered: $JOB_NAME (every 1h)"
 

@@ -63,33 +63,6 @@ export function InboxPage() {
     } catch { /* non-fatal */ }
   }, [listings, dismissing])
 
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if ((e.target as Element).tagName === 'INPUT' || (e.target as Element).tagName === 'TEXTAREA') return
-      const idx = listings.findIndex(p => p.id === selectedId)
-      switch (e.key) {
-        case 'j': case 'ArrowDown':
-          e.preventDefault()
-          if (idx < listings.length - 1) setSelectedId(listings[idx + 1].id)
-          break
-        case 'k': case 'ArrowUp':
-          e.preventDefault()
-          if (idx > 0) setSelectedId(listings[idx - 1].id)
-          break
-        case 'b':
-          if (selectedId && !dismissing.has(selectedId)) assign(selectedId, 'Buyable')
-          break
-        case 'i':
-          if (selectedId && !dismissing.has(selectedId)) assign(selectedId, 'Interested')
-          break
-        case 'p':
-          if (selectedId && !dismissing.has(selectedId)) assign(selectedId, 'Pass')
-          break
-      }
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [selectedId, listings, dismissing, assign])
 
   const selected = listings.find(p => p.id === selectedId) ?? null
   const searchMap = Object.fromEntries(searchProfiles.map(s => [s.id, s.title]))
@@ -107,7 +80,6 @@ export function InboxPage() {
           Inbox
           {listings.length > 0 && <span className="inbox-nav-count">{listings.length}</span>}
         </div>
-        <div className="inbox-nav-hint">j / k navigate · b / i / p assign</div>
       </div>
 
       {loading ? (

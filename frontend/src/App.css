@@ -676,7 +676,7 @@
   flex-wrap: wrap;
 }
 
-.listing-stats span + span::before {
+.listing-stats span+span::before {
   content: '·';
   margin: 0 0.35em;
   opacity: 0.4;
@@ -797,12 +797,6 @@
   padding: 0.15em 0.5em;
 }
 
-.inbox-nav-hint {
-  font-size: 0.71rem;
-  color: var(--text-muted);
-  font-family: ui-monospace, 'SF Mono', monospace;
-  letter-spacing: 0.01em;
-}
 
 .inbox-body {
   display: flex;
@@ -950,7 +944,7 @@
   margin-top: 0.5rem;
 }
 
-.inbox-detail-stats span + span::before {
+.inbox-detail-stats span+span::before {
   content: '·';
   margin: 0 0.4em;
   opacity: 0.4;

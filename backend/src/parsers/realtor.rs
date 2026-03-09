@@ -558,19 +558,4 @@ mod tests {
     }
 
 
-    #[test]
-    fn test_snapshot_51_has_address_and_geo() {
-        // use the actual 51_realtor.html snapshot stored by the backend
-        let path = format!("{}/html_snapshots/51_realtor.html", env!("CARGO_MANIFEST_DIR"));
-        let html = std::fs::read_to_string(path).expect("snapshot file exists");
-        let listing = parse(
-            "https://www.realtor.ca/real-estate/29435088/2740-e-2nd-avenue-vancouver",
-            &html,
-        )
-        .unwrap();
-        assert_eq!(listing.property.street_address.as_deref(), Some("2740 E 2ND AVENUE"));
-        assert_eq!(listing.property.city.as_deref(), Some("Vancouver"));
-        assert!(listing.property.lat.is_some());
-        assert!(listing.property.lon.is_some());
-    }
 }

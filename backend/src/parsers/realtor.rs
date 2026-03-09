@@ -151,6 +151,40 @@ fn extract_address_from_og(document: &Html) -> AddressInfo {
     }
 }
 
+/// Naively scrape latitude/longitude numbers from the page's Javascript
+/// dataLayer (or other inline JSON) when the normal JSON-LD events do not
+/// provide coordinates. This is a best-effort fallback and expects the values
+/// to appear as quoted strings.
+fn extract_geo_from_html(html: &str) -> (Option<f64>, Option<f64>) {
+    // 1. Search for explicit latitude/longitude strings in JS-like syntax.
+    let lat_re = Regex::new(r#"latitude\s*[:=]\s*\\?\"?([-0-9\.]+)\\?\"?"#).unwrap();
+    let lon_re = Regex::new(r#"longitude\s*[:=]\s*\\?\"?([-0-9\.]+)\\?\"?"#).unwrap();
+    if let (Some(lat), Some(lon)) = (
+        lat_re
+            .captures(html)
+            .and_then(|c| c.get(1))
+            .and_then(|m| m.as_str().parse().ok()),
+        lon_re
+            .captures(html)
+            .and_then(|c| c.get(1))
+            .and_then(|m| m.as_str().parse().ok()),
+    ) {
+        return (Some(lat), Some(lon));
+    }
+
+    // 2. Look for a Google maps directions URL with destination=lat%2clon
+    let map_re = Regex::new(r"destination=([0-9\.-]+)%2c([0-9\.-]+)").unwrap();
+    if let Some(capt) = map_re.captures(html) {
+        if let (Some(lat_s), Some(lon_s)) = (capt.get(1), capt.get(2)) {
+            if let (Ok(lat), Ok(lon)) = (lat_s.as_str().parse(), lon_s.as_str().parse()) {
+                return (Some(lat), Some(lon));
+            }
+        }
+    }
+
+    (None, None)
+}
+
 /// Extract open house events (startDate / endDate) from all Event JSON-LD blocks.
 fn extract_open_houses(json_ld: &[JsonValue]) -> Vec<OpenHouseEvent> {
     let mut events = Vec::new();
@@ -348,6 +382,16 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
             addr = og_addr;
         }
     }
+    // coordinates may also be missing; try a loose regex over the raw HTML.
+    if addr.lat.is_none() || addr.lon.is_none() {
+        let (lat, lon) = extract_geo_from_html(html);
+        if addr.lat.is_none() {
+            addr.lat = lat;
+        }
+        if addr.lon.is_none() {
+            addr.lon = lon;
+        }
+    }
     let product = extract_product(&json_ld);
     let (beds, baths) = extract_quick_stats(&document);
     let mls = extract_mls(&document);
@@ -486,5 +530,59 @@ mod tests {
         assert_eq!(listing.property.city.as_deref(), Some("Smalltown"));
         assert_eq!(listing.property.region.as_deref(), Some("ON"));
         assert_eq!(listing.property.postal_code.as_deref(), Some("V1A 2B3"));
+    }
+
+    #[test]
+    fn test_geo_extraction_fallback() {
+        // case A: coordinates buried in a JS object
+        let mut html = r#"<html><head></head><body>"#.to_string();
+        html.push_str(r#"<script>var foo={latitude:"49.1",longitude:"-123.2"};</script>"#);
+        html.push_str(r#"<meta property='og:description' content='123 Main St, Nowhere, BC V0X0X0'>"#);
+        html.push_str(&"x".repeat(6000));
+        html.push_str("</body></html>");
+        let listing = parse("https://www.realtor.ca/real-estate/foo", &html).unwrap();
+        assert_eq!(listing.property.lat, Some(49.1));
+        assert_eq!(listing.property.lon, Some(-123.2));
+
+        // case B: use a google maps directions link
+        let mut html2 = r#"<html><head></head><body>"#.to_string();
+        html2.push_str(
+            r#"<a id='listingDirectionsBtn' href='https://www.google.com/maps/dir/?api=1&destination=51.2%2c-122.3'>"#,
+        );
+        html2.push_str(r#"<meta property='og:description' content='A,B,C'>"#);
+        html2.push_str(&"x".repeat(6000));
+        html2.push_str("</body></html>");
+        let listing2 = parse("https://www.realtor.ca/real-estate/bar", &html2).unwrap();
+        assert_eq!(listing2.property.lat, Some(51.2));
+        assert_eq!(listing2.property.lon, Some(-122.3));
+    }
+
+    #[test]
+    fn test_real_snapshot_has_coords() {
+        let html = std::fs::read_to_string(fixture("realtor_3545_w_king_edward.html")).unwrap();
+        let listing = parse(
+            "https://www.realtor.ca/real-estate/29391064/3545-w-king-edward-avenue-vancouver",
+            &html,
+        )
+        .unwrap();
+        // snapshot already showed lat/lon; confirm regex still finds them
+        assert!(listing.property.lat.is_some());
+        assert!(listing.property.lon.is_some());
+    }
+
+    #[test]
+    fn test_snapshot_51_has_address_and_geo() {
+        // use the actual 51_realtor.html snapshot stored by the backend
+        let path = format!("{}/html_snapshots/51_realtor.html", env!("CARGO_MANIFEST_DIR"));
+        let html = std::fs::read_to_string(path).expect("snapshot file exists");
+        let listing = parse(
+            "https://www.realtor.ca/real-estate/29435088/2740-e-2nd-avenue-vancouver",
+            &html,
+        )
+        .unwrap();
+        assert_eq!(listing.property.street_address.as_deref(), Some("2740 E 2ND AVENUE"));
+        assert_eq!(listing.property.city.as_deref(), Some("Vancouver"));
+        assert!(listing.property.lat.is_some());
+        assert!(listing.property.lon.is_some());
     }
 }

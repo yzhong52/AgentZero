@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property } from './types'
 import { LABELS } from './labels'
-import { STATUS_OPTIONS } from './constants'
+import { STATUS_OPTIONS, displayStatus } from './constants'
 import { formatPriceFull } from './utils'
 
 export type ColKey =
@@ -15,7 +15,7 @@ export type ColDef = { key: ColKey; label: string; render: (p: Property) => Reac
 export const ALL_COLUMNS: ColDef[] = [
   { key: 'name', label: 'Name', render: p => p.title },
   { key: 'price', label: 'Price', render: p => formatPriceFull(p.price, p.price_currency) ?? '—' },
-  { key: 'status', label: 'Status', render: p => p.status ?? '—' },
+  { key: 'status', label: 'Status', render: p => displayStatus(p.status) || '—' },
   { key: 'address', label: 'Address', render: p => [p.street_address, p.city].filter(Boolean).join(', ') || '—' },
   { key: 'bedrooms', label: 'Beds', render: p => p.bedrooms ?? '—' },
   { key: 'bathrooms', label: 'Baths', render: p => p.bathrooms ?? '—' },

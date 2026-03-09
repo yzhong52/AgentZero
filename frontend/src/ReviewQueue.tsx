@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
 import type { Property } from './types'
 import { formatPriceCompact } from './utils'
 
@@ -66,7 +66,7 @@ export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
                     onClick={() => assign(p.id, s)}
                     disabled={dismissing.has(p.id)}
                   >
-                    {s}
+                    {displayStatus(s)}
                   </button>
                 ))}
               </div>

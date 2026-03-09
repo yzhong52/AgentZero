@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { STATUS_COLORS } from './constants'
+import { STATUS_COLORS, displayStatus } from './constants'
 import type { Property } from './types'
 import { formatPriceCompact } from './utils'
 
@@ -17,7 +17,7 @@ function StatusBadge({ status }: { status: string | null }) {
   if (!status) return null
   return (
     <span className="status-badge" style={{ background: STATUS_COLORS[status] ?? '#888' }}>
-      {status}
+      {displayStatus(status)}
     </span>
   )
 }

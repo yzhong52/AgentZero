@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property, SearchProfile } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
 
@@ -187,7 +187,7 @@ export function InboxPage() {
                       onClick={() => assign(selected.id, s)}
                       disabled={dismissing.has(selected.id)}
                     >
-                      {s}
+                      {displayStatus(s)}
                     </button>
                   ))}
                 </div>

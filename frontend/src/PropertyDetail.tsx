@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, SearchProfile } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
 import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
 
@@ -1391,7 +1391,7 @@ export function PropertyDetail() {
                                         style={property.status === s ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
                                         onClick={() => handleStatusChange(s)}
                                     >
-                                        {s}
+                                        {displayStatus(s)}
                                     </button>
                                 ))}
                             </div>

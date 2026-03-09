@@ -4,7 +4,7 @@ import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
 import type { StatusOption } from './constants'
 import type { Property, SearchProfile } from './types'
 
@@ -358,7 +358,7 @@ function App() {
                 onClick={() => toggleStatus(s)}
                 style={statusFilter.has(s) ? { background: STATUS_COLORS[s], color: '#fff', borderColor: STATUS_COLORS[s] } : {}}
               >
-                {s} · {statusCounts[s]}
+                {displayStatus(s)} · {statusCounts[s]}
               </button>
             ))}
           </div>

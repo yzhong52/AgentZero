@@ -144,29 +144,6 @@ Workflow when changing a backend model:
 
 ---
 
-## 🧩 Frontend Design & Conventions
-
-When making UI/UX changes, you can invoke the `frontend-design` skill in the
-agent (`/frontend-design`) for guidance on layout and aesthetics. It helps
-avoid generic patterns and keep the app visually coherent.
-
-### Coding Standards
-
-- **No duplication**: search `frontend/src/utils.ts` before adding helpers.
-- **Constants**: extract commonly used strings to named constants in
-  `frontend/src/constants.ts` rather than hard‑coding them.
-
----
-
-## 🛠️ Backend Conventions
-
-- Prefer named structs over tuples for multi‑value returns; examples already
-  exist in `backend/src/parsers/` (e.g. `AmenityFeatures`, `AddressInfo`).
-- The merge logic in `backend/src/api/refresh.rs` is intentionally exhaustive
-  to force conscious decisions when adding new fields.
-
-See the file headers and comments throughout the repo for additional
-documentation.
 
 ---
 

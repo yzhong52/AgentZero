@@ -110,6 +110,47 @@ fn extract_address(json_ld: &[JsonValue]) -> AddressInfo {
     }
 }
 
+/// Attempt to read a bare address string from the open‑graph description tag.
+///
+/// realtor.ca always includes a meta property "og:description" containing a
+/// comma‑separated address (street, city, region [postal]).  This isn't as
+/// reliable as the JSON‑LD blocks, but it serves as a useful fallback when the
+/// page has no `Event` data (for example, no open houses).
+fn extract_address_from_og(document: &Html) -> AddressInfo {
+    if let Ok(sel) = Selector::parse("meta[property='og:description']") {
+        for el in document.select(&sel) {
+            if let Some(content) = el.value().attr("content") {
+                let parts: Vec<&str> = content.split(',').map(|s| s.trim()).collect();
+                if parts.len() >= 3 {
+                    let street = Some(parts[0].to_string());
+                    let city = Some(parts[1].to_string());
+                    let last = parts[2];
+                    // last part may contain region + postal, e.g. "British Columbia   V6S1M4"
+                    let tokens: Vec<&str> = last.split_whitespace().collect();
+                    let region = tokens.get(0).map(|s| region_abbrev(s));
+                    let postal = tokens.last().map(|s| format_postal_code(s));
+                    return AddressInfo {
+                        street_address: street,
+                        city,
+                        region,
+                        postal_code: postal,
+                        lat: None,
+                        lon: None,
+                    };
+                }
+            }
+        }
+    }
+    AddressInfo {
+        street_address: None,
+        city: None,
+        region: None,
+        postal_code: None,
+        lat: None,
+        lon: None,
+    }
+}
+
 /// Extract open house events (startDate / endDate) from all Event JSON-LD blocks.
 fn extract_open_houses(json_ld: &[JsonValue]) -> Vec<OpenHouseEvent> {
     let mut events = Vec::new();
@@ -297,8 +338,16 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let document = Html::parse_document(html);
     let json_ld = extract_json_ld(&document);
 
-    let addr = extract_address(&json_ld);
+    let mut addr = extract_address(&json_ld);
     let open_houses = extract_open_houses(&json_ld);
+    // If JSON-LD events failed to provide an address, fall back to parsing the
+    // og:description meta tag which contains a comma‑separated address string.
+    if addr.street_address.is_none() && addr.city.is_none() {
+        let og_addr = extract_address_from_og(&document);
+        if og_addr.street_address.is_some() || og_addr.city.is_some() {
+            addr = og_addr;
+        }
+    }
     let product = extract_product(&json_ld);
     let (beds, baths) = extract_quick_stats(&document);
     let mls = extract_mls(&document);
@@ -418,5 +467,24 @@ mod tests {
         )
         .expect("should parse realtor.ca listing");
         insta::assert_json_snapshot!(listing_to_snapshot(listing));
+    }
+
+    /// If the page has no JSON-LD `Event` blocks (e.g. no open houses), we still
+    /// want to recover the street/city/region using the OG description meta tag.
+    #[test]
+    fn test_address_fallback_from_og() {
+        // The parser bails early if the HTML string is very short, so ensure we
+        // create a long document by padding with dummy content.
+        let mut html = r#"<html><head>
+            <meta property='og:description' content='123 Main St, Smalltown, Ontario V1A2B3'>
+        </head><body>"#.to_string();
+        html.push_str(&"x".repeat(6000));
+        html.push_str("</body></html>");
+        let listing = parse("https://www.realtor.ca/real-estate/foo", &html)
+            .expect("parse should succeed even with minimal html");
+        assert_eq!(listing.property.street_address.as_deref(), Some("123 Main St"));
+        assert_eq!(listing.property.city.as_deref(), Some("Smalltown"));
+        assert_eq!(listing.property.region.as_deref(), Some("ON"));
+        assert_eq!(listing.property.postal_code.as_deref(), Some("V1A 2B3"));
     }
 }

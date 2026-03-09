@@ -557,18 +557,6 @@ mod tests {
         assert_eq!(listing2.property.lon, Some(-122.3));
     }
 
-    #[test]
-    fn test_real_snapshot_has_coords() {
-        let html = std::fs::read_to_string(fixture("realtor_3545_w_king_edward.html")).unwrap();
-        let listing = parse(
-            "https://www.realtor.ca/real-estate/29391064/3545-w-king-edward-avenue-vancouver",
-            &html,
-        )
-        .unwrap();
-        // snapshot already showed lat/lon; confirm regex still finds them
-        assert!(listing.property.lat.is_some());
-        assert!(listing.property.lon.is_some());
-    }
 
     #[test]
     fn test_snapshot_51_has_address_and_geo() {

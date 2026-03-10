@@ -1,9 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property, SearchProfile } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
+import { STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
+
+// the inbox is a simple triage tool; the only statuses we offer here are
+// 'Interested' or 'Pass'.  keeping the list in a constant makes it easier to
+const INBOX_ACTION_STATUSES = ['Interested', 'Pass'] as const
+// modify later if requirements change.
 
 export function InboxPage() {
   const navigate = useNavigate()
@@ -151,7 +156,8 @@ export function InboxPage() {
                   <p className="inbox-detail-desc">{selected.description}</p>
                 )}
                 <div className="inbox-detail-actions">
-                  {STATUS_OPTIONS.filter(s => s !== PENDING_STATUS).map(s => (
+                  {/* only show the two actions the user cares about */}
+                  {INBOX_ACTION_STATUSES.map(s => (
                     <button
                       key={s}
                       className="inbox-action-btn"

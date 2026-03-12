@@ -1,160 +1,49 @@
-# AgentZero
+# AgentZero 🏠
 
-AgentZero is a property listing parser used to fetch and persist real estate
-listing data from multiple sources (Redfin, Realtor, REW, Zillow, etc.).
-It combines a Rust/Axum backend with a React/TypeScript frontend and is
-optimized for debugging, snapshot testing, and developer productivity.
+> **Your personal AI real estate agent.**
 
-**Backend:** Rust (Axum)  
-**Frontend:** React + TypeScript (Vite)
+Searching for a home is exciting. Scrolling through hundreds of listings every day is not.
 
----
+Built to run with **[OpenClaw](https://openclaw.ai)**, AgentZero watches the market for you. Tell it what you're looking for, and it quietly surfaces only the homes worth your attention — no phone calls, no pressure, no awkward "I'll pass on this one" conversations.
 
-## 🚀 Getting Started
+## What It Does
 
-### Prerequisites
+- 📋 **Set your search profile** — location, price range, must-haves, described in plain language
+- 🤖 **Let the agent do the watching** — AgentZero checks listings automatically on a schedule
+- 📬 **Inbox new matches** — only the properties that fit, surfaced when they appear
+- ✅ **Triage at your pace** — one-click Interested / Pass, no follow-up required
+- 📸 **Full listing details** — photos, price history, notes, all in one place
 
-- [Rust](https://rustup.rs/) (1.70+)
-- [Node.js](https://nodejs.org/) (18+) and npm
+No sign-ups. No subscriptions. Runs locally on your machine.
 
-### 🛠️ Build & Run
+## Screenshots
 
-```bash
-# install frontend deps
-npm install
+Home screen shows you the properties that you are watching.
 
-# build frontend bundle
-npm run build
+![Home](./screenshots/home.png)
 
-# start backend server (from project root)
-cargo run --release
-# it binds to http://127.0.0.1:8000 by default
-```
+Daily agent curated listings in the inbox:
 
-For development with live reload:
+![Agent Suggestions](./screenshots/agent_suggestions.png)
 
-```bash
-# terminal 1 – watch & rebuild frontend
-npm run dev
+Details for listings you're interested in:
 
-# terminal 2 – run backend with cargo-watch
-cargo install cargo-watch   # one‑time
-cargo watch -x run
-```
-
-### ⚡ One‑command restart scripts
-
-There are convenience helpers that kill any running processes, rebuild, and
-restart both services:
-
-```bash
-./scripts/run_backend.sh
-./scripts/run_frontend.sh
-```
-
-You can override ports or log files using environment variables:
-
-```bash
-BACKEND_PORT=8001 LOG_FILE=/tmp/backend.log ./scripts/run_backend.sh
-```
+![Listing Detail](./screenshots/listing_detail.png)
 
 ---
 
-## 📁 Project Layout
+## Getting Started
 
-```
-README.md                         ← you are here
-backend/                          ← Rust server
-  Cargo.toml
-  src/
-    api/                          ← HTTP handlers
-    parsers/                      ← parsing logic + fixtures/snapshots
-    models/ store/ images/ etc.
-frontend/                         ← React/Vite application
-  src/
-  bindings/                       ← auto‑generated TS from Rust models
-scripts/                          ← helper restart scripts
-```
+1. Install [OpenClaw](https://openclaw.ai) — your local AI orchestrator
+2. Ask your AI to **install AgentZero** and **set up a daily cron job**
+3. On your favourite listing site (Redfin, Realtor.ca, or REW.ca), **set up a search and subscribe to new listing email alerts** — AgentZero will pick these up automatically
+4. Open `http://localhost:5173` — your AI agent curates new listings daily for you to review
+
+## Supported Sites
+
+- ✅ Redfin
+- ✅ REW.ca
+- ✅ Realtor.ca
+- 🚧 Zillow *(coming soon)*
 
 ---
-
-## 🧠 API Overview
-
-The HTTP routes are defined in `backend/src/main.rs` and grouped by handler
-files in `backend/src/api/`.
-
-Key endpoints:
-
-| Method | Path                                  | Description                        |
-|--------|---------------------------------------|------------------------------------|
-| GET    | `/`                                   | Serve the UI                       |
-| GET    | `/api/listings/:id/preview`           | Parse but don’t save (refresh diff)|
-| PUT    | `/api/listings/:id/refresh`           | Re‑fetch, parse, merge, and save   |
-| POST   | `/api/parse?url=…`                    | Fetch arbitrary URL and parse
-
-(The frontend mainly uses the listing endpoints.)
-
-Source of truth for parsing logic lives under `backend/src/parsers/` and
-unit tests use HTML fixtures stored in `backend/src/parsers/fixtures/`.
-
----
-
-## 🧪 Testing
-
-Backend tests are standard Cargo tests:
-
-```bash
-cd backend
-git fetch && cargo test
-```
-
-Parser fixtures are snapshot‑tested with [`cargo-insta`]. After fixing
-parsing behavior you’ll update snapshots with:
-
-```bash
-cargo insta review
-```
-
-To strip bulky HTML fixtures and keep only the elements the parsers care
-about, use the helper binary:
-
-```bash
-cd backend
-cargo run --bin strip          # strip all fixtures in place
-cargo run --bin strip -- path/to/file.html
-```
-
-Always run the full test suite after stripping to ensure no parser data was
-removed.
-
----
-
-## 🔗 TypeScript Type Bindings
-
-Rust models are annotated with `#[cfg_attr(test, derive(TS))]` (via
-[`ts-rs`]). Running `cargo test` regenerates the reference files under
-`frontend/src/bindings/`. They are committed as a drift‑detection signal; do
-not import them directly — use `frontend/src/types.ts` instead.
-
-Workflow when changing a backend model:
-
-1. Modify the struct in `backend/src/models/`.
-2. Run `cargo test`; the binding file in `bindings/` will update.
-3. Update `frontend/src/types.ts` accordingly.
-
----
-
-
----
-
-## 📦 Contributing
-
-Feel free to open issues or pull requests. Ensure new features include
-appropriate tests and update documentation where necessary.
-
----
-
-[ts-rs]: https://github.com/Aleph-Alpha/ts-rs
-
-
-

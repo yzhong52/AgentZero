@@ -302,5 +302,6 @@ fn blank_stub() -> Property {
         listed_date: None,
         mls_number: None,
         laundry_in_unit: None,
+        source_status: None,
     }
 }

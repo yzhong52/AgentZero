@@ -404,6 +404,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         radiant_floor_heating: None,
         ac: None,
         laundry_in_unit: None,
+        source_status: None,
         down_payment_pct: None,
         mortgage_interest_rate: None,
         amortization_years: None,

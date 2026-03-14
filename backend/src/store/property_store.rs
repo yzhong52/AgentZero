@@ -17,7 +17,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating,
                     property_type, listed_date, mls_number, laundry_in_unit,
-                    search_profile_id";
+                    source_status, search_profile_id";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -57,11 +57,11 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 property_type, listed_date, mls_number, laundry_in_unit,
-                search_profile_id,
+                source_status, search_profile_id,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                datetime('now'), datetime('now'))
            RETURNING id"#,
     )
@@ -115,6 +115,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
     .bind(&p.listed_date)
     .bind(&p.mls_number)
     .bind(p.laundry_in_unit)
+    .bind(&p.source_status)
     .bind(p.search_profile_id)
     .fetch_one(pool)
     .await?;
@@ -181,6 +182,7 @@ pub async fn update_by_id(
                has_rental_suite         = ?,
                rental_income            = ?,
                status                   = ?,
+               source_status            = ?,
                search_profile_id        = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
@@ -235,6 +237,7 @@ pub async fn update_by_id(
     .bind(p.has_rental_suite)
     .bind(p.rental_income)
     .bind(p.status)
+    .bind(&p.source_status)
     .bind(p.search_profile_id)
     .bind(id)
     .execute(pool)
@@ -298,6 +301,22 @@ pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Err
 }
 
 // `update_details` removed — use `update_by_id` after merging `UserDetails` in the caller.
+
+/// Update only the source_status field for a property (e.g. marking it OffMarket).
+pub async fn update_source_status(
+    pool: &SqlitePool,
+    id: i64,
+    source_status: Option<&str>,
+) -> Result<Property, sqlx::Error> {
+    sqlx::query(
+        "UPDATE listings SET source_status = ?, updated_at = datetime('now') WHERE id = ?",
+    )
+    .bind(source_status)
+    .bind(id)
+    .execute(pool)
+    .await?;
+    fetch_one_by_id(pool, id).await
+}
 
 /// Update the notes field for a property.
 pub async fn update_notes(
@@ -434,6 +453,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         listed_date: row.get("listed_date"),
         mls_number: row.get("mls_number"),
         laundry_in_unit: row.get("laundry_in_unit"),
+        source_status: row.get("source_status"),
     }
 }
 
@@ -511,6 +531,7 @@ mod tests {
             listed_date: Some("2026-02-24".to_string()),
             mls_number: Some("R9999999".to_string()),
             laundry_in_unit: Some(true),
+            source_status: None,
         };
 
         let saved = add_listing(&pool, &p).await.expect("add_listing failed");
@@ -596,6 +617,7 @@ mod tests {
             listed_date: None,
             mls_number: None,
             laundry_in_unit: None,
+            source_status: None,
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)

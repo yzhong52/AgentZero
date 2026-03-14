@@ -54,6 +54,7 @@ expression: prop
   "zillow_url": "https://www.zillow.com/homedetails/3545-King-Edward-Ave-W-Vancouver-BC-V6S-1M4/460652473_zpid/",
   "mls_number": "R3092688",
   "listed_date": null,
+  "source_status": null,
   "status": "Interested",
   "notes": null,
   "images": [

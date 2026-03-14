@@ -158,8 +158,9 @@ pub struct Property {
     pub zillow_url: Option<String>,  // editable
 
     // ── Listing metadata ─────────────────────────────────────────────────────
-    pub mls_number: Option<String>,  // parsed; editable
-    pub listed_date: Option<String>, // parsed; display only (ISO date, e.g. "2026-02-17")
+    pub mls_number: Option<String>,      // parsed; editable
+    pub listed_date: Option<String>,     // parsed; display only (ISO date, e.g. "2026-02-17")
+    pub source_status: Option<String>,   // parsed; display only (e.g. "OffMarket" when listing is gone)
 
     // ── User notes / status ──────────────────────────────────────────────────
     pub status: ListingStatus, // editable (status widget); never null, defaults to Interested

@@ -487,6 +487,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         radiant_floor_heating: af.radiant_floor_heating,
         ac: af.ac,
         laundry_in_unit: af.laundry_in_unit,
+        source_status: None,
         // Mortgage params are set by main.rs after parsing (save/refresh handlers).
         down_payment_pct: None,
         mortgage_interest_rate: None,

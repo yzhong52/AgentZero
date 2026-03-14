@@ -570,6 +570,7 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
+        source_status: None, // cleared by a successful parse
         open_houses: vec![],
     }
 }

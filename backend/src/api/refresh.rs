@@ -185,6 +185,10 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         monthly_total: finance.monthly_total,
         monthly_cost: finance.monthly_cost,
 
+        // ── Source status ─────────────────────────────────────────────────────
+        // Successful parse clears any previously recorded off-market status.
+        source_status: None,
+
         // ── System metadata ───────────────────────────────────────────────────
         created_at: stored.created_at.clone(),
         updated_at: stored.updated_at.clone(),
@@ -214,10 +218,38 @@ pub(crate) async fn refresh_listing(
     let sources = fetch_sources(&state, &source_urls, "refresh_listing", true).await?;
 
     // ── 3. Parse ───────────────────────────────────────────────────────────────
-    let listing = parsers::parse_multi(&sources).ok_or((
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "No recognized listing format found in page".to_string(),
-    ))?;
+    // Save raw HTML snapshots for offline inspection / parser backfills.
+    for source in &sources {
+        if let Some(site) = parsers::ListingSite::from_url(&source.url) {
+            save_listing_html(id, site, &source.html).await;
+        }
+    }
+
+    let Some(listing) = parsers::parse_multi(&sources) else {
+        // No recognised listing format — the property is likely off-market or removed.
+        tracing::info!("refresh_listing: id={} no listing found — marking OffMarket", id);
+
+        // Record source_status change in history.
+        if stored.source_status.as_deref() != Some("OffMarket") {
+            let _ = history_store::insert_change(
+                &state.db, id, "source_status",
+                stored.source_status.as_deref(), Some("OffMarket"),
+            ).await;
+        }
+
+        let saved = property_store::update_source_status(&state.db, id, Some("OffMarket"))
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+
+        let images = image_store::list_images_with_meta(&state.db, saved.id)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+        let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
+            .await
+            .unwrap_or_default();
+        return Ok(Json(Property { images, open_houses, ..saved }));
+    };
+
     let image_urls = listing.image_urls;
     let open_houses = listing.open_houses;
     tracing::info!(
@@ -231,11 +263,18 @@ pub(crate) async fn refresh_listing(
     // values inline — no further mutation needed.
     let updated = merge_with_stored(listing.property, &stored, id);
 
-    // ── 6. Record price-change history ────────────────────────────────────────
+    // ── 6. Record history for changed fields ──────────────────────────────────
     if stored.price != updated.price {
         let old = stored.price.map(|v| v.to_string());
         let new = updated.price.map(|v| v.to_string());
         let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+    }
+    if stored.source_status.is_some() && updated.source_status.is_none() {
+        // Listing came back on-market (or parse succeeded again after being off-market).
+        let _ = history_store::insert_change(
+            &state.db, id, "source_status",
+            stored.source_status.as_deref(), None,
+        ).await;
     }
 
     // ── 7. Persist parsed fields ──────────────────────────────────────────────
@@ -261,14 +300,6 @@ pub(crate) async fn refresh_listing(
 
     // ── 9. Refresh image cache ────────────────────────────────────────────────
     // Upsert the freshly parsed image URLs, then download any that are not yet cached.
-
-    // Save raw HTML snapshots for offline inspection / parser backfills.
-    for source in &sources {
-        if let Some(site) = parsers::ListingSite::from_url(&source.url) {
-            save_listing_html(id, site, &source.html).await;
-        }
-    }
-
     tracing::info!(
         "refresh_listing: id={} registering {} image URL(s)",
         id,
@@ -380,6 +411,7 @@ mod tests {
             zillow_url: None,
             mls_number: None,
             listed_date: None,
+            source_status: None,
             status: ListingStatus::Interested,
             notes: None,
             images: vec![],

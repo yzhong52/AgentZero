@@ -54,6 +54,7 @@ expression: listing_to_snapshot(listing)
   "zillow_url": null,
   "mls_number": "R3088944",
   "listed_date": "2026-02-11",
+  "source_status": null,
   "status": "Interested",
   "notes": null,
   "images": [

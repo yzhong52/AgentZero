@@ -54,6 +54,7 @@ expression: property
   "zillow_url": null,
   "mls_number": "R3086230",
   "listed_date": "2026-02-03",
+  "source_status": null,
   "status": "Interested",
   "notes": null,
   "images": [

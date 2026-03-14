@@ -17,6 +17,7 @@ use std::env;
 use std::io::{self, BufRead, Write};
 
 const DEFAULT_PORT: u16 = 8000;
+const DEFAULT_FRONTEND_PORT: u16 = 5173;
 
 /// Refresh all listings from their source URLs.
 #[derive(Parser)]
@@ -160,6 +161,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(DEFAULT_PORT);
     let base_url = format!("http://127.0.0.1:{port}");
 
+    let frontend_port: u16 = env::var("FRONTEND_PORT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_FRONTEND_PORT);
+    let frontend_base_url = format!("http://127.0.0.1:{frontend_port}");
+
     let listings_url = match &cli.status {
         Some(s) => format!("{base_url}/api/listings?status={s}"),
         None => format!("{base_url}/api/listings"),
@@ -207,6 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             listing.title,
             listing.status,
         );
+        println!("  frontend: {}/property/{}", frontend_base_url, listing.id);
 
         // Fetch preview to compute diff
         print!("  previewing...");

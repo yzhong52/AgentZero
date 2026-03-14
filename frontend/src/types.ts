@@ -93,4 +93,5 @@ export type Property = {
   listed_date: string | null
   mls_number: string | null
   laundry_in_unit: boolean | null
+  source_status: string | null
 }

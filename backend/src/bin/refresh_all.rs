@@ -42,6 +42,7 @@ struct Listing {
     id: i64,
     title: String,
     status: String,
+    source_status: Option<String>,
     price: Option<i64>,
     price_currency: Option<String>,
     street_address: Option<String>,
@@ -136,6 +137,7 @@ fn compute_diff(current: &Listing, preview: &Listing) -> Vec<Change> {
 
     field!("listed_date", listed_date, fmt_opt_str);
     field!("mls_number", mls_number, fmt_opt_str);
+    field!("source_status", source_status, fmt_opt_str);
 
     changes
 }
@@ -206,13 +208,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdin_lock = stdin.lock();
 
     for (index, listing) in listings.iter().enumerate() {
+        let source_status_label = listing.source_status.as_deref()
+            .map(|s| format!(" [{}]", s))
+            .unwrap_or_default();
         println!(
-            "\n  [{}/{}] #{} — {} (status: {})",
+            "\n  [{}/{}] #{} — {} (status: {}{})",
             index + 1,
             total,
             listing.id,
             listing.title,
             listing.status,
+            source_status_label,
         );
         println!("  frontend: {}/property/{}", frontend_base_url, listing.id);
 
@@ -312,4 +318,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a `Listing` with all fields listed explicitly — intentionally no `..`.
+    ///
+    /// This is the enforcement mechanism: adding a new field to `Listing` causes a
+    /// compile error here, which forces every new field to be consciously added to
+    /// `compute_diff` or added to `SKIPPED_FIELDS` with a documented reason.
+    fn make_listing(variant: u8) -> Listing {
+        if variant == 0 {
+            Listing {
+                id: 1,                                                    // skipped: identity
+                title: "Before Title".to_string(),
+                status: "Interested".to_string(),                         // skipped: user-owned
+                source_status: None,
+                price: Some(500_000),
+                price_currency: Some("CAD".to_string()),
+                street_address: Some("123 Before St".to_string()),
+                bedrooms: Some(2),
+                bathrooms: Some(1),
+                property_tax: Some(3_000),
+                hoa_monthly: Some(200),
+                listed_date: Some("2026-01-01".to_string()),
+                mls_number: Some("R1111111".to_string()),
+            }
+        } else {
+            Listing {
+                id: 1,                                                    // skipped: identity
+                title: "After Title".to_string(),
+                status: "Pass".to_string(),                               // skipped: user-owned
+                source_status: Some("OffMarket".to_string()),
+                price: Some(550_000),
+                price_currency: Some("USD".to_string()),
+                street_address: Some("456 After Ave".to_string()),
+                bedrooms: Some(3),
+                bathrooms: Some(2),
+                property_tax: Some(4_000),
+                hoa_monthly: Some(300),
+                listed_date: Some("2026-06-01".to_string()),
+                mls_number: Some("R2222222".to_string()),
+            }
+        }
+    }
+
+    /// Fields intentionally excluded from `compute_diff` with documented reasons.
+    /// When a new field is added to `Listing`:
+    ///   - add it to `compute_diff`, OR
+    ///   - add it here with a reason.
+    const SKIPPED_FIELDS: &[&str] = &[
+        "id",     // identity — not a content change
+        "status", // user-owned — not sourced from the listing page
+    ];
+
+    /// Verify that every non-skipped field in `Listing` produces a diff entry
+    /// when it changes. The count assertion fails if a field was added to the
+    /// struct but not added to `compute_diff` or `SKIPPED_FIELDS`.
+    #[test]
+    fn test_compute_diff_covers_all_listing_fields() {
+        let before = make_listing(0);
+        let after = make_listing(1);
+        let changes = compute_diff(&before, &after);
+
+        // Count must equal: total Listing fields − skipped fields.
+        // Update this number whenever a field is added or removed from Listing.
+        //
+        // Current Listing fields (13):
+        //   id, title, status, source_status, price, price_currency,
+        //   street_address, bedrooms, bathrooms, property_tax, hoa_monthly,
+        //   listed_date, mls_number
+        const TOTAL_LISTING_FIELDS: usize = 13;
+        let expected = TOTAL_LISTING_FIELDS - SKIPPED_FIELDS.len();
+
+        assert_eq!(
+            changes.len(),
+            expected,
+            "compute_diff detected {} change(s) but expected {}. \
+             If you added a field to Listing, either add it to compute_diff \
+             or add it to SKIPPED_FIELDS with a reason.",
+            changes.len(),
+            expected,
+        );
+    }
+
+    #[test]
+    fn test_compute_diff_no_changes_when_equal() {
+        let listing = make_listing(0);
+        let changes = compute_diff(&listing, &listing.clone());
+        assert!(changes.is_empty(), "expected no changes for identical listings");
+    }
 }

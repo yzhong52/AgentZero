@@ -5,6 +5,7 @@
 //!
 //! Usage:
 //!   cargo run --bin refresh_all
+//!   cargo run --bin refresh_all -- --id 41
 //!   cargo run --bin refresh_all -- --status Interested,Buyable
 //!   cargo run --bin refresh_all -- --auto-accept
 //!   cargo run --bin refresh_all -- --dry-run
@@ -23,6 +24,10 @@ const DEFAULT_FRONTEND_PORT: u16 = 5173;
 #[derive(Parser)]
 #[command(name = "refresh_all")]
 struct Cli {
+    /// Refresh a single listing by ID instead of all listings.
+    #[arg(long, value_name = "ID")]
+    id: Option<i64>,
+
     /// Only refresh listings with these statuses (comma-separated).
     /// Valid values: Interested, Buyable, Pending, Pass
     #[arg(long, value_name = "STATUS,...")]
@@ -169,25 +174,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(DEFAULT_FRONTEND_PORT);
     let frontend_base_url = format!("http://127.0.0.1:{frontend_port}");
 
-    let listings_url = match &cli.status {
-        Some(s) => format!("{base_url}/api/listings?status={s}"),
-        None => format!("{base_url}/api/listings"),
-    };
-
-    println!("[refresh-all] fetching listings from {listings_url}...");
-
     let client = reqwest::Client::new();
-    let response = client
-        .get(&listings_url)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to reach backend at {base_url}: {e}"))?;
 
-    if !response.status().is_success() {
-        return Err(format!("Backend returned {}", response.status()).into());
-    }
-
-    let listings: Vec<Listing> = response.json().await?;
+    let listings: Vec<Listing> = if let Some(id) = cli.id {
+        let url = format!("{base_url}/api/listings/{id}");
+        println!("[refresh-all] fetching listing {id} from {url}...");
+        let response = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach backend at {base_url}: {e}"))?;
+        if !response.status().is_success() {
+            return Err(format!("Backend returned {} for listing {id}", response.status()).into());
+        }
+        vec![response.json::<Listing>().await?]
+    } else {
+        let listings_url = match &cli.status {
+            Some(s) => format!("{base_url}/api/listings?status={s}"),
+            None => format!("{base_url}/api/listings"),
+        };
+        println!("[refresh-all] fetching listings from {listings_url}...");
+        let response = client
+            .get(&listings_url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach backend at {base_url}: {e}"))?;
+        if !response.status().is_success() {
+            return Err(format!("Backend returned {}", response.status()).into());
+        }
+        response.json().await?
+    };
     let total = listings.len();
 
     if total == 0 {

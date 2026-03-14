@@ -23,6 +23,7 @@ static PARKING_COUNT_RE: OnceLock<Regex> = OnceLock::new();
 static CARPORT_SPACES_RE: OnceLock<Regex> = OnceLock::new();
 static OH_DATE_RE: OnceLock<Regex> = OnceLock::new();
 static OH_TIME_RE: OnceLock<Regex> = OnceLock::new();
+static HOME_STATUS_LABEL_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -44,6 +45,11 @@ fn oh_date_re() -> &'static Regex {
 /// Matches a 12-hour time like "2:00pm" or "10:30am".
 fn oh_time_re() -> &'static Regex {
     OH_TIME_RE.get_or_init(|| Regex::new(r"(\d{1,2}):(\d{2})\s*(am|pm)").unwrap())
+}
+
+fn home_status_label_re() -> &'static Regex {
+    HOME_STATUS_LABEL_RE
+        .get_or_init(|| Regex::new(r#"\\?"homeStatusLabel\\?":\s*\\?"([^"\\]+)\\?""#).unwrap())
 }
 
 fn lot_size_re() -> &'static Regex {
@@ -322,6 +328,18 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
         .and_then(|m| m.as_str().parse::<i64>().ok())
 }
 
+// ── Source status ─────────────────────────────────────────────────────────────
+
+/// Extracts the listing status label from Redfin's embedded JSON blob.
+/// Redfin embeds `"homeStatusLabel":"Off Market"` (or "Active", "Pending", etc.)
+/// in the escaped JSON in a `<script>` tag.
+pub fn extract_source_status(html: &str) -> Option<String> {
+    home_status_label_re()
+        .captures(html)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().to_string())
+}
+
 // ── Amenity features ──────────────────────────────────────────────────────────
 
 /// Parsed results from a property's `amenityFeature` array.
@@ -580,6 +598,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     property.land_sqft = extract_lot_size(html);
     property.property_tax = extract_property_tax(html);
     property.hoa_monthly = extract_hoa_monthly(html);
+    property.source_status = extract_source_status(html);
     if let Some(carport_spaces) = extract_carport_spaces(html) {
         property.parking_carport = Some(carport_spaces);
         if property.parking_total.is_none() {
@@ -704,5 +723,19 @@ mod tests {
         )
         .expect("parse failed");
         insta::assert_json_snapshot!("redfin_3206_e25th", listing_to_snapshot(listing));
+    }
+
+    #[test]
+    fn redfin_2643_e8th_off_market() {
+        let html = std::fs::read_to_string(fixture(
+            "2643 E 8th Ave, Vancouver, BC V5M 1W4 _ Redfin.html",
+        ))
+        .expect("fixture not found");
+        let listing = parse(
+            "https://www.redfin.ca/bc/vancouver/2643-E-8th-Ave-V5M-1W4/home/155349348",
+            &html,
+        )
+        .expect("parse failed");
+        insta::assert_json_snapshot!("redfin_2643_e8th_off_market", listing_to_snapshot(listing));
     }
 }

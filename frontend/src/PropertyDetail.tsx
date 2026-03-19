@@ -1369,7 +1369,7 @@ export function PropertyDetail() {
                                     </div>
                                     {(financeEditMode || finance.has_rental_suite !== false) && (
                                         <div className="tracked-field">
-                                            <label>Rental Income (Monthly)</label>
+                                            <label>Rental Income (Est.)</label>
                                             {financeEditMode ? (
                                                 <input className="edit-input" type="number" value={financeDraft?.rental_income ?? ''} onChange={e => setFinanceDraft(d => d ? { ...d, rental_income: e.target.value ? Number(e.target.value) : null } : d)} />
                                             ) : (

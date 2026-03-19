@@ -18,6 +18,19 @@ type HistoryEntry = {
     changed_at: string
 }
 
+// ── History field label map ───────────────────────────────────────────────────
+
+const HISTORY_FIELD_LABELS: Record<string, string> = {
+    price: 'Price',
+    mls_number: 'MLS #',
+    listed_date: 'Listed Date',
+    source_status: 'Source Status',
+}
+
+function historyFieldLabel(name: string): string {
+    return HISTORY_FIELD_LABELS[name] ?? name
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function boolLabel(v: boolean | null): string {
@@ -1661,7 +1674,7 @@ export function PropertyDetail() {
                                 <ul className="history-list">
                                     {(historyExpanded ? history : history.slice(0, 1)).map(entry => (
                                         <li key={entry.id} className="history-entry">
-                                            <span className="history-field">{entry.field_name}</span>
+                                            <span className="history-field">{historyFieldLabel(entry.field_name)}</span>
                                             <span className="history-change">
                                                 {entry.old_value ?? '—'} → {entry.new_value ?? '—'}
                                             </span>

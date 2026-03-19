@@ -178,7 +178,9 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         laundry_in_unit: parsed.laundry_in_unit,
         property_tax: parsed.property_tax,
         mls_number: parsed.mls_number,
-        listed_date: parsed.listed_date,
+        // Preserve the original listed_date; a new MLS number means a relist,
+        // which is captured in history, not by overwriting the first-seen date.
+        listed_date: stored.listed_date.clone().or(parsed.listed_date),
 
         // ── Computed ──────────────────────────────────────────────────────────
         mortgage_monthly: finance.mortgage_monthly,
@@ -186,8 +188,9 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         monthly_cost: finance.monthly_cost,
 
         // ── Source status ─────────────────────────────────────────────────────
-        // Successful parse clears any previously recorded off-market status.
-        source_status: None,
+        // Use the parser's extracted status (e.g. "Pending", "Off Market").
+        // None means actively for sale — also clears any stale off-market status.
+        source_status: parsed.source_status.clone(),
 
         // ── System metadata ───────────────────────────────────────────────────
         created_at: stored.created_at.clone(),
@@ -252,6 +255,8 @@ pub(crate) async fn refresh_listing(
 
     let image_urls = listing.image_urls;
     let open_houses = listing.open_houses;
+    // Capture the fresh listed_date before merging drops it (stored value is preserved).
+    let parsed_listed_date = listing.property.listed_date.clone();
     tracing::info!(
         "refresh_listing: parse result property_tax={:?}, price={:?}",
         listing.property.property_tax,
@@ -269,11 +274,21 @@ pub(crate) async fn refresh_listing(
         let new = updated.price.map(|v| v.to_string());
         let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
     }
-    if stored.source_status.is_some() && updated.source_status.is_none() {
-        // Listing came back on-market (or parse succeeded again after being off-market).
+    if stored.mls_number != updated.mls_number {
+        let _ = history_store::insert_change(
+            &state.db, id, "mls_number",
+            stored.mls_number.as_deref(), updated.mls_number.as_deref(),
+        ).await;
+        // Record the relisted date alongside the MLS change so the relist is fully traceable.
+        let _ = history_store::insert_change(
+            &state.db, id, "listed_date",
+            stored.listed_date.as_deref(), parsed_listed_date.as_deref(),
+        ).await;
+    }
+    if stored.source_status != updated.source_status {
         let _ = history_store::insert_change(
             &state.db, id, "source_status",
-            stored.source_status.as_deref(), None,
+            stored.source_status.as_deref(), updated.source_status.as_deref(),
         ).await;
     }
 

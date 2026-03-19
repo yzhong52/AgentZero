@@ -24,6 +24,7 @@ static CARPORT_SPACES_RE: OnceLock<Regex> = OnceLock::new();
 static OH_DATE_RE: OnceLock<Regex> = OnceLock::new();
 static OH_TIME_RE: OnceLock<Regex> = OnceLock::new();
 static HOME_STATUS_LABEL_RE: OnceLock<Regex> = OnceLock::new();
+static XDP_LISTING_STATUS_RE: OnceLock<Regex> = OnceLock::new();
 
 fn garage_re() -> &'static Regex {
     GARAGE_RE.get_or_init(|| Regex::new(r"(?i)(\d+)\s+garage").unwrap())
@@ -50,6 +51,13 @@ fn oh_time_re() -> &'static Regex {
 fn home_status_label_re() -> &'static Regex {
     HOME_STATUS_LABEL_RE
         .get_or_init(|| Regex::new(r#"\\?"homeStatusLabel\\?":\s*\\?"([^"\\]+)\\?""#).unwrap())
+}
+
+/// Matches `"listingStatus": "pending"` inside the `xdp-meta` JSON block.
+fn xdp_listing_status_re() -> &'static Regex {
+    XDP_LISTING_STATUS_RE.get_or_init(|| {
+        Regex::new(r#"id="xdp-meta">\s*\{[^}]*"listingStatus":\s*"([^"]+)""#).unwrap()
+    })
 }
 
 fn lot_size_re() -> &'static Regex {
@@ -330,14 +338,37 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 
 // ── Source status ─────────────────────────────────────────────────────────────
 
-/// Extracts the listing status label from Redfin's embedded JSON blob.
-/// Redfin embeds `"homeStatusLabel":"Off Market"` (or "Active", "Pending", etc.)
-/// in the escaped JSON in a `<script>` tag.
+/// Extracts the listing status label from Redfin's HTML.
+///
+/// Two sources are tried in order:
+/// 1. `homeStatusLabel` in the escaped JSON blob (present on off-market/sold pages).
+/// 2. `listingStatus` in the `xdp-meta` JSON script tag (present on active/pending pages).
+///
+/// Returns `None` for "active" listings — active is the normal state and needs no annotation.
 pub fn extract_source_status(html: &str) -> Option<String> {
-    home_status_label_re()
-        .captures(html)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().to_string())
+    // 1. Escaped JSON blob — authoritative for off-market / sold pages.
+    if let Some(caps) = home_status_label_re().captures(html) {
+        if let Some(m) = caps.get(1) {
+            return Some(m.as_str().to_string());
+        }
+    }
+    // 2. xdp-meta JSON tag — present on active/pending pages when the blob is absent.
+    //    Redfin uses lowercase values like "pending", "active", "sold".
+    if let Some(caps) = xdp_listing_status_re().captures(html) {
+        if let Some(m) = caps.get(1) {
+            let raw = m.as_str();
+            // "active" is the normal for-sale state; leave source_status unset.
+            if raw.eq_ignore_ascii_case("active") {
+                return None;
+            }
+            // Capitalise first letter for display (e.g. "pending" → "Pending").
+            let mut chars = raw.chars();
+            return chars.next().map(|c| {
+                c.to_uppercase().collect::<String>() + chars.as_str()
+            });
+        }
+    }
+    None
 }
 
 // ── Amenity features ──────────────────────────────────────────────────────────

@@ -188,12 +188,6 @@ pub struct UserDetails {
     pub price: Option<i64>,
     pub price_currency: Option<String>,
 
-    // ── Location ─────────────────────────────────────────────────────────────
-    pub street_address: Option<String>,
-    pub city: Option<String>,
-    pub region: Option<String>,
-    pub postal_code: Option<String>,
-
     // ── Property facts ───────────────────────────────────────────────────────
     pub property_type: Option<String>,
     pub bedrooms: Option<i64>,

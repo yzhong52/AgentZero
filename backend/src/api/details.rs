@@ -126,13 +126,6 @@ pub(crate) async fn patch_details(
         .clone()
         .or(updated.price_currency.clone());
     updated.offer_price = body.offer_price.or(updated.offer_price);
-    updated.street_address = body
-        .street_address
-        .clone()
-        .or(updated.street_address.clone());
-    updated.city = body.city.clone().or(updated.city.clone());
-    updated.region = body.region.clone().or(updated.region.clone());
-    updated.postal_code = body.postal_code.clone().or(updated.postal_code.clone());
     updated.bedrooms = body.bedrooms.or(updated.bedrooms);
     updated.bathrooms = body.bathrooms.or(updated.bathrooms);
     updated.sqft = body.sqft.or(updated.sqft);

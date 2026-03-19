@@ -692,11 +692,6 @@ mod tests {
             price: Some(110_000),
             price_currency: Some("CAD".to_string()),
             offer_price: Some(105_000),
-            // Location
-            street_address: Some("123 Test St".to_string()),
-            city: Some("Vancouver".to_string()),
-            region: Some("BC".to_string()),
-            postal_code: Some("V1V1V1".to_string()),
             // Property facts
             bedrooms: Some(3),
             bathrooms: Some(2),
@@ -767,13 +762,6 @@ mod tests {
             .clone()
             .or(merged.price_currency.clone());
         merged.offer_price = details.offer_price.or(merged.offer_price);
-        merged.street_address = details
-            .street_address
-            .clone()
-            .or(merged.street_address.clone());
-        merged.city = details.city.clone().or(merged.city.clone());
-        merged.region = details.region.clone().or(merged.region.clone());
-        merged.postal_code = details.postal_code.clone().or(merged.postal_code.clone());
         merged.bedrooms = details.bedrooms.or(merged.bedrooms);
         merged.bathrooms = details.bathrooms.or(merged.bathrooms);
         merged.sqft = details.sqft.or(merged.sqft);
@@ -842,11 +830,6 @@ mod tests {
         assert_eq!(updated.price, Some(110_000));
         assert_eq!(updated.price_currency.as_deref(), Some("CAD"));
         assert_eq!(updated.offer_price, Some(105_000));
-        // Location
-        assert_eq!(updated.street_address.as_deref(), Some("123 Test St"));
-        assert_eq!(updated.city.as_deref(), Some("Vancouver"));
-        assert_eq!(updated.region.as_deref(), Some("BC"));
-        assert_eq!(updated.postal_code.as_deref(), Some("V1V1V1"));
         // Property facts
         assert_eq!(updated.bedrooms, Some(3));
         assert_eq!(updated.bathrooms, Some(2));

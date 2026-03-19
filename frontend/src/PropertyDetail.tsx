@@ -363,7 +363,7 @@ export function PropertyDetail() {
     const [financeDraft, setFinanceDraft] = useState<Property | null>(null)
     const [locationEditMode, setLocationEditMode] = useState(false)
     const [locationSaving, setLocationSaving] = useState(false)
-    const [locationDraft, setLocationDraft] = useState<{ street_address: string | null; city: string | null; region: string | null; postal_code: string | null; skytrain_station: string | null; skytrain_walk_min: number | null } | null>(null)
+    const [locationDraft, setLocationDraft] = useState<{ skytrain_station: string | null; skytrain_walk_min: number | null } | null>(null)
 
     // Refresh preview
     const [previewing, setPreviewing] = useState(false)
@@ -512,7 +512,7 @@ export function PropertyDetail() {
 
     function enterLocationEdit() {
         if (!property) return
-        setLocationDraft({ street_address: property.street_address ?? null, city: property.city ?? null, region: property.region ?? null, postal_code: property.postal_code ?? null, skytrain_station: property.skytrain_station ?? null, skytrain_walk_min: property.skytrain_walk_min ?? null })
+        setLocationDraft({ skytrain_station: property.skytrain_station ?? null, skytrain_walk_min: property.skytrain_walk_min ?? null })
         setLocationEditMode(true)
     }
 
@@ -1135,26 +1135,28 @@ export function PropertyDetail() {
                         <div className="location-card">
                             <div className="tracked-details-header">
                                 <h3>Location</h3>
-                                {!locationEditMode ? (
-                                    <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
-                                ) : (
-                                    <div className="detail-edit-actions">
-                                        <button className="save-btn" onClick={saveLocationEdits} disabled={locationSaving}>
-                                            {locationSaving ? 'Saving…' : 'Save'}
-                                        </button>
-                                        <button className="cancel-btn" onClick={cancelLocationEdit} disabled={locationSaving}>Cancel</button>
-                                    </div>
-                                )}
                             </div>
                             <div className="tracked-fields location-fields">
-                                <div className="tracked-field"><label>{LABELS.STREET_ADDRESS}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.street_address ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, street_address: e.target.value || null } : d)} /> : <span className="tracked-value">{property.street_address ?? '—'}</span>}</div>
-                                <div className="tracked-field"><label>{LABELS.CITY}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.city ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, city: e.target.value || null } : d)} /> : <span className="tracked-value">{property.city ?? '—'}</span>}</div>
-                                <div className="tracked-field"><label>{LABELS.REGION_PROVINCE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.region ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, region: e.target.value || null } : d)} /> : <span className="tracked-value">{property.region ?? '—'}</span>}</div>
-                                <div className="tracked-field"><label>{LABELS.POSTAL_CODE}</label>{locationEditMode ? <input className="edit-input" value={locationDraft?.postal_code ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, postal_code: e.target.value || null } : d)} /> : <span className="tracked-value">{property.postal_code ?? '—'}</span>}</div>
+                                <div className="tracked-field"><label>{LABELS.STREET_ADDRESS}</label><span className="tracked-value">{property.street_address ?? '—'}</span></div>
+                                <div className="tracked-field"><label>{LABELS.CITY}</label><span className="tracked-value">{property.city ?? '—'}</span></div>
+                                <div className="tracked-field"><label>{LABELS.REGION_PROVINCE}</label><span className="tracked-value">{property.region ?? '—'}</span></div>
+                                <div className="tracked-field"><label>{LABELS.POSTAL_CODE}</label><span className="tracked-value">{property.postal_code ?? '—'}</span></div>
                             </div>
 
                             <div className="location-subsection">
-                                <h4>Transit</h4>
+                                <div className="tracked-details-header">
+                                    <h4>Transit</h4>
+                                    {!locationEditMode ? (
+                                        <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
+                                    ) : (
+                                        <div className="detail-edit-actions">
+                                            <button className="save-btn" onClick={saveLocationEdits} disabled={locationSaving}>
+                                                {locationSaving ? 'Saving…' : 'Save'}
+                                            </button>
+                                            <button className="cancel-btn" onClick={cancelLocationEdit} disabled={locationSaving}>Cancel</button>
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="tracked-fields">
                                     <div className="tracked-field">
                                         <label>{LABELS.SKYTRAIN_STATION}</label>

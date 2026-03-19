@@ -292,11 +292,38 @@ function isTitleExist(title: string): boolean {
     return title.length > 0
 }
 
+function fmtOpenHouse(oh: { start_time: string; end_time?: string | null }): string {
+    const start = new Date(oh.start_time)
+    const datePart = start.toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })
+    const startTime = start.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })
+    if (oh.end_time) {
+        const endTime = new Date(oh.end_time).toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })
+        return `${datePart} ${startTime}–${endTime}`
+    }
+    return `${datePart} ${startTime}`
+}
+
+function fmtOpenHouseList(openHouses: Property['open_houses']): string {
+    if (openHouses.length === 0) return '—'
+    return openHouses.map(fmtOpenHouse).join(', ')
+}
+
 function buildDiff(stored: Property, fresh: Property): DiffEntry[] {
-    return DIFF_FIELDS
+    const diffs = DIFF_FIELDS
         .filter(f => str(stored[f.key]) !== str(fresh[f.key]))
         .filter(f => f.key !== TITLE_KEY || !isTitleExist(stored.title))
         .map(f => ({ field: f.label, old: str(stored[f.key]), fresh: str(fresh[f.key]) }))
+
+    // Compare open houses by start_time set
+    const storedTimes = new Set(stored.open_houses.map(oh => oh.start_time))
+    const freshTimes = new Set(fresh.open_houses.map(oh => oh.start_time))
+    const hasNew = fresh.open_houses.some(oh => !storedTimes.has(oh.start_time))
+    const hasRemoved = stored.open_houses.some(oh => !freshTimes.has(oh.start_time))
+    if (hasNew || hasRemoved) {
+        diffs.push({ field: 'Open Houses', old: fmtOpenHouseList(stored.open_houses), fresh: fmtOpenHouseList(fresh.open_houses) })
+    }
+
+    return diffs
 }
 
 // ── Build details payload (all editable fields) ───────────────────────────────

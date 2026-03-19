@@ -2,6 +2,7 @@ use crate::images;
 use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
+use crate::models::open_house::OpenHouse;
 use crate::models::property::Property;
 use crate::parsers;
 use crate::finance as property_finance;
@@ -363,7 +364,23 @@ pub(crate) async fn preview_refresh(
     // ── 4. Merge using the same rules as refresh ──────────────────────────────
     let preview = merge_with_stored(listing.property, &stored, stored.id);
 
-    Ok(Json(preview))
+    // Populate open_houses with the freshly parsed events so the diff can
+    // compare them against the stored ones. Use negative fake IDs (never in DB).
+    let parsed_open_houses: Vec<OpenHouse> = listing
+        .open_houses
+        .into_iter()
+        .enumerate()
+        .map(|(i, oh)| OpenHouse {
+            id: -(i as i64 + 1),
+            listing_id: stored.id,
+            start_time: oh.start_time,
+            end_time: oh.end_time,
+            visited: false,
+            created_at: String::new(),
+        })
+        .collect();
+
+    Ok(Json(Property { open_houses: parsed_open_houses, ..preview }))
 }
 
 #[cfg(test)]

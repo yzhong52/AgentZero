@@ -43,6 +43,12 @@ struct Cli {
 }
 
 #[derive(Deserialize, Clone)]
+struct OpenHouseEntry {
+    start_time: String,
+    end_time: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
 struct Listing {
     id: i64,
     title: String,
@@ -57,6 +63,8 @@ struct Listing {
     hoa_monthly: Option<i64>,
     listed_date: Option<String>,
     mls_number: Option<String>,
+    #[serde(default)]
+    open_houses: Vec<OpenHouseEntry>,
 }
 
 struct Change {
@@ -76,6 +84,28 @@ fn fmt_dollars(cents: &i64) -> String {
         out.push(ch);
     }
     format!("${}", out.chars().rev().collect::<String>())
+}
+
+fn fmt_open_houses(open_houses: &[OpenHouseEntry]) -> String {
+    if open_houses.is_empty() {
+        return "—".to_string();
+    }
+    open_houses
+        .iter()
+        .map(|oh| {
+            // Parse ISO datetime "2026-03-22T14:00:00" → "2026-03-22 2:00 PM"
+            let date_part = oh.start_time.get(..10).unwrap_or(&oh.start_time);
+            let time_part = oh.start_time.get(11..16).unwrap_or("");
+            let end_part = oh
+                .end_time
+                .as_deref()
+                .and_then(|e| e.get(11..16))
+                .map(|t| format!("–{t}"))
+                .unwrap_or_default();
+            format!("{date_part} {time_part}{end_part}")
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn fmt_opt_str(v: &Option<String>) -> String {
@@ -143,6 +173,19 @@ fn compute_diff(current: &Listing, preview: &Listing) -> Vec<Change> {
     field!("listed_date", listed_date, fmt_opt_str);
     field!("mls_number", mls_number, fmt_opt_str);
     field!("source_status", source_status, fmt_opt_str);
+
+    // Open houses: compare by start_time set; show if any added or removed.
+    let current_times: std::collections::HashSet<&str> =
+        current.open_houses.iter().map(|oh| oh.start_time.as_str()).collect();
+    let preview_times: std::collections::HashSet<&str> =
+        preview.open_houses.iter().map(|oh| oh.start_time.as_str()).collect();
+    if current_times != preview_times {
+        changes.push(Change {
+            label: "open_houses",
+            from: fmt_open_houses(&current.open_houses),
+            to: fmt_open_houses(&preview.open_houses),
+        });
+    }
 
     changes
 }
@@ -361,6 +404,7 @@ mod tests {
                 hoa_monthly: Some(200),
                 listed_date: Some("2026-01-01".to_string()),
                 mls_number: Some("R1111111".to_string()),
+                open_houses: vec![],
             }
         } else {
             Listing {
@@ -377,6 +421,10 @@ mod tests {
                 hoa_monthly: Some(300),
                 listed_date: Some("2026-06-01".to_string()),
                 mls_number: Some("R2222222".to_string()),
+                open_houses: vec![OpenHouseEntry {
+                    start_time: "2026-06-15T14:00:00".to_string(),
+                    end_time: Some("2026-06-15T16:00:00".to_string()),
+                }],
             }
         }
     }
@@ -402,11 +450,11 @@ mod tests {
         // Count must equal: total Listing fields − skipped fields.
         // Update this number whenever a field is added or removed from Listing.
         //
-        // Current Listing fields (13):
+        // Current Listing fields (14):
         //   id, title, status, source_status, price, price_currency,
         //   street_address, bedrooms, bathrooms, property_tax, hoa_monthly,
-        //   listed_date, mls_number
-        const TOTAL_LISTING_FIELDS: usize = 13;
+        //   listed_date, mls_number, open_houses
+        const TOTAL_LISTING_FIELDS: usize = 14;
         let expected = TOTAL_LISTING_FIELDS - SKIPPED_FIELDS.len();
 
         assert_eq!(

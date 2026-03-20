@@ -48,6 +48,16 @@ struct OpenHouseEntry {
     end_time: Option<String>,
 }
 
+/// Mirrors the wire format of `ResolvedListing` returned by GET /api/listings/:id/preview.
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum PreviewResult {
+    /// Data-stripped page (off-market): only source_status would change.
+    StatusOnly { source_status: Option<String> },
+    /// Full listing data available — diff against the stored record.
+    Full { property: Listing },
+}
+
 #[derive(Deserialize, Clone)]
 struct Listing {
     id: i64,
@@ -314,8 +324,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Ok(resp) => {
                 println!();
-                let has_changes = match resp.json::<Listing>().await {
-                    Ok(preview) => {
+                let has_changes = match resp.json::<PreviewResult>().await {
+                    Ok(PreviewResult::StatusOnly { source_status }) => {
+                        let from = listing.source_status.as_deref().unwrap_or("—");
+                        let to = source_status.as_deref().unwrap_or("—");
+                        println!("  [status-only]  source_status  {}  →  {}", from, to);
+                        true
+                    }
+                    Ok(PreviewResult::Full { property: preview }) => {
                         let changes = compute_diff(listing, &preview);
                         print_diff(&changes);
                         !changes.is_empty()

@@ -9,6 +9,10 @@ import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './
 import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
 
+type PreviewResult =
+    | { kind: 'status_only'; source_status: string | null }
+    | { kind: 'full'; property: Property }
+
 type HistoryEntry = {
     id: number
     listing_id: number
@@ -702,9 +706,6 @@ export function PropertyDetail() {
         try {
             const resp = await fetch(`/api/listings/${property.id}/preview`)
             if (!resp.ok) throw new Error(await resp.text())
-            type PreviewResult =
-                | { kind: 'status_only'; source_status: string | null }
-                | { kind: 'full'; property: Property }
             const result: PreviewResult = await resp.json()
             const fresh: Property = result.kind === 'status_only'
                 ? { ...property, source_status: result.source_status }

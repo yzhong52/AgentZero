@@ -328,8 +328,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(PreviewResult::StatusOnly { source_status }) => {
                         let from = listing.source_status.as_deref().unwrap_or("—");
                         let to = source_status.as_deref().unwrap_or("—");
-                        println!("  [status-only]  source_status  {}  →  {}", from, to);
-                        true
+                        let changed = listing.source_status.as_deref() != source_status.as_deref();
+                        if changed {
+                            println!("  [status-only]  source_status  {}  →  {}", from, to);
+                        } else {
+                            println!("  no changes detected");
+                        }
+                        changed
                     }
                     Ok(PreviewResult::Full { property: preview }) => {
                         let changes = compute_diff(listing, &preview);

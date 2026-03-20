@@ -1,7 +1,7 @@
 import { LABELS } from './labels'
 
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, SearchProfile } from './types'
@@ -388,6 +388,8 @@ function toUserDetails(p: Property) {
 export function PropertyDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const location = useLocation()
+    const fromApp = location.key !== 'default'
 
     const [property, setProperty] = useState<Property | null>(null)
     const [loading, setLoading] = useState(true)
@@ -922,9 +924,13 @@ export function PropertyDetail() {
     return (
         <>
             <div className="detail-nav">
-                <button className="back-btn" onClick={() => navigate(-1)}>
-                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    Back
+                <button className="back-btn" onClick={() => fromApp ? navigate(-1) : navigate('/')}>
+                    {fromApp ? (
+                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    ) : (
+                        <svg width="13" height="12" viewBox="0 0 13 12" fill="none" aria-hidden="true"><path d="M1 5.5L6.5 1 12 5.5V11H8.5V8H4.5v3H1V5.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    )}
+                    {fromApp ? 'Back' : 'Home'}
                 </button>
                 <span className="detail-nav-title" title={property.title}>{property.title}</span>
                 <button

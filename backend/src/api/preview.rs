@@ -1,7 +1,8 @@
 //! Handler for the refresh diff preview endpoint.
 //!
-//! - GET /api/listings/:id/preview — fetch and parse without saving; returns the merged
-//!   result so the caller can diff it against the stored record.
+//! - GET /api/listings/:id/preview — fetch and parse without saving; returns a
+//!   `ResolvedListing` so callers can distinguish a status-only update (off-market)
+//!   from a full data refresh and diff accordingly.
 
 use axum::{
     extract::{Path, State},
@@ -11,7 +12,7 @@ use axum::{
 
 use crate::models::open_house::OpenHouse;
 use crate::models::property::Property;
-use crate::store::{open_house_store, property_store};
+use crate::store::property_store;
 use crate::{parsers, AppState};
 
 use super::refresh::{fetch_sources, resolve_parsed_listing, stored_source_urls, ResolvedListing};
@@ -19,12 +20,14 @@ use super::refresh::{fetch_sources, resolve_parsed_listing, stored_source_urls, 
 /// GET /api/listings/:id/preview
 ///
 /// Fetches and parses a listing without saving — used to build the refresh diff preview.
-/// Applies the same field-preservation rules as `refresh_listing` so the diff accurately
-/// reflects what would change if the user confirmed the refresh.
+/// Returns a [`ResolvedListing`]:
+/// - `StatusOnly { source_status }` when the page is data-stripped (off-market).
+/// - `Full { property }` with the merged property (including freshly parsed open houses
+///   at negative fake IDs) when full data is available.
 pub(crate) async fn preview_refresh(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<Property>, (StatusCode, String)> {
+) -> Result<Json<ResolvedListing>, (StatusCode, String)> {
     // ── 1. Load the stored record ──────────────────────────────────────────────
     let stored = property_store::get_by_id(&state.db, id)
         .await
@@ -42,23 +45,14 @@ pub(crate) async fn preview_refresh(
 
     match resolve_parsed_listing(listing, &stored) {
         // ── 3a. Off-market / data-stripped page ───────────────────────────────
-        // Mirror the same guard used in refresh_listing: only show a source_status
-        // change in the diff so the user isn't presented with spurious field resets.
-        ResolvedListing::StatusOnly(new_status) => {
-            let open_houses = open_house_store::list_open_houses(&state.db, stored.id)
-                .await
-                .unwrap_or_default();
-            Ok(Json(Property {
-                source_status: new_status,
-                open_houses,
-                ..stored
-            }))
-        }
+        // Only the source_status field would change; return it directly so the
+        // caller can show a focused "status-only" diff rather than spurious resets.
+        status_only @ ResolvedListing::StatusOnly { .. } => Ok(Json(status_only)),
 
-        // ── 4. Full listing — merge using the same rules as refresh ───────────
-        ResolvedListing::Full { property: preview, open_houses: parsed_oh, .. } => {
-            // Populate open_houses with the freshly parsed events so the diff can
-            // compare them against the stored ones. Use negative fake IDs (never in DB).
+        // ── 4. Full listing — populate open_houses then return ────────────────
+        ResolvedListing::Full { property: preview, open_houses: parsed_oh, image_urls, parsed_listed_date } => {
+            // Attach the freshly parsed open house events so the diff can compare
+            // them against the stored ones. Use negative fake IDs (never in DB).
             let parsed_open_houses: Vec<OpenHouse> = parsed_oh
                 .into_iter()
                 .enumerate()
@@ -72,7 +66,13 @@ pub(crate) async fn preview_refresh(
                 })
                 .collect();
 
-            Ok(Json(Property { open_houses: parsed_open_houses, ..preview }))
+            let property = Property { open_houses: parsed_open_houses, ..preview };
+            Ok(Json(ResolvedListing::Full {
+                property,
+                image_urls,
+                open_houses: vec![],        // internal field, skipped in serialization
+                parsed_listed_date,         // internal field, skipped in serialization
+            }))
         }
     }
 }

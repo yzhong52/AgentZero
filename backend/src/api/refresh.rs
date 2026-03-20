@@ -13,6 +13,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+use serde::Serialize;
 
 /// Returns `true` when the stored title has been set by the user and should be
 /// preserved during a refresh. An empty string means the user never set one (or
@@ -204,15 +205,26 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
 /// The outcome of resolving a freshly parsed listing against the stored record.
 /// Both `refresh_listing` and `preview_refresh` use this to apply identical
 /// field-preservation rules before deciding what to write (or return).
-pub(crate) enum ResolvedListing {
+///
+/// Serializes as a tagged JSON object (`"kind": "status_only"` / `"kind": "full"`).
+/// Internal-only fields (`image_urls`, `open_houses`, `parsed_listed_date`) are
+/// skipped during serialization and default to empty/None on deserialization.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ResolvedListing {
     /// The parsed page is data-stripped: source_status is set but price is absent.
     /// Only the source_status field should change; all other stored data is preserved.
-    StatusOnly(Option<String>),
+    StatusOnly {
+        source_status: Option<String>,
+    },
     /// The parsed page has full listing data — use the merged property.
     Full {
         property: Property,
+        #[serde(skip)]
         image_urls: Vec<String>,
+        #[serde(skip)]
         open_houses: Vec<OpenHouseEvent>,
+        #[serde(skip)]
         parsed_listed_date: Option<String>,
     },
 }
@@ -220,7 +232,7 @@ pub(crate) enum ResolvedListing {
 /// Applies merge and off-market guard logic to a freshly parsed listing.
 pub(crate) fn resolve_parsed_listing(listing: parsers::ParsedListing, stored: &Property) -> ResolvedListing {
     if listing.property.source_status.is_some() && listing.property.price.is_none() {
-        return ResolvedListing::StatusOnly(listing.property.source_status);
+        return ResolvedListing::StatusOnly { source_status: listing.property.source_status };
     }
     let parsed_listed_date = listing.property.listed_date.clone();
     let property = merge_with_stored(listing.property, stored, stored.id);
@@ -296,7 +308,7 @@ pub(crate) async fn refresh_listing(
 
     // ── 4. Resolve parsed result ───────────────────────────────────────────────
     match resolve_parsed_listing(listing, &stored) {
-        ResolvedListing::StatusOnly(new_status) => {
+        ResolvedListing::StatusOnly { source_status: new_status } => {
             tracing::info!(
                 "refresh_listing: id={} data-stripped page (source_status={:?}), skipping full update",
                 id, new_status.as_deref()

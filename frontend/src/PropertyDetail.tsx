@@ -702,7 +702,13 @@ export function PropertyDetail() {
         try {
             const resp = await fetch(`/api/listings/${property.id}/preview`)
             if (!resp.ok) throw new Error(await resp.text())
-            const fresh: Property = await resp.json()
+            type PreviewResult =
+                | { kind: 'status_only'; source_status: string | null }
+                | { kind: 'full'; property: Property }
+            const result: PreviewResult = await resp.json()
+            const fresh: Property = result.kind === 'status_only'
+                ? { ...property, source_status: result.source_status }
+                : result.property
             setDiffModal(buildDiff(property, fresh))
         } catch (err: any) {
             setError(err?.message || String(err))

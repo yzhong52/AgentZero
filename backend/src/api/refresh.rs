@@ -98,20 +98,20 @@ pub(crate) async fn fetch_sources(
 ///
 /// `id` is passed separately because callers know the DB row id while the
 /// parsed struct always carries `0`.
-fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
+fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i64) -> Property {
     // Pre-compute fields that are both stored in the struct and fed into the
     // mortgage calculation, so each value is stated exactly once.
-    let hoa_monthly = parsed.hoa_monthly.or(stored.hoa_monthly);
-    let down_pct = stored.down_payment_pct.unwrap_or(0.20);
-    let rate = stored.mortgage_interest_rate.unwrap_or(0.04);
-    let years = stored.amortization_years.unwrap_or(25);
+    let hoa_monthly = parsed_listing.hoa_monthly.or(stored_listing.hoa_monthly);
+    let down_pct = stored_listing.down_payment_pct.unwrap_or(0.20);
+    let rate = stored_listing.mortgage_interest_rate.unwrap_or(0.04);
+    let years = stored_listing.amortization_years.unwrap_or(25);
     let finance = property_finance::compute(
-        parsed.price,
-        stored.offer_price,
+        parsed_listing.price,
+        stored_listing.offer_price,
         down_pct,
         rate,
         years,
-        parsed.property_tax,
+        parsed_listing.property_tax,
         hoa_monthly,
     );
 
@@ -121,23 +121,23 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         // search_profile_id must come from stored; writing the struct default (0)
         // violates the FK constraint on the search_profiles table.
         id,
-        search_profile_id: stored.search_profile_id,
+        search_profile_id: stored_listing.search_profile_id,
 
         // ── Source URLs ───────────────────────────────────────────────────────
         // Users may manually link additional sources; preserve them all.
-        redfin_url: stored.redfin_url.clone(),
-        realtor_url: stored.realtor_url.clone(),
-        rew_url: stored.rew_url.clone(),
-        zillow_url: stored.zillow_url.clone(),
+        redfin_url: stored_listing.redfin_url.clone(),
+        realtor_url: stored_listing.realtor_url.clone(),
+        rew_url: stored_listing.rew_url.clone(),
+        zillow_url: stored_listing.zillow_url.clone(),
 
         // ── User-owned: parser never produces these ───────────────────────────
-        status: stored.status,
-        notes: stored.notes.clone(),
-        offer_price: stored.offer_price,
-        skytrain_station: stored.skytrain_station.clone(),
-        skytrain_walk_min: stored.skytrain_walk_min,
-        has_rental_suite: stored.has_rental_suite,
-        rental_income: stored.rental_income,
+        status: stored_listing.status,
+        notes: stored_listing.notes.clone(),
+        offer_price: stored_listing.offer_price,
+        skytrain_station: stored_listing.skytrain_station.clone(),
+        skytrain_walk_min: stored_listing.skytrain_walk_min,
+        has_rental_suite: stored_listing.has_rental_suite,
+        rental_income: stored_listing.rental_income,
 
         // ── User-set mortgage parameters ──────────────────────────────────────
         down_payment_pct: Some(down_pct),
@@ -145,44 +145,44 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         amortization_years: Some(years),
 
         // ── Parser wins, stored as fallback ───────────────────────────────────
-        title: if is_title_exist(&stored.title) { stored.title.clone() } else { parsed.title },
-        school_elementary: parsed.school_elementary.or(stored.school_elementary.clone()),
-        school_elementary_rating: parsed.school_elementary_rating.or(stored.school_elementary_rating),
-        school_middle: parsed.school_middle.or(stored.school_middle.clone()),
-        school_middle_rating: parsed.school_middle_rating.or(stored.school_middle_rating),
-        school_secondary: parsed.school_secondary.or(stored.school_secondary.clone()),
-        school_secondary_rating: parsed.school_secondary_rating.or(stored.school_secondary_rating),
+        title: if is_title_exist(&stored_listing.title) { stored_listing.title.clone() } else { parsed_listing.title },
+        school_elementary: parsed_listing.school_elementary.or(stored_listing.school_elementary.clone()),
+        school_elementary_rating: parsed_listing.school_elementary_rating.or(stored_listing.school_elementary_rating),
+        school_middle: parsed_listing.school_middle.or(stored_listing.school_middle.clone()),
+        school_middle_rating: parsed_listing.school_middle_rating.or(stored_listing.school_middle_rating),
+        school_secondary: parsed_listing.school_secondary.or(stored_listing.school_secondary.clone()),
+        school_secondary_rating: parsed_listing.school_secondary_rating.or(stored_listing.school_secondary_rating),
         hoa_monthly,
 
         // ── Parser wins ───────────────────────────────────────────────────────
-        description: parsed.description,
-        price: parsed.price,
-        price_currency: parsed.price_currency,
-        street_address: parsed.street_address,
-        city: parsed.city,
-        region: parsed.region,
-        postal_code: parsed.postal_code,
-        country: parsed.country,
-        lat: parsed.lat,
-        lon: parsed.lon,
-        property_type: parsed.property_type,
-        bedrooms: parsed.bedrooms,
-        bathrooms: parsed.bathrooms,
-        sqft: parsed.sqft,
-        land_sqft: parsed.land_sqft,
-        year_built: parsed.year_built,
-        parking_total: parsed.parking_total,
-        parking_garage: parsed.parking_garage,
-        parking_carport: parsed.parking_carport,
-        parking_pad: parsed.parking_pad,
-        radiant_floor_heating: parsed.radiant_floor_heating,
-        ac: parsed.ac,
-        laundry_in_unit: parsed.laundry_in_unit,
-        property_tax: parsed.property_tax,
-        mls_number: parsed.mls_number,
+        description: parsed_listing.description,
+        price: parsed_listing.price,
+        price_currency: parsed_listing.price_currency,
+        street_address: parsed_listing.street_address,
+        city: parsed_listing.city,
+        region: parsed_listing.region,
+        postal_code: parsed_listing.postal_code,
+        country: parsed_listing.country,
+        lat: parsed_listing.lat,
+        lon: parsed_listing.lon,
+        property_type: parsed_listing.property_type,
+        bedrooms: parsed_listing.bedrooms,
+        bathrooms: parsed_listing.bathrooms,
+        sqft: parsed_listing.sqft,
+        land_sqft: parsed_listing.land_sqft,
+        year_built: parsed_listing.year_built,
+        parking_total: parsed_listing.parking_total,
+        parking_garage: parsed_listing.parking_garage,
+        parking_carport: parsed_listing.parking_carport,
+        parking_pad: parsed_listing.parking_pad,
+        radiant_floor_heating: parsed_listing.radiant_floor_heating,
+        ac: parsed_listing.ac,
+        laundry_in_unit: parsed_listing.laundry_in_unit,
+        property_tax: parsed_listing.property_tax,
+        mls_number: parsed_listing.mls_number,
         // Preserve the original listed_date; a new MLS number means a relist,
         // which is captured in history, not by overwriting the first-seen date.
-        listed_date: stored.listed_date.clone().or(parsed.listed_date),
+        listed_date: stored_listing.listed_date.clone().or(parsed_listing.listed_date),
 
         // ── Computed ──────────────────────────────────────────────────────────
         mortgage_monthly: finance.mortgage_monthly,
@@ -192,13 +192,19 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
         // ── Source status ─────────────────────────────────────────────────────
         // Use the parser's extracted status (e.g. "Pending", "Off Market").
         // None means actively for sale — also clears any stale off-market status.
-        source_status: parsed.source_status.clone(),
+        source_status: parsed_listing.source_status.clone(),
 
         // ── System metadata ───────────────────────────────────────────────────
-        created_at: stored.created_at.clone(),
-        updated_at: stored.updated_at.clone(),
-        images: vec![],      // repopulated from images_cache after save
-        open_houses: vec![], // repopulated from open_houses table after save
+        // Neither value affects the UPDATE: created_at is not in the SET clause,
+        // and updated_at is overwritten with datetime('now') by the SQL.
+        // The correct values come back from the fetch_one_by_id re-read in update_by_id.
+        created_at: stored_listing.created_at.clone(),
+        updated_at: stored_listing.updated_at.clone(),
+
+        // ── Joined data (not stored in listings row) ──────────────────────────
+        // Callers repopulate these from their own tables after saving.
+        images: vec![],
+        open_houses: vec![],
     }
 }
 

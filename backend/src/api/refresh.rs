@@ -209,48 +209,49 @@ fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i6
 }
 
 /// The outcome of resolving a freshly parsed listing against the stored record.
-/// Both `refresh_listing` and `preview_refresh` use this to apply identical
-/// field-preservation rules before deciding what to write (or return).
-///
 /// Serializes as a tagged JSON object (`"kind": "status_only"` / `"kind": "full"`).
-/// Internal-only fields (`image_urls`, `open_houses`, `parsed_listed_date`) are
-/// skipped during serialization — they carry data for `refresh_listing` only.
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ResolvedListing {
-    /// The parsed page is data-stripped: source_status is set but price is absent.
-    /// Only the source_status field should change; all other stored data is preserved.
+    /// The parsed page has a source_status (e.g. Pending, OffMarket) — treat as
+    /// data-stripped and preserve all stored fields.
     StatusOnly {
         source_status: String,
     },
-    /// The parsed page has full listing data — use the merged property.
+    /// The parsed page has full listing data — the merged property ready to use.
     Full {
         property: Property,
-        #[serde(skip)]
-        image_urls: Vec<String>,
-        #[serde(skip)]
-        open_houses: Vec<OpenHouseEvent>,
-        #[serde(skip)]
-        parsed_listed_date: Option<String>,
     },
 }
 
+/// Extra data produced by parsing that lives outside `Property` and is only
+/// needed by `refresh_listing` (not the preview path).
+pub(crate) struct ParsedExtras {
+    pub image_urls: Vec<String>,
+    pub open_houses: Vec<OpenHouseEvent>,
+    pub parsed_listed_date: Option<String>,
+}
+
 /// Applies merge and off-market guard logic to a freshly parsed listing.
-pub(crate) fn resolve_parsed_listing(listing: parsers::ParsedListing, stored: &Property) -> ResolvedListing {
+/// Returns the wire-ready `ResolvedListing` and, for the `Full` path, the
+/// accompanying `ParsedExtras` that `refresh_listing` needs for DB writes.
+pub(crate) fn resolve_parsed_listing(
+    listing: parsers::ParsedListing,
+    stored: &Property,
+) -> (ResolvedListing, Option<ParsedExtras>) {
     if let Some(source_status) = listing.property.source_status {
         // The page has a source_status (e.g. Pending, OffMarket) — treat as data-stripped
         // and preserve all stored fields rather than overwriting with potentially incomplete
         // parsed data.
-        return ResolvedListing::StatusOnly { source_status };
+        return (ResolvedListing::StatusOnly { source_status }, None);
     }
-    let parsed_listed_date = listing.property.listed_date.clone();
-    let property = merge_with_stored(listing.property, stored, stored.id);
-    ResolvedListing::Full {
-        property,
+    let extras = ParsedExtras {
         image_urls: listing.image_urls,
         open_houses: listing.open_houses,
-        parsed_listed_date,
-    }
+        parsed_listed_date: listing.property.listed_date.clone(),
+    };
+    let property = merge_with_stored(listing.property, stored, stored.id);
+    (ResolvedListing::Full { property }, Some(extras))
 }
 
 /// Writes only the `source_status` field to the DB and returns the updated
@@ -316,7 +317,8 @@ pub(crate) async fn refresh_listing(
     };
 
     // ── 4. Resolve parsed result ───────────────────────────────────────────────
-    match resolve_parsed_listing(listing, &stored) {
+    let (resolved, extras) = resolve_parsed_listing(listing, &stored);
+    match resolved {
         ResolvedListing::StatusOnly { source_status: new_status } => {
             tracing::info!(
                 "refresh_listing: id={} data-stripped page (source_status={:?}), skipping full update",
@@ -325,7 +327,8 @@ pub(crate) async fn refresh_listing(
             status_only_refresh(&state.db, id, &stored, Some(new_status.as_str())).await
         }
 
-        ResolvedListing::Full { property: updated, image_urls, open_houses, parsed_listed_date } => {
+        ResolvedListing::Full { property: updated } => {
+            let ParsedExtras { image_urls, open_houses, parsed_listed_date } = extras.unwrap();
             tracing::info!(
                 "refresh_listing: parse result property_tax={:?}, price={:?}",
                 updated.property_tax,

@@ -43,17 +43,18 @@ pub(crate) async fn preview_refresh(
         "No recognized listing format found in page".to_string(),
     ))?;
 
-    match resolve_parsed_listing(listing, &stored) {
+    let (resolved, extras) = resolve_parsed_listing(listing, &stored);
+    match resolved {
         // ── 3a. Off-market / data-stripped page ───────────────────────────────
         // Only the source_status field would change; return it directly so the
         // caller can show a focused "status-only" diff rather than spurious resets.
         status_only @ ResolvedListing::StatusOnly { .. } => Ok(Json(status_only)),
 
         // ── 4. Full listing — populate open_houses then return ────────────────
-        ResolvedListing::Full { property: preview, open_houses: parsed_oh, .. } => {
+        ResolvedListing::Full { property: preview } => {
             // Attach the freshly parsed open house events so the diff can compare
             // them against the stored ones. Use negative fake IDs (never in DB).
-            let parsed_open_houses: Vec<OpenHouse> = parsed_oh
+            let parsed_open_houses: Vec<OpenHouse> = extras.unwrap().open_houses
                 .into_iter()
                 .enumerate()
                 .map(|(i, oh)| OpenHouse {
@@ -67,12 +68,7 @@ pub(crate) async fn preview_refresh(
                 .collect();
 
             let property = Property { open_houses: parsed_open_houses, ..preview };
-            Ok(Json(ResolvedListing::Full {
-                property,
-                image_urls: vec![],
-                open_houses: vec![],
-                parsed_listed_date: None,
-            }))
+            Ok(Json(ResolvedListing::Full { property }))
         }
     }
 }

@@ -234,7 +234,14 @@ pub(crate) async fn patch_details(
     if current.price != updated.price {
         let old = current.price.map(|v| v.to_string());
         let new = updated.price.map(|v| v.to_string());
-        let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+        let _ = history_store::insert_change(
+            &state.db,
+            id,
+            crate::models::history::HistoryField::Price,
+            old.as_deref(),
+            new.as_deref(),
+        )
+        .await;
     }
 
     // Re-attach images (update_by_id doesn't load them).

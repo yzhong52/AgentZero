@@ -1,11 +1,11 @@
-use crate::models::history::HistoryEntry;
+use crate::models::history::{HistoryEntry, HistoryField};
 use sqlx::{Row, SqlitePool};
 
 /// Record a field value change for a listing.
 pub async fn insert_change(
     pool: &SqlitePool,
     listing_id: i64,
-    field_name: &str,
+    field_name: HistoryField,
     old_value: Option<&str>,
     new_value: Option<&str>,
 ) -> Result<(), sqlx::Error> {
@@ -14,7 +14,7 @@ pub async fn insert_change(
          VALUES (?, ?, ?, ?)",
     )
     .bind(listing_id)
-    .bind(field_name)
+    .bind(field_name.to_string())
     .bind(old_value)
     .bind(new_value)
     .execute(pool)
@@ -35,15 +35,17 @@ pub async fn list_history(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .iter()
-        .map(|r| HistoryEntry {
-            id: r.get("id"),
-            listing_id: r.get("listing_id"),
-            field_name: r.get("field_name"),
-            old_value: r.get("old_value"),
-            new_value: r.get("new_value"),
-            changed_at: r.get("changed_at"),
+    rows.iter()
+        .map(|r| -> Result<HistoryEntry, sqlx::Error> {
+            let field_name_str: String = r.get("field_name");
+            Ok(HistoryEntry {
+                id: r.get("id"),
+                listing_id: r.get("listing_id"),
+                field_name: field_name_str.parse().map_err(sqlx::Error::Protocol)?,
+                old_value: r.get("old_value"),
+                new_value: r.get("new_value"),
+                changed_at: r.get("changed_at"),
+            })
         })
-        .collect())
+        .collect()
 }

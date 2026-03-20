@@ -236,9 +236,13 @@ pub(crate) async fn refresh_listing(
         // Record source_status change in history.
         if stored.source_status.as_deref() != Some("OffMarket") {
             let _ = history_store::insert_change(
-                &state.db, id, "source_status",
-                stored.source_status.as_deref(), Some("OffMarket"),
-            ).await;
+                &state.db,
+                id,
+                crate::models::history::HistoryField::SourceStatus,
+                stored.source_status.as_deref(),
+                Some("OffMarket"),
+            )
+            .await;
         }
 
         let saved = property_store::update_source_status(&state.db, id, Some("OffMarket"))
@@ -273,24 +277,43 @@ pub(crate) async fn refresh_listing(
     if stored.price != updated.price {
         let old = stored.price.map(|v| v.to_string());
         let new = updated.price.map(|v| v.to_string());
-        let _ = history_store::insert_change(&state.db, id, "price", old.as_deref(), new.as_deref()).await;
+        let _ = history_store::insert_change(
+            &state.db,
+            id,
+            crate::models::history::HistoryField::Price,
+            old.as_deref(),
+            new.as_deref(),
+        )
+        .await;
     }
     if stored.mls_number != updated.mls_number {
         let _ = history_store::insert_change(
-            &state.db, id, "mls_number",
-            stored.mls_number.as_deref(), updated.mls_number.as_deref(),
-        ).await;
+            &state.db,
+            id,
+            crate::models::history::HistoryField::MlsNumber,
+            stored.mls_number.as_deref(),
+            updated.mls_number.as_deref(),
+        )
+        .await;
         // Record the relisted date alongside the MLS change so the relist is fully traceable.
         let _ = history_store::insert_change(
-            &state.db, id, "listed_date",
-            stored.listed_date.as_deref(), parsed_listed_date.as_deref(),
-        ).await;
+            &state.db,
+            id,
+            crate::models::history::HistoryField::ListedDate,
+            stored.listed_date.as_deref(),
+            parsed_listed_date.as_deref(),
+        )
+        .await;
     }
     if stored.source_status != updated.source_status {
         let _ = history_store::insert_change(
-            &state.db, id, "source_status",
-            stored.source_status.as_deref(), updated.source_status.as_deref(),
-        ).await;
+            &state.db,
+            id,
+            crate::models::history::HistoryField::SourceStatus,
+            stored.source_status.as_deref(),
+            updated.source_status.as_deref(),
+        )
+        .await;
     }
 
     // ── 7. Persist parsed fields ──────────────────────────────────────────────

@@ -86,7 +86,7 @@ pub async fn build_app() -> Router {
 		.route("/api/listings/:id", get(api::listings::get_listing))
 		.route("/api/listings/:id/delete", delete(api::listings::delete_listing))
 		.route("/api/listings/:id/refresh", put(api::refresh::refresh_listing))
-		.route("/api/listings/:id/preview", get(api::refresh::preview_refresh))
+		.route("/api/listings/:id/preview", get(api::preview::preview_refresh))
 		.route("/api/listings/:id/notes", patch(api::details::patch_notes))
 		.route("/api/listings/:id/search-profile", patch(api::details::patch_search_profile))
 		.route("/api/listings/:id/details", patch(api::details::patch_details))

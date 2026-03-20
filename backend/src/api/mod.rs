@@ -4,5 +4,6 @@ pub mod images;
 pub mod listings;
 pub mod open_houses;
 pub mod parse;
+pub mod preview;
 pub mod refresh;
 pub mod search_profiles;

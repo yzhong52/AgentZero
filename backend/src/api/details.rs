@@ -108,16 +108,24 @@ pub(crate) async fn patch_details(
     updated.title = body.title.clone().unwrap_or(updated.title.clone());
 
     if let Some(url) = &body.redfin_url {
-        updated.redfin_url = Some(validate_listing_url(url, parsers::ListingSite::Redfin)?);
+        let validated = validate_listing_url(url, parsers::ListingSite::Redfin)?;
+        tracing::info!("patch_details: id={} updating redfin_url to {}", id, validated);
+        updated.redfin_url = Some(validated);
     }
     if let Some(url) = &body.realtor_url {
-        updated.realtor_url = Some(validate_listing_url(url, parsers::ListingSite::Realtor)?);
+        let validated = validate_listing_url(url, parsers::ListingSite::Realtor)?;
+        tracing::info!("patch_details: id={} updating realtor_url to {}", id, validated);
+        updated.realtor_url = Some(validated);
     }
     if let Some(url) = &body.rew_url {
-        updated.rew_url = Some(validate_listing_url(url, parsers::ListingSite::Rew)?);
+        let validated = validate_listing_url(url, parsers::ListingSite::Rew)?;
+        tracing::info!("patch_details: id={} updating rew_url to {}", id, validated);
+        updated.rew_url = Some(validated);
     }
     if let Some(url) = &body.zillow_url {
-        updated.zillow_url = Some(validate_listing_url(url, parsers::ListingSite::Zillow)?);
+        let validated = validate_listing_url(url, parsers::ListingSite::Zillow)?;
+        tracing::info!("patch_details: id={} updating zillow_url to {}", id, validated);
+        updated.zillow_url = Some(validated);
     }
 
     updated.price = body.price.or(updated.price);
@@ -187,10 +195,18 @@ pub(crate) async fn patch_details(
     let mut updated = property_store::update_by_id(&state.db, id, &updated)
         .await
         .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("DB error: {}", e),
-            )
+            let msg = e.to_string();
+            if msg.contains("UNIQUE constraint failed: listings.redfin_url") {
+                (StatusCode::CONFLICT, "This Redfin URL is already linked to another listing".to_string())
+            } else if msg.contains("UNIQUE constraint failed: listings.realtor_url") {
+                (StatusCode::CONFLICT, "This Realtor URL is already linked to another listing".to_string())
+            } else if msg.contains("UNIQUE constraint failed: listings.rew_url") {
+                (StatusCode::CONFLICT, "This REW URL is already linked to another listing".to_string())
+            } else if msg.contains("UNIQUE constraint failed: listings.zillow_url") {
+                (StatusCode::CONFLICT, "This Zillow URL is already linked to another listing".to_string())
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {}", e))
+            }
         })?;
 
     // Recompute monthly_total/monthly_cost from the freshly saved values.

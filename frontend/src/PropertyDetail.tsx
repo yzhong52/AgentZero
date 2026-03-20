@@ -422,6 +422,7 @@ export function PropertyDetail() {
     }>({ redfin_url: null, realtor_url: null, rew_url: null, zillow_url: null })
     const [editingUrlKey, setEditingUrlKey] = useState<'redfin_url' | 'realtor_url' | 'rew_url' | 'zillow_url' | null>(null)
     const [urlsSaving, setUrlsSaving] = useState(false)
+    const [urlSaveError, setUrlSaveError] = useState<string | null>(null)
     const [urlsExpanded, setUrlsExpanded] = useState(false)
 
     // History expand
@@ -646,7 +647,7 @@ export function PropertyDetail() {
     async function saveUrls(): Promise<boolean> {
         if (!property) return false
         setUrlsSaving(true)
-        setError(null)
+        setUrlSaveError(null)
         try {
             const resp = await fetch(`/api/listings/${property.id}/details`, {
                 method: 'PATCH',
@@ -660,7 +661,7 @@ export function PropertyDetail() {
             setEditingUrlKey(null)
             return true
         } catch (err: any) {
-            setError(err?.message || String(err))
+            setUrlSaveError(err?.message || String(err))
             return false
         } finally {
             setUrlsSaving(false)
@@ -1644,6 +1645,9 @@ export function PropertyDetail() {
                                     )}
                                 </>
                             })()}
+                            {urlSaveError && (
+                                <div className="message error url-save-error">{urlSaveError}</div>
+                            )}
                             {hasUrlChanges && (
                                 <button className="save-btn save-urls-btn" onClick={saveUrls} disabled={urlsSaving}>
                                     {urlsSaving ? 'Saving…' : 'Save URLs'}

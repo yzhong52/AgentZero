@@ -231,9 +231,11 @@ pub enum ResolvedListing {
 
 /// Applies merge and off-market guard logic to a freshly parsed listing.
 pub(crate) fn resolve_parsed_listing(listing: parsers::ParsedListing, stored: &Property) -> ResolvedListing {
-    if listing.property.source_status.is_some() && listing.property.price.is_none() {
-        // source_status.is_some() is guaranteed by the guard above.
-        return ResolvedListing::StatusOnly { source_status: listing.property.source_status.unwrap() };
+    if let Some(source_status) = listing.property.source_status {
+        // The page has a source_status (e.g. Pending, OffMarket) — treat as data-stripped
+        // and preserve all stored fields rather than overwriting with potentially incomplete
+        // parsed data.
+        return ResolvedListing::StatusOnly { source_status };
     }
     let parsed_listed_date = listing.property.listed_date.clone();
     let property = merge_with_stored(listing.property, stored, stored.id);

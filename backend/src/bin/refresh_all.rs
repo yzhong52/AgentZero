@@ -53,7 +53,7 @@ struct OpenHouseEntry {
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum PreviewResult {
     /// Data-stripped page (off-market): only source_status would change.
-    StatusOnly { source_status: Option<String> },
+    StatusOnly { source_status: String },
     /// Full listing data available — diff against the stored record.
     Full { property: Listing },
 }
@@ -327,8 +327,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let has_changes = match resp.json::<PreviewResult>().await {
                     Ok(PreviewResult::StatusOnly { source_status }) => {
                         let from = listing.source_status.as_deref().unwrap_or("—");
-                        let to = source_status.as_deref().unwrap_or("—");
-                        let changed = listing.source_status.as_deref() != source_status.as_deref();
+                        let to = source_status.as_str();
+                        let changed = listing.source_status.as_deref() != Some(to);
                         if changed {
                             println!("  [status-only]  source_status  {}  →  {}", from, to);
                         } else {

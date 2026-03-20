@@ -215,7 +215,7 @@ pub enum ResolvedListing {
     /// The parsed page is data-stripped: source_status is set but price is absent.
     /// Only the source_status field should change; all other stored data is preserved.
     StatusOnly {
-        source_status: Option<String>,
+        source_status: String,
     },
     /// The parsed page has full listing data — use the merged property.
     Full {
@@ -232,7 +232,8 @@ pub enum ResolvedListing {
 /// Applies merge and off-market guard logic to a freshly parsed listing.
 pub(crate) fn resolve_parsed_listing(listing: parsers::ParsedListing, stored: &Property) -> ResolvedListing {
     if listing.property.source_status.is_some() && listing.property.price.is_none() {
-        return ResolvedListing::StatusOnly { source_status: listing.property.source_status };
+        // source_status.is_some() is guaranteed by the guard above.
+        return ResolvedListing::StatusOnly { source_status: listing.property.source_status.unwrap() };
     }
     let parsed_listed_date = listing.property.listed_date.clone();
     let property = merge_with_stored(listing.property, stored, stored.id);
@@ -311,9 +312,9 @@ pub(crate) async fn refresh_listing(
         ResolvedListing::StatusOnly { source_status: new_status } => {
             tracing::info!(
                 "refresh_listing: id={} data-stripped page (source_status={:?}), skipping full update",
-                id, new_status.as_deref()
+                id, new_status
             );
-            status_only_refresh(&state.db, id, &stored, new_status.as_deref()).await
+            status_only_refresh(&state.db, id, &stored, Some(new_status.as_str())).await
         }
 
         ResolvedListing::Full { property: updated, image_urls, open_houses, parsed_listed_date } => {

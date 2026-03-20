@@ -10,7 +10,7 @@ import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
 
 type PreviewResult =
-    | { kind: 'status_only'; source_status: string | null }
+    | { kind: 'status_only'; source_status: string }
     | { kind: 'full'; property: Property }
 
 type HistoryEntry = {

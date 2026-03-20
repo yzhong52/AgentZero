@@ -2,7 +2,7 @@ use crate::images;
 use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
-use crate::models::open_house::OpenHouse;
+use crate::models::open_house::{OpenHouse, OpenHouseEvent};
 use crate::models::property::Property;
 use crate::parsers;
 use crate::finance as property_finance;
@@ -201,6 +201,65 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
     }
 }
 
+/// The outcome of resolving a freshly parsed listing against the stored record.
+/// Both `refresh_listing` and `preview_refresh` use this to apply identical
+/// field-preservation rules before deciding what to write (or return).
+enum ResolvedListing {
+    /// The parsed page is data-stripped: source_status is set but price is absent.
+    /// Only the source_status field should change; all other stored data is preserved.
+    StatusOnly(Option<String>),
+    /// The parsed page has full listing data — use the merged property.
+    Full {
+        property: Property,
+        image_urls: Vec<String>,
+        open_houses: Vec<OpenHouseEvent>,
+        parsed_listed_date: Option<String>,
+    },
+}
+
+/// Applies merge and off-market guard logic to a freshly parsed listing.
+fn resolve_parsed_listing(listing: parsers::ParsedListing, stored: &Property) -> ResolvedListing {
+    if listing.property.source_status.is_some() && listing.property.price.is_none() {
+        return ResolvedListing::StatusOnly(listing.property.source_status);
+    }
+    let parsed_listed_date = listing.property.listed_date.clone();
+    let property = merge_with_stored(listing.property, stored, stored.id);
+    ResolvedListing::Full {
+        property,
+        image_urls: listing.image_urls,
+        open_houses: listing.open_houses,
+        parsed_listed_date,
+    }
+}
+
+/// Writes only the `source_status` field to the DB and returns the updated
+/// property. Used when the parsed page is data-stripped (off-market) so that
+/// all other stored data is preserved.
+async fn status_only_refresh(
+    db: &sqlx::SqlitePool,
+    id: i64,
+    stored: &Property,
+    new_status: Option<&str>,
+) -> Result<Json<Property>, (StatusCode, String)> {
+    if stored.source_status.as_deref() != new_status {
+        let _ = history_store::insert_change(
+            db, id,
+            crate::models::history::HistoryField::SourceStatus,
+            stored.source_status.as_deref(), new_status,
+        ).await;
+    }
+    let saved = property_store::update_source_status(db, id, new_status)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+    let images = image_store::list_images_with_meta(db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+    let open_houses = open_house_store::list_open_houses(db, id)
+        .await
+        .unwrap_or_default();
+    Ok(Json(Property { images, open_houses, ..saved }))
+}
+
 /// PUT /api/listings/:id/refresh
 ///
 /// Re-fetches the stored source URLs, re-parses, and saves the updated data.
@@ -232,136 +291,92 @@ pub(crate) async fn refresh_listing(
     let Some(listing) = parsers::parse_multi(&sources) else {
         // No recognised listing format — the property is likely off-market or removed.
         tracing::info!("refresh_listing: id={} no listing found — marking OffMarket", id);
-
-        // Record source_status change in history.
-        if stored.source_status.as_deref() != Some("OffMarket") {
-            let _ = history_store::insert_change(
-                &state.db,
-                id,
-                crate::models::history::HistoryField::SourceStatus,
-                stored.source_status.as_deref(),
-                Some("OffMarket"),
-            )
-            .await;
-        }
-
-        let saved = property_store::update_source_status(&state.db, id, Some("OffMarket"))
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
-
-        let images = image_store::list_images_with_meta(&state.db, saved.id)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
-        let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
-            .await
-            .unwrap_or_default();
-        return Ok(Json(Property { images, open_houses, ..saved }));
+        return status_only_refresh(&state.db, id, &stored, Some("OffMarket")).await;
     };
 
-    let image_urls = listing.image_urls;
-    let open_houses = listing.open_houses;
-    // Capture the fresh listed_date before merging drops it (stored value is preserved).
-    let parsed_listed_date = listing.property.listed_date.clone();
-    tracing::info!(
-        "refresh_listing: parse result property_tax={:?}, price={:?}",
-        listing.property.property_tax,
-        listing.property.price
-    );
+    // ── 4. Resolve parsed result ───────────────────────────────────────────────
+    match resolve_parsed_listing(listing, &stored) {
+        ResolvedListing::StatusOnly(new_status) => {
+            tracing::info!(
+                "refresh_listing: id={} data-stripped page (source_status={:?}), skipping full update",
+                id, new_status.as_deref()
+            );
+            status_only_refresh(&state.db, id, &stored, new_status.as_deref()).await
+        }
 
-    // ── 4. Merge parsed result with stored record ──────────────────────────────
-    // merge_with_stored carries forward user-owned fields and computes mortgage
-    // values inline — no further mutation needed.
-    let updated = merge_with_stored(listing.property, &stored, id);
+        ResolvedListing::Full { property: updated, image_urls, open_houses, parsed_listed_date } => {
+            tracing::info!(
+                "refresh_listing: parse result property_tax={:?}, price={:?}",
+                updated.property_tax,
+                updated.price
+            );
 
-    // ── 6. Record history for changed fields ──────────────────────────────────
-    if stored.price != updated.price {
-        let old = stored.price.map(|v| v.to_string());
-        let new = updated.price.map(|v| v.to_string());
-        let _ = history_store::insert_change(
-            &state.db,
-            id,
-            crate::models::history::HistoryField::Price,
-            old.as_deref(),
-            new.as_deref(),
-        )
-        .await;
-    }
-    if stored.mls_number != updated.mls_number {
-        let _ = history_store::insert_change(
-            &state.db,
-            id,
-            crate::models::history::HistoryField::MlsNumber,
-            stored.mls_number.as_deref(),
-            updated.mls_number.as_deref(),
-        )
-        .await;
-        // Record the relisted date alongside the MLS change so the relist is fully traceable.
-        // Only insert if the date actually changed — avoids spurious None→None entries.
-        if stored.listed_date.as_deref() != parsed_listed_date.as_deref() {
-            let _ = history_store::insert_change(
-                &state.db,
-                id,
-                crate::models::history::HistoryField::ListedDate,
-                stored.listed_date.as_deref(),
-                parsed_listed_date.as_deref(),
-            )
-            .await;
+            // ── 5. Record history for changed fields ──────────────────────────
+            if stored.price != updated.price {
+                let old = stored.price.map(|v| v.to_string());
+                let new = updated.price.map(|v| v.to_string());
+                let _ = history_store::insert_change(
+                    &state.db, id,
+                    crate::models::history::HistoryField::Price,
+                    old.as_deref(), new.as_deref(),
+                ).await;
+            }
+            if stored.mls_number != updated.mls_number {
+                let _ = history_store::insert_change(
+                    &state.db, id,
+                    crate::models::history::HistoryField::MlsNumber,
+                    stored.mls_number.as_deref(), updated.mls_number.as_deref(),
+                ).await;
+                if stored.listed_date.as_deref() != parsed_listed_date.as_deref() {
+                    let _ = history_store::insert_change(
+                        &state.db, id,
+                        crate::models::history::HistoryField::ListedDate,
+                        stored.listed_date.as_deref(), parsed_listed_date.as_deref(),
+                    ).await;
+                }
+            }
+            if stored.source_status != updated.source_status {
+                let _ = history_store::insert_change(
+                    &state.db, id,
+                    crate::models::history::HistoryField::SourceStatus,
+                    stored.source_status.as_deref(), updated.source_status.as_deref(),
+                ).await;
+            }
+
+            // ── 6. Persist ────────────────────────────────────────────────────
+            let saved = property_store::update_by_id(&state.db, id, &updated)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+            tracing::info!(
+                "refresh_listing: saved listing id={} property_tax={:?} price={:?}",
+                saved.id, saved.property_tax, saved.price
+            );
+
+            // ── 7. Upsert open house events ───────────────────────────────────
+            if !open_houses.is_empty() {
+                if let Err(e) = open_house_store::upsert_open_houses(&state.db, id, &open_houses).await {
+                    tracing::warn!("refresh_listing: failed to save open houses for id={}: {}", id, e);
+                }
+            }
+
+            // ── 8. Refresh image cache ────────────────────────────────────────
+            tracing::info!("refresh_listing: id={} registering {} image URL(s)", id, image_urls.len());
+            for (position, url) in image_urls.iter().enumerate() {
+                let _ = image_store::insert_image_url(&state.db, id, url, position as i64).await;
+            }
+            let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
+            tracing::info!("refresh_listing: id={} cached {} new image(s)", id, cached);
+
+            // ── 9. Return with image metadata ─────────────────────────────────
+            let images = image_store::list_images_with_meta(&state.db, saved.id)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+            let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
+                .await
+                .unwrap_or_default();
+            Ok(Json(Property { images, open_houses, ..saved }))
         }
     }
-    if stored.source_status != updated.source_status {
-        let _ = history_store::insert_change(
-            &state.db,
-            id,
-            crate::models::history::HistoryField::SourceStatus,
-            stored.source_status.as_deref(),
-            updated.source_status.as_deref(),
-        )
-        .await;
-    }
-
-    // ── 7. Persist parsed fields ──────────────────────────────────────────────
-    // `update_by_id` intentionally omits user-only columns (notes, status,
-    // has_rental_suite, rental_income, skytrain_*) so those remain intact in the DB.
-    let saved = property_store::update_by_id(&state.db, id, &updated)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
-
-    tracing::info!(
-        "refresh_listing: saved listing id={} property_tax={:?} price={:?}",
-        saved.id,
-        saved.property_tax,
-        saved.price
-    );
-
-    // ── 8. Upsert open house events ───────────────────────────────────────────
-    if !open_houses.is_empty() {
-        if let Err(e) = open_house_store::upsert_open_houses(&state.db, id, &open_houses).await {
-            tracing::warn!("refresh_listing: failed to save open houses for id={}: {}", id, e);
-        }
-    }
-
-    // ── 9. Refresh image cache ────────────────────────────────────────────────
-    // Upsert the freshly parsed image URLs, then download any that are not yet cached.
-    tracing::info!(
-        "refresh_listing: id={} registering {} image URL(s)",
-        id,
-        image_urls.len()
-    );
-    for (position, url) in image_urls.iter().enumerate() {
-        let _ = image_store::insert_image_url(&state.db, id, url, position as i64).await;
-    }
-    let cached = images::cache_images(&state.db, &state.client, state.store.as_ref(), id).await;
-    tracing::info!("refresh_listing: id={} cached {} new image(s)", id, cached);
-
-    // ── 10. Return the refreshed record with image metadata ───────────────────
-    let images = image_store::list_images_with_meta(&state.db, saved.id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
-    let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
-        .await
-        .unwrap_or_default();
-
-    Ok(Json(Property { images, open_houses, ..saved }))
 }
 
 /// GET /api/listings/:id/preview
@@ -382,31 +397,47 @@ pub(crate) async fn preview_refresh(
     let stored_urls = stored_source_urls(&stored);
     let sources = fetch_sources(&state, &stored_urls, "preview_refresh", false).await?;
 
-    // ── 3. Parse ───────────────────────────────────────────────────────────────
+    // ── 3. Parse and resolve ───────────────────────────────────────────────────
     let listing = parsers::parse_multi(&sources).ok_or((
         StatusCode::UNPROCESSABLE_ENTITY,
         "No recognized listing format found in page".to_string(),
     ))?;
-    // ── 4. Merge using the same rules as refresh ──────────────────────────────
-    let preview = merge_with_stored(listing.property, &stored, stored.id);
 
-    // Populate open_houses with the freshly parsed events so the diff can
-    // compare them against the stored ones. Use negative fake IDs (never in DB).
-    let parsed_open_houses: Vec<OpenHouse> = listing
-        .open_houses
-        .into_iter()
-        .enumerate()
-        .map(|(i, oh)| OpenHouse {
-            id: -(i as i64 + 1),
-            listing_id: stored.id,
-            start_time: oh.start_time,
-            end_time: oh.end_time,
-            visited: false,
-            created_at: String::new(),
-        })
-        .collect();
+    match resolve_parsed_listing(listing, &stored) {
+        // ── 3a. Off-market / data-stripped page ───────────────────────────────
+        // Mirror the same guard used in refresh_listing: only show a source_status
+        // change in the diff so the user isn't presented with spurious field resets.
+        ResolvedListing::StatusOnly(new_status) => {
+            let open_houses = open_house_store::list_open_houses(&state.db, stored.id)
+                .await
+                .unwrap_or_default();
+            Ok(Json(Property {
+                source_status: new_status,
+                open_houses,
+                ..stored
+            }))
+        }
 
-    Ok(Json(Property { open_houses: parsed_open_houses, ..preview }))
+        // ── 4. Full listing — merge using the same rules as refresh ───────────
+        ResolvedListing::Full { property: preview, open_houses: parsed_oh, .. } => {
+            // Populate open_houses with the freshly parsed events so the diff can
+            // compare them against the stored ones. Use negative fake IDs (never in DB).
+            let parsed_open_houses: Vec<OpenHouse> = parsed_oh
+                .into_iter()
+                .enumerate()
+                .map(|(i, oh)| OpenHouse {
+                    id: -(i as i64 + 1),
+                    listing_id: stored.id,
+                    start_time: oh.start_time,
+                    end_time: oh.end_time,
+                    visited: false,
+                    created_at: String::new(),
+                })
+                .collect();
+
+            Ok(Json(Property { open_houses: parsed_open_houses, ..preview }))
+        }
+    }
 }
 
 #[cfg(test)]

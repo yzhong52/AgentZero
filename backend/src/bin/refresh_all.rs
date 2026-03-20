@@ -59,8 +59,40 @@ struct Listing {
     hoa_monthly: Option<i64>,
     listed_date: Option<String>,
     mls_number: Option<String>,
+    redfin_url: Option<String>,
+    realtor_url: Option<String>,
+    rew_url: Option<String>,
+    zillow_url: Option<String>,
     #[serde(default)]
     open_houses: Vec<OpenHouse>,
+}
+
+// ── ANSI ────────────────────────────────────────────────────────────────────
+
+const BOLD:   &str = "\x1b[1m";
+const DIM:    &str = "\x1b[2m";
+const RESET:  &str = "\x1b[0m";
+const GREEN:  &str = "\x1b[32m";
+const YELLOW: &str = "\x1b[33m";
+const RED:    &str = "\x1b[31m";
+const CYAN:   &str = "\x1b[36m";
+
+fn fmt_review_status(s: &str) -> String {
+    match s {
+        "Buyable"    => format!("{GREEN}{BOLD}{s}{RESET}"),
+        "Interested" => format!("{CYAN}{s}{RESET}"),
+        "Pending"    => format!("{YELLOW}{s}{RESET}"),
+        "Pass"       => format!("{DIM}{s}{RESET}"),
+        _            => s.to_string(),
+    }
+}
+
+fn fmt_source_status(s: Option<&str>) -> String {
+    match s {
+        None => format!("{GREEN}Active{RESET}"),
+        Some(v) if v.eq_ignore_ascii_case("pending") => format!("{YELLOW}{v}{RESET}"),
+        Some(v) => format!("{RED}{v}{RESET}"),
+    }
 }
 
 struct Change {
@@ -263,19 +295,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stdin_lock = stdin.lock();
 
     for (index, listing) in listings.iter().enumerate() {
-        let source_status_label = listing.source_status.as_deref()
-            .map(|s| format!(" [{}]", s))
-            .unwrap_or_default();
         println!(
-            "\n  [{}/{}] #{} — {} (status: {}{})",
-            index + 1,
-            total,
-            listing.id,
-            listing.title,
-            listing.status,
-            source_status_label,
+            "\n  [{}/{}] #{} 🏠 {BOLD}{}{RESET}",
+            index + 1, total, listing.id, listing.title,
         );
-        println!("  frontend: {}/property/{}", frontend_base_url, listing.id);
+        println!("     📋 Review:   {}", fmt_review_status(&listing.status));
+        println!("     🏷  Property: {}", fmt_source_status(listing.source_status.as_deref()));
+        for url in [&listing.redfin_url, &listing.realtor_url, &listing.rew_url, &listing.zillow_url]
+            .into_iter().flatten()
+        {
+            println!("     🔗 {DIM}{url}{RESET}");
+        }
+        println!("     🌐 {DIM}{frontend_base_url}/property/{}{RESET}", listing.id);
 
         // Fetch preview to compute diff
         print!("  previewing...");
@@ -337,6 +368,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             hoa_monthly: property.hoa_monthly,
                             listed_date: property.listed_date,
                             mls_number: property.mls_number,
+                            redfin_url: property.redfin_url,
+                            realtor_url: property.realtor_url,
+                            rew_url: property.rew_url,
+                            zillow_url: property.zillow_url,
                             open_houses: property.open_houses,
                         };
                         let changes = compute_diff(listing, &preview);
@@ -427,6 +462,10 @@ mod tests {
                 hoa_monthly: Some(200),
                 listed_date: Some("2026-01-01".to_string()),
                 mls_number: Some("R1111111".to_string()),
+                redfin_url: Some("https://redfin.ca/1".to_string()),      // skipped: display-only
+                realtor_url: None,                                        // skipped: display-only
+                rew_url: None,                                            // skipped: display-only
+                zillow_url: None,                                         // skipped: display-only
                 open_houses: vec![],
             }
         } else {
@@ -444,6 +483,10 @@ mod tests {
                 hoa_monthly: Some(300),
                 listed_date: Some("2026-06-01".to_string()),
                 mls_number: Some("R2222222".to_string()),
+                redfin_url: Some("https://redfin.ca/2".to_string()),      // skipped: display-only
+                realtor_url: None,                                        // skipped: display-only
+                rew_url: None,                                            // skipped: display-only
+                zillow_url: None,                                         // skipped: display-only
                 open_houses: vec![OpenHouse {
                     id: -1,
                     listing_id: 1,
@@ -461,8 +504,12 @@ mod tests {
     ///   - add it to `compute_diff`, OR
     ///   - add it here with a reason.
     const SKIPPED_FIELDS: &[&str] = &[
-        "id",     // identity — not a content change
-        "status", // user-owned — not sourced from the listing page
+        "id",          // identity — not a content change
+        "status",      // user-owned — not sourced from the listing page
+        "redfin_url",  // display-only — user-managed, not refreshed from page
+        "realtor_url", // display-only — user-managed, not refreshed from page
+        "rew_url",     // display-only — user-managed, not refreshed from page
+        "zillow_url",  // display-only — user-managed, not refreshed from page
     ];
 
     /// Verify that every non-skipped field in `Listing` produces a diff entry
@@ -477,11 +524,11 @@ mod tests {
         // Count must equal: total Listing fields − skipped fields.
         // Update this number whenever a field is added or removed from Listing.
         //
-        // Current Listing fields (14):
+        // Current Listing fields (18):
         //   id, title, status, source_status, price, price_currency,
         //   street_address, bedrooms, bathrooms, property_tax, hoa_monthly,
-        //   listed_date, mls_number, open_houses
-        const TOTAL_LISTING_FIELDS: usize = 14;
+        //   listed_date, mls_number, redfin_url, realtor_url, rew_url, zillow_url, open_houses
+        const TOTAL_LISTING_FIELDS: usize = 18;
         let expected = TOTAL_LISTING_FIELDS - SKIPPED_FIELDS.len();
 
         assert_eq!(

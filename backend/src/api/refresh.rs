@@ -208,7 +208,7 @@ fn merge_with_stored(parsed: Property, stored: &Property, id: i64) -> Property {
 ///
 /// Serializes as a tagged JSON object (`"kind": "status_only"` / `"kind": "full"`).
 /// Internal-only fields (`image_urls`, `open_houses`, `parsed_listed_date`) are
-/// skipped during serialization and default to empty/None on deserialization.
+/// skipped during serialization — they carry data for `refresh_listing` only.
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ResolvedListing {

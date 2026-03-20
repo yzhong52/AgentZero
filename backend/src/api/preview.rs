@@ -50,7 +50,7 @@ pub(crate) async fn preview_refresh(
         status_only @ ResolvedListing::StatusOnly { .. } => Ok(Json(status_only)),
 
         // ── 4. Full listing — populate open_houses then return ────────────────
-        ResolvedListing::Full { property: preview, open_houses: parsed_oh, image_urls, parsed_listed_date } => {
+        ResolvedListing::Full { property: preview, open_houses: parsed_oh, .. } => {
             // Attach the freshly parsed open house events so the diff can compare
             // them against the stored ones. Use negative fake IDs (never in DB).
             let parsed_open_houses: Vec<OpenHouse> = parsed_oh
@@ -69,9 +69,9 @@ pub(crate) async fn preview_refresh(
             let property = Property { open_houses: parsed_open_houses, ..preview };
             Ok(Json(ResolvedListing::Full {
                 property,
-                image_urls,
-                open_houses: vec![],        // internal field, skipped in serialization
-                parsed_listed_date,         // internal field, skipped in serialization
+                image_urls: vec![],
+                open_houses: vec![],
+                parsed_listed_date: None,
             }))
         }
     }

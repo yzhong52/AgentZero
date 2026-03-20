@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use ts_rs::TS;
 
 /// A single image entry associated with a property listing.
 /// Can be a local cached file or a remote URL.
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub struct ImageEntry {
     pub id: i64,

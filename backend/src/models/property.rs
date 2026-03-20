@@ -79,7 +79,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
 ///   parsed; display only — filled by the parser; no UI edit control
 ///   derived; read-only  — recomputed server-side on every save
 ///   system              — managed entirely by the server / DB
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub struct Property {
     // ── System ──────────────────────────────────────────────────────────────

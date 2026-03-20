@@ -13,7 +13,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Returns `true` when the stored title has been set by the user and should be
 /// preserved during a refresh. An empty string means the user never set one (or
@@ -210,7 +210,7 @@ fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i6
 
 /// The outcome of resolving a freshly parsed listing against the stored record.
 /// Serializes as a tagged JSON object (`"kind": "status_only"` / `"kind": "full"`).
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ResolvedListing {
     /// The parsed page has a source_status (e.g. Pending, OffMarket) — treat as

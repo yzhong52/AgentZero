@@ -12,6 +12,8 @@
 //!
 //! Reads BACKEND_PORT from the environment (default: 8000).
 
+use agent_zero_backend::api::refresh::ResolvedListing;
+use agent_zero_backend::models::open_house::OpenHouse;
 use clap::Parser;
 use serde::Deserialize;
 use std::env;
@@ -43,22 +45,6 @@ struct Cli {
 }
 
 #[derive(Deserialize, Clone)]
-struct OpenHouseEntry {
-    start_time: String,
-    end_time: Option<String>,
-}
-
-/// Mirrors the wire format of `ResolvedListing` returned by GET /api/listings/:id/preview.
-#[derive(Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-enum PreviewResult {
-    /// Data-stripped page (off-market): only source_status would change.
-    StatusOnly { source_status: String },
-    /// Full listing data available — diff against the stored record.
-    Full { property: Listing },
-}
-
-#[derive(Deserialize, Clone)]
 struct Listing {
     id: i64,
     title: String,
@@ -74,7 +60,7 @@ struct Listing {
     listed_date: Option<String>,
     mls_number: Option<String>,
     #[serde(default)]
-    open_houses: Vec<OpenHouseEntry>,
+    open_houses: Vec<OpenHouse>,
 }
 
 struct Change {
@@ -96,7 +82,7 @@ fn fmt_dollars(cents: &i64) -> String {
     format!("${}", out.chars().rev().collect::<String>())
 }
 
-fn fmt_open_houses(open_houses: &[OpenHouseEntry]) -> String {
+fn fmt_open_houses(open_houses: &[OpenHouse]) -> String {
     if open_houses.is_empty() {
         return "—".to_string();
     }
@@ -324,8 +310,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             Ok(resp) => {
                 println!();
-                let has_changes = match resp.json::<PreviewResult>().await {
-                    Ok(PreviewResult::StatusOnly { source_status }) => {
+                let has_changes = match resp.json::<ResolvedListing>().await {
+                    Ok(ResolvedListing::StatusOnly { source_status }) => {
                         let from = listing.source_status.as_deref().unwrap_or("—");
                         let to = source_status.as_str();
                         let changed = listing.source_status.as_deref() != Some(to);
@@ -336,7 +322,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         changed
                     }
-                    Ok(PreviewResult::Full { property: preview }) => {
+                    Ok(ResolvedListing::Full { property }) => {
+                        let preview = Listing {
+                            id: property.id,
+                            title: property.title,
+                            status: property.status.to_string(),
+                            source_status: property.source_status,
+                            price: property.price,
+                            price_currency: property.price_currency,
+                            street_address: property.street_address,
+                            bedrooms: property.bedrooms,
+                            bathrooms: property.bathrooms,
+                            property_tax: property.property_tax,
+                            hoa_monthly: property.hoa_monthly,
+                            listed_date: property.listed_date,
+                            mls_number: property.mls_number,
+                            open_houses: property.open_houses,
+                        };
                         let changes = compute_diff(listing, &preview);
                         print_diff(&changes);
                         !changes.is_empty()
@@ -442,9 +444,13 @@ mod tests {
                 hoa_monthly: Some(300),
                 listed_date: Some("2026-06-01".to_string()),
                 mls_number: Some("R2222222".to_string()),
-                open_houses: vec![OpenHouseEntry {
+                open_houses: vec![OpenHouse {
+                    id: -1,
+                    listing_id: 1,
                     start_time: "2026-06-15T14:00:00".to_string(),
                     end_time: Some("2026-06-15T16:00:00".to_string()),
+                    visited: false,
+                    created_at: String::new(),
                 }],
             }
         }

@@ -31,6 +31,19 @@ function historyFieldLabel(name: string): string {
     return HISTORY_FIELD_LABELS[name] ?? name
 }
 
+function formatHistoryValue(field: string, value: string | null): string {
+    if (value === null) return '—'
+    if (field === 'price') {
+        // Some history values may already be formatted, some may be raw numbers.
+        const rawDigits = value.replace(/[^0-9\-]/g, '')
+        const parsed = Number(rawDigits)
+        if (!Number.isNaN(parsed)) {
+            return formatPriceFull(parsed, 'CAD') ?? value
+        }
+    }
+    return value
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function boolLabel(v: boolean | null): string {
@@ -1707,7 +1720,7 @@ export function PropertyDetail() {
                                         <li key={entry.id} className="history-entry">
                                             <span className="history-field">{historyFieldLabel(entry.field_name)}</span>
                                             <span className="history-change">
-                                                {entry.old_value ?? '—'} → {entry.new_value ?? '—'}
+                                                {formatHistoryValue(entry.field_name, entry.old_value)} → {formatHistoryValue(entry.field_name, entry.new_value)}
                                             </span>
                                             <span className="history-date">
                                                 {new Date(entry.changed_at).toLocaleDateString('en-CA', {

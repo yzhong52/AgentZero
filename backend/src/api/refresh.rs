@@ -296,14 +296,17 @@ pub(crate) async fn refresh_listing(
         )
         .await;
         // Record the relisted date alongside the MLS change so the relist is fully traceable.
-        let _ = history_store::insert_change(
-            &state.db,
-            id,
-            crate::models::history::HistoryField::ListedDate,
-            stored.listed_date.as_deref(),
-            parsed_listed_date.as_deref(),
-        )
-        .await;
+        // Only insert if the date actually changed — avoids spurious None→None entries.
+        if stored.listed_date.as_deref() != parsed_listed_date.as_deref() {
+            let _ = history_store::insert_change(
+                &state.db,
+                id,
+                crate::models::history::HistoryField::ListedDate,
+                stored.listed_date.as_deref(),
+                parsed_listed_date.as_deref(),
+            )
+            .await;
+        }
     }
     if stored.source_status != updated.source_status {
         let _ = history_store::insert_change(

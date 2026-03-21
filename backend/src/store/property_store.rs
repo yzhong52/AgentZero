@@ -284,6 +284,9 @@ pub async fn list(
         prop.images = image_store::list_images_with_meta(pool, prop.id)
             .await
             .unwrap_or_default();
+        prop.open_houses = open_house_store::list_open_houses(pool, prop.id)
+            .await
+            .unwrap_or_default();
     }
     Ok(properties)
 }
@@ -885,6 +888,59 @@ mod tests {
         assert_eq!(updated.property_type.as_deref(), Some("Townhouse"));
         assert_eq!(updated.laundry_in_unit, Some(true));
         assert_eq!(updated.mls_number.as_deref(), Some("R3086230"));
+
+        let _ = std::fs::remove_file(db_path);
+    }
+
+    /// Regression: `list()` must populate `open_houses`, not just `images`.
+    /// Previously only `get_by_id` joined the open_houses table, so the bulk
+    /// listing fetch always returned an empty vec, causing false diffs in the
+    /// CLI's refresh preview.
+    #[tokio::test]
+    async fn test_list_includes_open_houses() {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let db_path = std::env::temp_dir().join(format!("agentzero_test_oh_{}.db", now));
+        let database_url = format!("sqlite://{}", db_path.display());
+        let pool = init(&database_url).await;
+
+        // Insert a minimal listing.
+        let id: i64 = sqlx::query_scalar(
+            "INSERT INTO listings (title, description, status, search_profile_id, created_at)
+             VALUES ('OH Test', '', 'Interested', 1, datetime('now')) RETURNING id",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("insert listing");
+
+        // Insert two open house rows directly.
+        sqlx::query(
+            "INSERT INTO open_houses (listing_id, start_time, end_time)
+             VALUES (?, '2026-06-01T14:00:00', '2026-06-01T16:00:00'),
+                    (?, '2026-06-08T14:00:00', '2026-06-08T16:00:00')",
+        )
+        .bind(id)
+        .bind(id)
+        .execute(&pool)
+        .await
+        .expect("insert open houses");
+
+        // list() must surface those open houses.
+        let listings = list(&pool, &[], None).await.expect("list failed");
+        assert_eq!(listings.len(), 1);
+        assert_eq!(
+            listings[0].open_houses.len(), 2,
+            "list() must populate open_houses; got {} instead of 2",
+            listings[0].open_houses.len(),
+        );
+
+        let start_times: Vec<&str> = listings[0].open_houses.iter()
+            .map(|oh| oh.start_time.as_str())
+            .collect();
+        assert!(start_times.contains(&"2026-06-01T14:00:00"));
+        assert!(start_times.contains(&"2026-06-08T14:00:00"));
 
         let _ = std::fs::remove_file(db_path);
     }

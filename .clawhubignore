@@ -1,5 +1,9 @@
 target/
 frontend/node_modules/
 frontend/dist/
-*.db
+backend/listings_images/
+backend/html_snapshots/
+backend/src/parsers/fixtures/
+backend/*.db
+backend/*.log
 .git/

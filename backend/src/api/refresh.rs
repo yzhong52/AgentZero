@@ -3,7 +3,7 @@ use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
 use crate::models::open_house::OpenHouseEvent;
-use crate::models::property::Property;
+use crate::models::property::{Property, StoredProperty};
 use crate::parsers;
 use crate::finance as property_finance;
 use crate::store::{history_store, image_store, open_house_store, property_store};
@@ -98,7 +98,7 @@ pub(crate) async fn fetch_sources(
 ///
 /// `id` is passed separately because callers know the DB row id while the
 /// parsed struct always carries `0`.
-fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i64) -> Property {
+fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProperty, id: i64) -> StoredProperty {
     // Pre-compute fields that are both stored in the struct and fed into the
     // mortgage calculation, so each value is stated exactly once.
     let hoa_monthly = parsed_listing.hoa_monthly.or(stored_listing.hoa_monthly);
@@ -115,7 +115,7 @@ fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i6
         hoa_monthly,
     );
 
-    Property {
+    StoredProperty {
         // ── Identity ──────────────────────────────────────────────────────────
         // These fields have no representation in the parsed HTML.
         // search_profile_id must come from stored; writing the struct default (0)
@@ -201,10 +201,6 @@ fn merge_with_stored(parsed_listing: Property, stored_listing: &Property, id: i6
         created_at: stored_listing.created_at.clone(),
         updated_at: stored_listing.updated_at.clone(),
 
-        // ── Joined data (not stored in listings row) ──────────────────────────
-        // Callers repopulate these from their own tables after saving.
-        images: vec![],
-        open_houses: vec![],
     }
 }
 
@@ -250,7 +246,9 @@ pub(crate) fn resolve_parsed_listing(
         open_houses: listing.open_houses,
         parsed_listed_date: listing.property.listed_date.clone(),
     };
-    let property = merge_with_stored(listing.property, stored, stored.id);
+    let stored_base = StoredProperty::from(stored.clone());
+    let merged = merge_with_stored(listing.property, &stored_base, stored.id);
+    let property = Property::from_stored(merged, vec![], vec![]);
     (ResolvedListing::Full { property }, Some(extras))
 }
 
@@ -279,7 +277,7 @@ async fn status_only_refresh(
     let open_houses = open_house_store::list_open_houses(db, id)
         .await
         .unwrap_or_default();
-    Ok(Json(Property { images, open_houses, ..saved }))
+    Ok(Json(Property::from_stored(saved, images, open_houses)))
 }
 
 /// PUT /api/listings/:id/refresh
@@ -368,7 +366,8 @@ pub(crate) async fn refresh_listing(
             }
 
             // ── 6. Persist ────────────────────────────────────────────────────
-            let saved = property_store::update_by_id(&state.db, id, &updated)
+            let updated_stored = StoredProperty::from(updated);
+            let saved = property_store::update_by_id(&state.db, id, &updated_stored)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
             tracing::info!(
@@ -398,7 +397,7 @@ pub(crate) async fn refresh_listing(
             let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
                 .await
                 .unwrap_or_default();
-            Ok(Json(Property { images, open_houses, ..saved }))
+            Ok(Json(Property::from_stored(saved, images, open_houses)))
         }
     }
 }
@@ -408,10 +407,10 @@ mod tests {
     use super::*;
     use crate::models::property::ListingStatus;
 
-    /// Minimal valid `Property` with every field at its zero/None value.
+    /// Minimal valid `StoredProperty` with every field at its zero/None value.
     /// Tests should override only the fields they care about.
-    fn base_property() -> Property {
-        Property {
+    fn base_stored() -> StoredProperty {
+        StoredProperty {
             id: 0,
             search_profile_id: 1,
             title: String::new(),
@@ -466,11 +465,13 @@ mod tests {
             source_status: None,
             status: ListingStatus::Interested,
             notes: None,
-            images: vec![],
-            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
         }
+    }
+
+    fn base_property() -> Property {
+        Property::from_stored(base_stored(), vec![], vec![])
     }
 
     // ── is_title_exist ────────────────────────────────────────────────────────
@@ -527,18 +528,18 @@ mod tests {
 
     #[test]
     fn test_merge_identity_fields_from_stored() {
-        let parsed = Property {
+        let parsed = StoredProperty {
             redfin_url: Some("https://wrong.com".to_string()),
             search_profile_id: 0,
-            ..base_property()
+            ..base_stored()
         };
-        let stored = Property {
+        let stored = StoredProperty {
             redfin_url: Some("https://redfin.ca/correct".to_string()),
             realtor_url: Some("https://realtor.ca/correct".to_string()),
             rew_url: None,
             zillow_url: Some("https://zillow.com/correct".to_string()),
             search_profile_id: 3,
-            ..base_property()
+            ..base_stored()
         };
 
         let result = merge_with_stored(parsed, &stored, 42);
@@ -554,8 +555,8 @@ mod tests {
     /// which has no matching row in search_profiles → FK constraint failure.
     #[test]
     fn test_merge_preserves_search_profile_id() {
-        let parsed = Property { search_profile_id: 0, ..base_property() };
-        let stored = Property { search_profile_id: 5, ..base_property() };
+        let parsed = StoredProperty { search_profile_id: 0, ..base_stored() };
+        let stored = StoredProperty { search_profile_id: 5, ..base_stored() };
 
         let result = merge_with_stored(parsed, &stored, 1);
 
@@ -564,7 +565,7 @@ mod tests {
 
     #[test]
     fn test_merge_user_owned_fields_from_stored() {
-        let parsed = Property {
+        let parsed = StoredProperty {
             status: ListingStatus::Interested,
             skytrain_station: None,
             skytrain_walk_min: None,
@@ -572,9 +573,9 @@ mod tests {
             rental_income: None,
             offer_price: None,
             notes: None,
-            ..base_property()
+            ..base_stored()
         };
-        let stored = Property {
+        let stored = StoredProperty {
             status: ListingStatus::Buyable,
             skytrain_station: Some("Main St".to_string()),
             skytrain_walk_min: Some(5),
@@ -582,7 +583,7 @@ mod tests {
             rental_income: Some(1500),
             offer_price: Some(800_000),
             notes: Some("Great location".to_string()),
-            ..base_property()
+            ..base_stored()
         };
 
         let result = merge_with_stored(parsed, &stored, 1);
@@ -598,15 +599,15 @@ mod tests {
 
     #[test]
     fn test_merge_parser_fields_win() {
-        let parsed = Property {
+        let parsed = StoredProperty {
             price: Some(1_200_000),
             bedrooms: Some(4),
             bathrooms: Some(3),
             property_tax: Some(7_000),
-            ..base_property()
+            ..base_stored()
         };
 
-        let result = merge_with_stored(parsed, &base_property(), 1);
+        let result = merge_with_stored(parsed, &base_stored(), 1);
 
         assert_eq!(result.price, Some(1_200_000));
         assert_eq!(result.bedrooms, Some(4));
@@ -616,15 +617,15 @@ mod tests {
 
     #[test]
     fn test_merge_school_parser_wins_over_stored() {
-        let parsed = Property {
+        let parsed = StoredProperty {
             school_elementary: Some("Parser Elementary".to_string()),
             school_elementary_rating: Some(9.0),
-            ..base_property()
+            ..base_stored()
         };
-        let stored = Property {
+        let stored = StoredProperty {
             school_elementary: Some("Stored Elementary".to_string()),
             school_elementary_rating: Some(7.0),
-            ..base_property()
+            ..base_stored()
         };
 
         let result = merge_with_stored(parsed, &stored, 1);
@@ -635,17 +636,17 @@ mod tests {
 
     #[test]
     fn test_merge_school_stored_fallback_when_parser_empty() {
-        let stored = Property {
+        let stored = StoredProperty {
             school_elementary: Some("Stored Elementary".to_string()),
             school_elementary_rating: Some(7.0),
             school_middle: Some("Stored Middle".to_string()),
             school_middle_rating: Some(6.5),
             school_secondary: Some("Stored Secondary".to_string()),
             school_secondary_rating: Some(8.0),
-            ..base_property()
+            ..base_stored()
         };
 
-        let result = merge_with_stored(base_property(), &stored, 1);
+        let result = merge_with_stored(base_stored(), &stored, 1);
 
         assert_eq!(result.school_elementary.as_deref(), Some("Stored Elementary"));
         assert_eq!(result.school_elementary_rating, Some(7.0));
@@ -657,31 +658,31 @@ mod tests {
 
     #[test]
     fn test_merge_hoa_parser_wins() {
-        let parsed = Property { hoa_monthly: Some(500), ..base_property() };
-        let stored = Property { hoa_monthly: Some(300), ..base_property() };
+        let parsed = StoredProperty { hoa_monthly: Some(500), ..base_stored() };
+        let stored = StoredProperty { hoa_monthly: Some(300), ..base_stored() };
 
         assert_eq!(merge_with_stored(parsed, &stored, 1).hoa_monthly, Some(500));
     }
 
     #[test]
     fn test_merge_hoa_stored_fallback_when_parser_empty() {
-        let stored = Property { hoa_monthly: Some(300), ..base_property() };
+        let stored = StoredProperty { hoa_monthly: Some(300), ..base_stored() };
 
-        assert_eq!(merge_with_stored(base_property(), &stored, 1).hoa_monthly, Some(300));
+        assert_eq!(merge_with_stored(base_stored(), &stored, 1).hoa_monthly, Some(300));
     }
 
     #[test]
     fn test_merge_title_preserved_when_user_set() {
-        let parsed = Property { title: "Parser Title".to_string(), ..base_property() };
-        let stored = Property { title: "User Title".to_string(), ..base_property() };
+        let parsed = StoredProperty { title: "Parser Title".to_string(), ..base_stored() };
+        let stored = StoredProperty { title: "User Title".to_string(), ..base_stored() };
 
         assert_eq!(merge_with_stored(parsed, &stored, 1).title, "User Title");
     }
 
     #[test]
     fn test_merge_title_uses_parser_when_stored_empty() {
-        let parsed = Property { title: "Parser Title".to_string(), ..base_property() };
+        let parsed = StoredProperty { title: "Parser Title".to_string(), ..base_stored() };
 
-        assert_eq!(merge_with_stored(parsed, &base_property(), 1).title, "Parser Title");
+        assert_eq!(merge_with_stored(parsed, &base_stored(), 1).title, "Parser Title");
     }
 }

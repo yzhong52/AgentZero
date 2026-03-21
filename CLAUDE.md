@@ -161,3 +161,18 @@ let af = parse_amenity_features(amenities);
 ```
 
 Existing examples in this codebase: `AmenityFeatures`, `AddressInfo`, `SchoolEntry`, `ParsedSource`, `SourceInput` (all in `backend/src/parsers/`).
+
+### Rust: split stored and API types to enforce explicit joins
+
+When a model is stored in the DB but also carries joined data (e.g. related rows from other tables), define two types:
+
+- **`StoredProperty`** (or similar) — only the scalar fields that live in the DB row. Used by all internal logic: parsers, store write functions, merge functions.
+- **`Property`** (the API-facing type) — extends the stored type with joined fields (`images`, `open_houses`, etc.), constructed exclusively via a `from_stored(stored, images, open_houses)` factory.
+
+This pattern enforces at compile time that joined data is always explicitly provided. It eliminates a whole class of bugs where internal helpers return a `Property` with `images: vec![]` / `open_houses: vec![]` as placeholders and the caller forgets to repopulate them.
+
+**Rules:**
+- All parsers, merge functions, and store functions take/return `StoredProperty`.
+- Only store *read* functions (`list`, `get_by_id`) produce `Property`, via `Property::from_stored(stored, images, open_houses)` — explicitly fetching both joined tables before constructing the result.
+- API handlers convert to `StoredProperty` when writing, and use `Property::from_stored` when returning to callers.
+- `impl From<Property> for StoredProperty` enables converting back for write operations without reconstructing all fields manually.

@@ -13,7 +13,7 @@ use scraper::{Html, Selector};
 use serde_json::Value as JsonValue;
 
 use super::{extract_description, extract_json_ld, extract_title, ParsedListing};
-use crate::models::property::Property;
+use crate::models::property::StoredProperty;
 
 // ── Field helpers ─────────────────────────────────────────────────────────────
 
@@ -365,7 +365,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let property_type = extract_property_type(&document);
     let sqft = extract_sqft(&document);
 
-    let property = Property {
+    let property = StoredProperty {
         id: 0,
         search_profile_id: 0, // overwritten by caller
         redfin_url: None,
@@ -389,7 +389,6 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         year_built,
         lat: addr.lat,
         lon: addr.lon,
-        images: Vec::new(),
         created_at: String::new(),
         updated_at: None,
         notes: None,
@@ -423,7 +422,6 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
         school_secondary_rating: None,
         listed_date: None,
         mls_number,
-        open_houses: vec![],
     };
 
     Some(ParsedListing {

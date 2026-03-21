@@ -28,7 +28,7 @@ use serde::Deserialize;
 use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
-use crate::models::property::{ListingStatus, Property};
+use crate::models::property::{ListingStatus, Property, StoredProperty};
 use crate::finance as property_finance;
 use crate::store::{image_store, open_house_store, property_store, search_profile_store};
 use crate::{images, parsers, AppState};
@@ -227,7 +227,7 @@ async fn add_listing_impl(
     let open_houses = open_house_store::list_open_houses(&state.db, saved.id)
         .await
         .unwrap_or_default();
-    Ok(Property { images, open_houses, ..saved })
+    Ok(Property::from_stored(saved, images, open_houses))
 }
 
 /// Returns `true` for hosts that are known to block programmatic HTTP
@@ -240,11 +240,11 @@ fn is_blocked_host(site: parsers::ListingSite) -> bool {
     matches!(site, parsers::ListingSite::Zillow | parsers::ListingSite::Realtor)
 }
 
-/// Constructs a blank `Property` with all fields zeroed/None and mortgage
+/// Constructs a blank `StoredProperty` with all fields zeroed/None and mortgage
 /// defaults pre-filled.  Used as a base for stub listings when scraping is
 /// blocked.  Callers should set the relevant URL field(s) after calling this.
-fn blank_stub() -> Property {
-    Property {
+fn blank_stub() -> StoredProperty {
+    StoredProperty {
         id: 0,
         search_profile_id: 0, // overwritten by the caller before insert
         redfin_url: None,
@@ -267,8 +267,6 @@ fn blank_stub() -> Property {
         year_built: None,
         lat: None,
         lon: None,
-        images: vec![],
-        open_houses: vec![],
         created_at: String::new(),
         updated_at: None,
         notes: None,

@@ -1,4 +1,4 @@
-use crate::models::property::{ListingStatus, Property};
+use crate::models::property::{ListingStatus, Property, StoredProperty};
 use crate::store::{image_store, open_house_store};
 use sqlx::{sqlite::SqliteConnectOptions, Row, SqlitePool};
 use std::str::FromStr;
@@ -40,7 +40,7 @@ pub async fn init(database_url: &str) -> SqlitePool {
 
 /// Insert a new property and return it with the assigned id.
 /// The caller is responsible for computing mortgage/monthly fields before calling this.
-pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sqlx::Error> {
+pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<StoredProperty, sqlx::Error> {
     let row = sqlx::query(
         r#"INSERT INTO listings
                (redfin_url, realtor_url, rew_url, zillow_url,
@@ -128,8 +128,8 @@ pub async fn add_listing(pool: &SqlitePool, p: &Property) -> Result<Property, sq
 pub async fn update_by_id(
     pool: &SqlitePool,
     id: i64,
-    p: &Property,
-) -> Result<Property, sqlx::Error> {
+    p: &StoredProperty,
+) -> Result<StoredProperty, sqlx::Error> {
     sqlx::query(
         r#"UPDATE listings SET
               redfin_url              = ?,
@@ -279,27 +279,30 @@ pub async fn list(
 
     let rows = sqlx::query(&sql).fetch_all(pool).await?;
 
-    let mut properties: Vec<Property> = rows.iter().map(row_to_property).collect();
-    for prop in &mut properties {
-        prop.images = image_store::list_images_with_meta(pool, prop.id)
+    let stored: Vec<StoredProperty> = rows.iter().map(row_to_property).collect();
+    let mut properties = Vec::with_capacity(stored.len());
+    for s in stored {
+        let images = image_store::list_images_with_meta(pool, s.id)
             .await
             .unwrap_or_default();
-        prop.open_houses = open_house_store::list_open_houses(pool, prop.id)
+        let open_houses = open_house_store::list_open_houses(pool, s.id)
             .await
             .unwrap_or_default();
+        properties.push(Property::from_stored(s, images, open_houses));
     }
     Ok(properties)
 }
 
 /// Fetch a single property by ID (with images and open houses).
 pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
-    let mut p = fetch_one_by_id(pool, id).await?;
-    p.images = image_store::list_images_with_meta(pool, p.id)
+    let s = fetch_one_by_id(pool, id).await?;
+    let images = image_store::list_images_with_meta(pool, s.id)
         .await
         .unwrap_or_default();
-    p.open_houses = open_house_store::list_open_houses(pool, p.id)
+    let open_houses = open_house_store::list_open_houses(pool, s.id)
         .await
         .unwrap_or_default();
+    let p = Property::from_stored(s, images, open_houses);
     Ok(p)
 }
 
@@ -310,7 +313,7 @@ pub async fn update_source_status(
     pool: &SqlitePool,
     id: i64,
     source_status: Option<&str>,
-) -> Result<Property, sqlx::Error> {
+) -> Result<StoredProperty, sqlx::Error> {
     sqlx::query(
         "UPDATE listings SET source_status = ?, updated_at = datetime('now') WHERE id = ?",
     )
@@ -353,7 +356,7 @@ pub async fn update_search_profile_id(
 pub async fn find_by_source_url(
     pool: &SqlitePool,
     url: &str,
-) -> Result<Option<Property>, sqlx::Error> {
+) -> Result<Option<StoredProperty>, sqlx::Error> {
     let row = sqlx::query(&format!(
         "SELECT {COLS} FROM listings WHERE redfin_url = ? OR realtor_url = ? OR rew_url = ? OR zillow_url = ?"
     ))
@@ -367,7 +370,7 @@ pub async fn find_by_source_url(
 }
 
 /// Find a listing by MLS number. Returns `None` if no match.
-pub async fn find_by_mls(pool: &SqlitePool, mls: &str) -> Result<Option<Property>, sqlx::Error> {
+pub async fn find_by_mls(pool: &SqlitePool, mls: &str) -> Result<Option<StoredProperty>, sqlx::Error> {
     let row = sqlx::query(&format!(
         "SELECT {COLS} FROM listings WHERE mls_number = ?"
     ))
@@ -388,7 +391,7 @@ pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
+async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<StoredProperty, sqlx::Error> {
     let row = sqlx::query(&format!("SELECT {COLS} FROM listings WHERE id = ?"))
         .bind(id)
         .fetch_one(pool)
@@ -396,9 +399,9 @@ async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::E
     Ok(row_to_property(&row))
 }
 
-/// Convert a database row to a Property instance.
-fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
-    Property {
+/// Convert a database row to a `StoredProperty` (scalar fields only — no images or open houses).
+fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> StoredProperty {
+    StoredProperty {
         id: row.get("id"),
         search_profile_id: row.get("search_profile_id"),
         redfin_url: row.get("redfin_url"),
@@ -421,8 +424,6 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
         year_built: row.get("year_built"),
         lat: row.get("lat"),
         lon: row.get("lon"),
-        images: vec![],
-        open_houses: vec![],
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
         notes: row.get("notes"),
@@ -463,7 +464,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> Property {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::property::UserDetails;
+    use crate::models::property::{StoredProperty, UserDetails};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[tokio::test]
@@ -476,7 +477,7 @@ mod tests {
         let database_url = format!("sqlite://{}", db_path.display());
         let pool = init(&database_url).await;
 
-        let p = Property {
+        let p = StoredProperty {
             id: 0,
             search_profile_id: 1,
             redfin_url: Some("https://example.com/add".to_string()),
@@ -499,8 +500,6 @@ mod tests {
             year_built: Some(2001),
             lat: Some(49.28),
             lon: Some(-123.12),
-            images: vec![],
-            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
             notes: None,
@@ -562,7 +561,7 @@ mod tests {
         let pool = init(&database_url).await;
 
         // Construct a minimal property to save.
-        let p = Property {
+        let p = StoredProperty {
             id: 0,
             search_profile_id: 1,
             redfin_url: Some("https://example.com/1".to_string()),
@@ -585,8 +584,6 @@ mod tests {
             year_built: None,
             lat: None,
             lon: None,
-            images: vec![],
-            open_houses: vec![],
             created_at: String::new(),
             updated_at: None,
             notes: None,
@@ -645,7 +642,7 @@ mod tests {
         assert_eq!(saved.price, Some(500_000));
 
         // Update some fields and call update_by_id
-        let mut updated = saved.clone();
+        let mut updated = StoredProperty::from(saved.clone());
         updated.title = "Updated Title".to_string();
         updated.price = Some(510_000);
 
@@ -745,7 +742,7 @@ mod tests {
         };
 
         // Mirror the exact merge logic from patch_details in main.rs
-        let mut merged = saved.clone();
+        let mut merged = StoredProperty::from(saved.clone());
         merged.title = details.title.clone().unwrap_or(merged.title.clone());
         if details.redfin_url.is_some() {
             merged.redfin_url = details.redfin_url.clone();

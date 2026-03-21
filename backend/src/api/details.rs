@@ -13,9 +13,9 @@ use serde::Deserialize;
 
 use crate::fetching::url::parse_listing_url;
 use crate::models::history::HistoryEntry;
-use crate::models::property::{Property, UserDetails};
+use crate::models::property::{Property, StoredProperty, UserDetails};
 use crate::finance as property_finance;
-use crate::store::{history_store, image_store, property_store};
+use crate::store::{history_store, image_store, open_house_store, property_store};
 use crate::{parsers, AppState};
 
 /// Validate and strip query params from a URL that must belong to `expected`.
@@ -103,7 +103,7 @@ pub(crate) async fn patch_details(
 
     // Merge every provided field from the request body over the stored values.
     // Fields absent from the body (None) are left unchanged.
-    let mut updated = current.clone();
+    let mut updated = StoredProperty::from(current.clone());
 
     updated.title = body.title.clone().unwrap_or(updated.title.clone());
 
@@ -244,7 +244,7 @@ pub(crate) async fn patch_details(
         .await;
     }
 
-    // Re-attach images (update_by_id doesn't load them).
+    // Re-attach images and open houses (update_by_id doesn't load them).
     let images = image_store::list_images_with_meta(&state.db, id)
         .await
         .map_err(|e| {
@@ -253,8 +253,11 @@ pub(crate) async fn patch_details(
                 format!("DB error: {}", e),
             )
         })?;
+    let open_houses = open_house_store::list_open_houses(&state.db, id)
+        .await
+        .unwrap_or_default();
 
-    Ok(Json(Property { images, ..updated }))
+    Ok(Json(Property::from_stored(updated, images, open_houses)))
 }
 
 /// GET /api/listings/:id/history

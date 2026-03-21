@@ -10,7 +10,7 @@ use serde_json::Value as JsonValue;
 use std::sync::OnceLock;
 
 use super::{extract_json_ld, extract_title, OpenHouseEvent, ParsedListing};
-use crate::models::property::Property;
+use crate::models::property::StoredProperty;
 
 // ── Static regexes ────────────────────────────────────────────────────────────
 
@@ -453,7 +453,7 @@ fn parse_amenity_features(features: &[JsonValue]) -> AmenityFeatures {
 /// Extracts structured property fields from JSON-LD blocks.
 /// Looks for the item whose `@type` includes `"RealEstateListing"`.
 /// `images` is always left empty — `extract_image_urls` handles that.
-pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option<Property> {
+pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option<StoredProperty> {
     let listing = json_ld.iter().find(|v| {
         let t = &v["@type"];
         t == "RealEstateListing"
@@ -498,7 +498,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         .as_str()
         .map(|s| s[..s.len().min(10)].to_string());
 
-    Some(Property {
+    Some(StoredProperty {
         id: 0,
         search_profile_id: 0, // overwritten by caller
         redfin_url: Some(url.to_string()),
@@ -521,7 +521,6 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         year_built,
         lat,
         lon,
-        images: Vec::new(),
         created_at: String::new(),
         updated_at: None,
         notes: None,
@@ -557,7 +556,6 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         property_type,
         listed_date,
         mls_number: None,
-        open_houses: vec![],
     })
 }
 
@@ -665,8 +663,8 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     let year = property
         .listed_date
         .as_deref()
-        .and_then(|d| d.split('-').next())
-        .and_then(|y| y.parse::<i32>().ok())
+        .and_then(|d: &str| d.split('-').next())
+        .and_then(|y: &str| y.parse::<i32>().ok())
         .unwrap_or(2026);
     let open_houses = extract_open_houses(&document, year);
 

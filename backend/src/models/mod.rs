@@ -13,5 +13,5 @@ pub mod search_profile;
 pub use history::HistoryEntry;
 pub use image::{CachedImage, ImageEntry};
 pub use open_house::{OpenHouse, OpenHouseEvent};
-pub use property::{Property, UserDetails};
+pub use property::{Property, StoredProperty, UserDetails};
 pub use search_profile::SearchProfile;

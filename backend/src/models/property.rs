@@ -70,6 +70,102 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
     }
 }
 
+/// The raw database row for a property listing — scalar fields only.
+///
+/// Images and open houses live in separate tables and are joined when building
+/// the full [`Property`] API response via [`Property::from_stored`]. Internal
+/// code (parsers, merge logic, store write-path) works exclusively with this
+/// type so that the absence of joined fields is enforced by the compiler rather
+/// than by convention.
+#[derive(Serialize, Deserialize, Clone)]
+pub struct StoredProperty {
+    // ── System ──────────────────────────────────────────────────────────────
+    pub id: i64,
+    pub search_profile_id: i64,
+
+    // ── Header ──────────────────────────────────────────────────────────────
+    pub title: String,
+    pub description: String,
+
+    // ── Price ────────────────────────────────────────────────────────────────
+    pub price: Option<i64>,
+    pub price_currency: Option<String>,
+
+    // ── Location ─────────────────────────────────────────────────────────────
+    pub street_address: Option<String>,
+    pub city: Option<String>,
+    pub region: Option<String>,
+    pub postal_code: Option<String>,
+    pub country: Option<String>,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+
+    // ── Property facts ───────────────────────────────────────────────────────
+    pub property_type: Option<String>,
+    pub bedrooms: Option<i64>,
+    pub bathrooms: Option<i64>,
+    pub sqft: Option<i64>,
+    pub land_sqft: Option<i64>,
+    pub year_built: Option<i64>,
+
+    // ── Parking ──────────────────────────────────────────────────────────────
+    pub parking_total: Option<i64>,
+    pub parking_garage: Option<i64>,
+    pub parking_carport: Option<i64>,
+    pub parking_pad: Option<i64>,
+
+    // ── Features ─────────────────────────────────────────────────────────────
+    pub radiant_floor_heating: Option<bool>,
+    pub ac: Option<bool>,
+    pub laundry_in_unit: Option<bool>,
+
+    // ── Transit ──────────────────────────────────────────────────────────────
+    pub skytrain_station: Option<String>,
+    pub skytrain_walk_min: Option<i64>,
+
+    // ── Finance ──────────────────────────────────────────────────────────────
+    pub offer_price: Option<i64>,
+    pub property_tax: Option<i64>,
+    pub hoa_monthly: Option<i64>,
+    pub down_payment_pct: Option<f64>,
+    pub mortgage_interest_rate: Option<f64>,
+    pub amortization_years: Option<i64>,
+    pub mortgage_monthly: Option<i64>,
+    pub monthly_total: Option<i64>,
+    pub monthly_cost: Option<i64>,
+
+    // ── Rental ───────────────────────────────────────────────────────────────
+    pub has_rental_suite: Option<bool>,
+    pub rental_income: Option<i64>,
+
+    // ── Schools ──────────────────────────────────────────────────────────────
+    pub school_elementary: Option<String>,
+    pub school_elementary_rating: Option<f64>,
+    pub school_middle: Option<String>,
+    pub school_middle_rating: Option<f64>,
+    pub school_secondary: Option<String>,
+    pub school_secondary_rating: Option<f64>,
+
+    // ── Source URLs ──────────────────────────────────────────────────────────
+    pub redfin_url: Option<String>,
+    pub realtor_url: Option<String>,
+    pub rew_url: Option<String>,
+    pub zillow_url: Option<String>,
+
+    // ── Listing metadata ─────────────────────────────────────────────────────
+    pub mls_number: Option<String>,
+    pub listed_date: Option<String>,
+    pub source_status: Option<String>,
+
+    // ── User notes / status ──────────────────────────────────────────────────
+    pub status: ListingStatus,
+    pub notes: Option<String>,
+
+    // ── System metadata ──────────────────────────────────────────────────────
+    pub created_at: String,
+    pub updated_at: Option<String>,
+}
+
 /// A real estate property with all parsed and user-tracked fields.
 /// Images are populated separately from the images_cache table.
 ///
@@ -173,6 +269,141 @@ pub struct Property {
     pub open_houses: Vec<OpenHouse>, // system
     pub created_at: String,         // system
     pub updated_at: Option<String>, // system
+}
+
+impl Property {
+    /// Construct a full API `Property` from a DB row (`StoredProperty`) plus
+    /// the joined data that lives in separate tables.  The compiler enforces
+    /// that both `images` and `open_houses` are always explicitly provided.
+    pub fn from_stored(
+        s: StoredProperty,
+        images: Vec<ImageEntry>,
+        open_houses: Vec<OpenHouse>,
+    ) -> Self {
+        Property {
+            id: s.id,
+            search_profile_id: s.search_profile_id,
+            title: s.title,
+            description: s.description,
+            price: s.price,
+            price_currency: s.price_currency,
+            street_address: s.street_address,
+            city: s.city,
+            region: s.region,
+            postal_code: s.postal_code,
+            country: s.country,
+            lat: s.lat,
+            lon: s.lon,
+            property_type: s.property_type,
+            bedrooms: s.bedrooms,
+            bathrooms: s.bathrooms,
+            sqft: s.sqft,
+            land_sqft: s.land_sqft,
+            year_built: s.year_built,
+            parking_total: s.parking_total,
+            parking_garage: s.parking_garage,
+            parking_carport: s.parking_carport,
+            parking_pad: s.parking_pad,
+            radiant_floor_heating: s.radiant_floor_heating,
+            ac: s.ac,
+            laundry_in_unit: s.laundry_in_unit,
+            skytrain_station: s.skytrain_station,
+            skytrain_walk_min: s.skytrain_walk_min,
+            offer_price: s.offer_price,
+            property_tax: s.property_tax,
+            hoa_monthly: s.hoa_monthly,
+            down_payment_pct: s.down_payment_pct,
+            mortgage_interest_rate: s.mortgage_interest_rate,
+            amortization_years: s.amortization_years,
+            mortgage_monthly: s.mortgage_monthly,
+            monthly_total: s.monthly_total,
+            monthly_cost: s.monthly_cost,
+            has_rental_suite: s.has_rental_suite,
+            rental_income: s.rental_income,
+            school_elementary: s.school_elementary,
+            school_elementary_rating: s.school_elementary_rating,
+            school_middle: s.school_middle,
+            school_middle_rating: s.school_middle_rating,
+            school_secondary: s.school_secondary,
+            school_secondary_rating: s.school_secondary_rating,
+            redfin_url: s.redfin_url,
+            realtor_url: s.realtor_url,
+            rew_url: s.rew_url,
+            zillow_url: s.zillow_url,
+            mls_number: s.mls_number,
+            listed_date: s.listed_date,
+            source_status: s.source_status,
+            status: s.status,
+            notes: s.notes,
+            created_at: s.created_at,
+            updated_at: s.updated_at,
+            images,
+            open_houses,
+        }
+    }
+}
+
+impl From<Property> for StoredProperty {
+    fn from(p: Property) -> Self {
+        StoredProperty {
+            id: p.id,
+            search_profile_id: p.search_profile_id,
+            title: p.title,
+            description: p.description,
+            price: p.price,
+            price_currency: p.price_currency,
+            street_address: p.street_address,
+            city: p.city,
+            region: p.region,
+            postal_code: p.postal_code,
+            country: p.country,
+            lat: p.lat,
+            lon: p.lon,
+            property_type: p.property_type,
+            bedrooms: p.bedrooms,
+            bathrooms: p.bathrooms,
+            sqft: p.sqft,
+            land_sqft: p.land_sqft,
+            year_built: p.year_built,
+            parking_total: p.parking_total,
+            parking_garage: p.parking_garage,
+            parking_carport: p.parking_carport,
+            parking_pad: p.parking_pad,
+            radiant_floor_heating: p.radiant_floor_heating,
+            ac: p.ac,
+            laundry_in_unit: p.laundry_in_unit,
+            skytrain_station: p.skytrain_station,
+            skytrain_walk_min: p.skytrain_walk_min,
+            offer_price: p.offer_price,
+            property_tax: p.property_tax,
+            hoa_monthly: p.hoa_monthly,
+            down_payment_pct: p.down_payment_pct,
+            mortgage_interest_rate: p.mortgage_interest_rate,
+            amortization_years: p.amortization_years,
+            mortgage_monthly: p.mortgage_monthly,
+            monthly_total: p.monthly_total,
+            monthly_cost: p.monthly_cost,
+            has_rental_suite: p.has_rental_suite,
+            rental_income: p.rental_income,
+            school_elementary: p.school_elementary,
+            school_elementary_rating: p.school_elementary_rating,
+            school_middle: p.school_middle,
+            school_middle_rating: p.school_middle_rating,
+            school_secondary: p.school_secondary,
+            school_secondary_rating: p.school_secondary_rating,
+            redfin_url: p.redfin_url,
+            realtor_url: p.realtor_url,
+            rew_url: p.rew_url,
+            zillow_url: p.zillow_url,
+            mls_number: p.mls_number,
+            listed_date: p.listed_date,
+            source_status: p.source_status,
+            status: p.status,
+            notes: p.notes,
+            created_at: p.created_at,
+            updated_at: p.updated_at,
+        }
+    }
 }
 
 /// All user-editable fields for a property.

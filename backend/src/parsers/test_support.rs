@@ -1,4 +1,5 @@
 use crate::models::{ImageEntry, OpenHouseEvent, Property};
+use crate::models::property::StoredProperty;
 use crate::parsers::ParsedListing;
 use serde::Serialize;
 
@@ -31,10 +32,7 @@ pub(crate) fn listing_to_property(listing: ParsedListing) -> Property {
         })
         .collect();
 
-    Property {
-        images,
-        ..listing.property
-    }
+    Property::from_stored(listing.property, images, vec![])
 }
 
 pub(crate) fn listing_to_snapshot(listing: ParsedListing) -> ListingSnapshot {

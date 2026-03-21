@@ -7,6 +7,10 @@ metadata:
       bins:
         - himalaya
         - openclaw
+        - cargo
+        - node
+        - npm
+        - sqlite3
       localServices:
         - name: AgentZero backend
           url: "http://localhost:8000"
@@ -34,6 +38,18 @@ metadata:
     writes:
       - "~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md"
       - "~/.openclaw/workspace/agent_zero_logs/processed_emails.json"
+      - "<project>/backend/listings.db"
+      - "<project>/backend/html_snapshots/"
+      - "/tmp/agent_zero_backend.log"
+    install:
+      - type: shell
+        label: "Build and start Rust backend"
+        script: "./scripts/run_backend.sh"
+        note: "Requires Rust/Cargo toolchain. Builds the Axum backend and starts it at http://localhost:8000."
+      - type: shell
+        label: "Build and start TypeScript frontend (optional)"
+        script: "./scripts/run_frontend.sh"
+        note: "Requires Node/npm. Starts the Vite UI at http://localhost:5173."
 ---
 
 # AgentZero Skill

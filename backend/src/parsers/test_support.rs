@@ -1,5 +1,4 @@
 use crate::models::{ImageEntry, OpenHouseEvent, Property};
-use crate::models::property::StoredProperty;
 use crate::parsers::ParsedListing;
 use serde::Serialize;
 

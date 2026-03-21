@@ -86,7 +86,7 @@ pub(crate) async fn fetch_sources(
 /// Merges a freshly parsed property with the stored record into the final value
 /// that gets written back to the DB (or returned as a preview).
 ///
-/// Every field of [`Property`] is listed explicitly so that adding a new field
+/// Every field of [`StoredProperty`] is listed explicitly so that adding a new field
 /// to the struct produces a compile error here, forcing a conscious merge decision.
 ///
 /// The three merge rules used below are:

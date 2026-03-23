@@ -102,6 +102,7 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
     // Pre-compute fields that are both stored in the struct and fed into the
     // mortgage calculation, so each value is stated exactly once.
     let hoa_monthly = parsed_listing.hoa_monthly.or(stored_listing.hoa_monthly);
+    let property_tax = parsed_listing.property_tax.or(stored_listing.property_tax);
     let down_pct = stored_listing.down_payment_pct.unwrap_or(0.20);
     let rate = stored_listing.mortgage_interest_rate.unwrap_or(0.04);
     let years = stored_listing.amortization_years.unwrap_or(25);
@@ -111,7 +112,7 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
         down_pct,
         rate,
         years,
-        parsed_listing.property_tax,
+        property_tax,
         hoa_monthly,
     );
 
@@ -154,32 +155,35 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
         school_secondary_rating: parsed_listing.school_secondary_rating.or(stored_listing.school_secondary_rating),
         hoa_monthly,
 
-        // ── Parser wins ───────────────────────────────────────────────────────
+        // ── Parser wins, stored as fallback ───────────────────────────────────
+        // Fresh parse is the source of truth; stored value is kept when parser
+        // returns None so that manually-entered or previously-parsed data is
+        // never silently erased by a page that temporarily omits a field.
         description: parsed_listing.description,
-        price: parsed_listing.price,
-        price_currency: parsed_listing.price_currency,
-        street_address: parsed_listing.street_address,
-        city: parsed_listing.city,
-        region: parsed_listing.region,
-        postal_code: parsed_listing.postal_code,
-        country: parsed_listing.country,
-        lat: parsed_listing.lat,
-        lon: parsed_listing.lon,
-        property_type: parsed_listing.property_type,
-        bedrooms: parsed_listing.bedrooms,
-        bathrooms: parsed_listing.bathrooms,
-        sqft: parsed_listing.sqft,
-        land_sqft: parsed_listing.land_sqft,
-        year_built: parsed_listing.year_built,
-        parking_total: parsed_listing.parking_total,
-        parking_garage: parsed_listing.parking_garage,
-        parking_carport: parsed_listing.parking_carport,
-        parking_pad: parsed_listing.parking_pad,
-        radiant_floor_heating: parsed_listing.radiant_floor_heating,
-        ac: parsed_listing.ac,
-        laundry_in_unit: parsed_listing.laundry_in_unit,
-        property_tax: parsed_listing.property_tax,
-        mls_number: parsed_listing.mls_number,
+        price: parsed_listing.price.or(stored_listing.price),
+        price_currency: parsed_listing.price_currency.or(stored_listing.price_currency.clone()),
+        street_address: parsed_listing.street_address.or(stored_listing.street_address.clone()),
+        city: parsed_listing.city.or(stored_listing.city.clone()),
+        region: parsed_listing.region.or(stored_listing.region.clone()),
+        postal_code: parsed_listing.postal_code.or(stored_listing.postal_code.clone()),
+        country: parsed_listing.country.or(stored_listing.country.clone()),
+        lat: parsed_listing.lat.or(stored_listing.lat),
+        lon: parsed_listing.lon.or(stored_listing.lon),
+        property_type: parsed_listing.property_type.or(stored_listing.property_type.clone()),
+        bedrooms: parsed_listing.bedrooms.or(stored_listing.bedrooms),
+        bathrooms: parsed_listing.bathrooms.or(stored_listing.bathrooms),
+        sqft: parsed_listing.sqft.or(stored_listing.sqft),
+        land_sqft: parsed_listing.land_sqft.or(stored_listing.land_sqft),
+        year_built: parsed_listing.year_built.or(stored_listing.year_built),
+        parking_total: parsed_listing.parking_total.or(stored_listing.parking_total),
+        parking_garage: parsed_listing.parking_garage.or(stored_listing.parking_garage),
+        parking_carport: parsed_listing.parking_carport.or(stored_listing.parking_carport),
+        parking_pad: parsed_listing.parking_pad.or(stored_listing.parking_pad),
+        radiant_floor_heating: parsed_listing.radiant_floor_heating.or(stored_listing.radiant_floor_heating),
+        ac: parsed_listing.ac.or(stored_listing.ac),
+        laundry_in_unit: parsed_listing.laundry_in_unit.or(stored_listing.laundry_in_unit),
+        property_tax,
+        mls_number: parsed_listing.mls_number.or(stored_listing.mls_number.clone()),
         // Preserve the original listed_date; a new MLS number means a relist,
         // which is captured in history, not by overwriting the first-seen date.
         listed_date: stored_listing.listed_date.clone().or(parsed_listing.listed_date),

@@ -200,7 +200,7 @@ fn compute_diff(current: &Listing, preview: &Listing) -> Vec<Change> {
 
     field!("listed_date", listed_date, fmt_opt_str);
     field!("mls_number", mls_number, fmt_opt_str);
-    field!("source_status", source_status, fmt_opt_str);
+    field!("property status", source_status, fmt_opt_str);
 
     // Open houses are additive-only — refresh never removes existing entries.
     // Only show newly parsed ones that aren't already stored.
@@ -304,8 +304,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "\n  [{}/{}] #{} 🏠 {BOLD}{}{RESET}",
             index + 1, total, listing.id, listing.title,
         );
-        println!("     📋 Review:   {}", fmt_review_status(&listing.status));
-        println!("     🏷  Property: {}", fmt_source_status(listing.source_status.as_deref()));
+        println!("     📋 Review status:   {}", fmt_review_status(&listing.status));
+        println!("     🏷  Property status: {}", fmt_source_status(listing.source_status.as_deref()));
         for url in [&listing.redfin_url, &listing.realtor_url, &listing.rew_url, &listing.zillow_url]
             .into_iter().flatten()
         {
@@ -352,7 +352,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let to = source_status.as_str();
                         let changed = listing.source_status.as_deref() != Some(to);
                         if changed {
-                            println!("  [status-only]  source_status  {}  →  {}", from, to);
+                            println!("  [status-only]  property status  {}  →  {}", from, to);
                         } else {
                             println!("  no changes detected");
                         }

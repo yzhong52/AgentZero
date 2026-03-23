@@ -30,11 +30,27 @@ metadata:
       emailAccess: true
       browserAutomation: true
       note: >
-        The Daily Email Scan workflow reads Redfin alert emails from the user's Gmail inbox via himalaya,
-        opens Gmail in the openclaw browser, clicks listing links, and records email IDs and thread URLs
-        to ~/.openclaw/workspace/agent_zero_logs/. This is intentional — the workflow is explicitly
-        user-triggered (cron or manual) and scoped to Redfin sender emails only (from:redfin.com).
-        No email body text is stored; only listing URLs and envelope metadata (ID, subject) are logged.
+        The Daily Email Scan workflow is explicitly opt-in (user-triggered via cron or manual invocation)
+        and is scoped to Redfin sender emails only (from:redfin.com).
+
+        Email access: himalaya reads envelope metadata only (sender, subject, ID) via IMAP — no email
+        body text is read or stored. The only data logged is the listing URLs extracted from Redfin
+        emails and the processed email IDs (to avoid re-processing).
+
+        Browser automation: the openclaw browser is used exclusively to open Redfin listing URLs
+        (redfin.ca / redfin.com) — it does NOT browse Gmail or any other site. Gmail is only opened
+        briefly to search for and click through to the Redfin listing link; no Gmail session data,
+        cookies, or body content is recorded.
+
+        HTML snapshots (backend/html_snapshots/): these are snapshots of Redfin property listing pages
+        only — not Gmail or any user account pages. They are cached locally by the backend to avoid
+        re-fetching listing data. No session tokens or authentication artifacts are stored in these files.
+
+        Local scripts: scripts/run_backend.sh builds and starts the Rust/Axum backend (cargo build +
+        ./target/release/backend). scripts/run_frontend.sh runs `npm install && npm run dev` for the
+        Vite frontend. Both scripts are included in full in this repository and can be reviewed before
+        execution. They do not make outbound network calls beyond fetching Rust crates (cargo) and
+        npm packages on first build.
     writes:
       - "~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md"
       - "~/.openclaw/workspace/agent_zero_logs/processed_emails.json"

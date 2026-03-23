@@ -1,10 +1,51 @@
-//! HTML fetching: direct HTTP client with Safari/AppleScript fallback for bot-protected hosts.
+//! HTML fetching: direct HTTP client with Safari/AppleScript and Chrome CDP fallbacks
+//! for bot-protected hosts.
 
+use chromiumoxide::browser::{Browser, BrowserConfig};
+use chromiumoxide::cdp::browser_protocol::page::AddScriptToEvaluateOnNewDocumentParams;
+use futures::StreamExt;
 use reqwest::header::{
     HeaderMap, HeaderValue, ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, REFERER, USER_AGENT,
 };
 use reqwest::Client;
+use std::time::Duration;
 use url::Url;
+
+/// Stealth JS injected via CDP before any page script runs.
+/// Hides automation signals that Incapsula/Imperva use for bot detection.
+const STEALTH_JS: &str = r#"
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+if (!window.chrome) { window.chrome = {}; }
+if (!window.chrome.runtime) { window.chrome.runtime = {}; }
+Object.defineProperty(navigator, 'plugins', {
+    get: () => {
+        const arr = [
+            { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+            { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '' },
+            { name: 'Native Client', filename: 'internal-nacl-plugin', description: '' },
+        ];
+        arr.refresh = () => {};
+        return arr;
+    },
+});
+Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+const originalQuery = window.navigator.permissions.query;
+window.navigator.permissions.query = (parameters) =>
+    parameters.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission })
+        : originalQuery(parameters);
+try {
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+        if (parameter === 37445) return 'Intel Inc.';
+        if (parameter === 37446) return 'Intel Iris OpenGL Engine';
+        return getParameter.call(this, parameter);
+    };
+} catch (e) {}
+Object.defineProperty(navigator, 'connection', {
+    get: () => ({ effectiveType: '4g', rtt: 50, downlink: 10, saveData: false }),
+});
+"#;
 
 /// Fetch HTML using the reqwest HTTP client.
 async fn fetch_html_direct(client: &Client, url: &Url) -> Result<String, reqwest::Error> {
@@ -71,6 +112,107 @@ end tell
     Ok(html)
 }
 
+/// Fetch HTML by launching Chrome via CDP with stealth JS injection.
+///
+/// Uses chromiumoxide to control a real Chrome instance (headed, non-headless)
+/// which bypasses Incapsula/Imperva bot detection. Cookies are persisted in a
+/// profile directory so subsequent fetches reuse the session.
+///
+/// This is the fallback when both the direct HTTP fetch and Safari fail.
+async fn fetch_html_chrome(url: &Url) -> Result<String, String> {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let profile_dir = std::path::PathBuf::from(home).join(".agent-zero-chrome-profile");
+    let _ = std::fs::create_dir_all(&profile_dir);
+    let profile_dir = std::fs::canonicalize(&profile_dir).unwrap_or(profile_dir);
+
+    let mut builder = BrowserConfig::builder()
+        .disable_default_args()
+        .no_sandbox()
+        .window_size(1920, 1080)
+        .user_data_dir(profile_dir)
+        .arg("--disable-blink-features=AutomationControlled")
+        .arg("--disable-features=IsolateOrigins,site-per-process")
+        .arg("--disable-infobars")
+        .arg("--disable-dev-shm-usage")
+        .arg("--no-first-run")
+        .arg("--disable-gpu")
+        .arg("--lang=en-US,en")
+        .arg("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+        .with_head();
+
+    // On macOS, Chrome may not be in PATH — try the standard app location.
+    let macos_chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+    if std::path::Path::new(macos_chrome).exists() {
+        builder = builder.chrome_executable(macos_chrome);
+    }
+
+    let config = builder
+        .build()
+        .map_err(|e| format!("Chrome config error: {e}"))?;
+
+    let (mut browser, mut handler) = Browser::launch(config)
+        .await
+        .map_err(|e| format!("Failed to launch Chrome: {e}"))?;
+
+    let _handle = tokio::spawn(async move {
+        while let Some(h) = handler.next().await {
+            if h.is_err() {
+                break;
+            }
+        }
+    });
+
+    let page = browser
+        .new_page("about:blank")
+        .await
+        .map_err(|e| format!("Chrome new page error: {e}"))?;
+
+    page.execute(
+        AddScriptToEvaluateOnNewDocumentParams::builder()
+            .source(STEALTH_JS)
+            .build()
+            .unwrap(),
+    )
+    .await
+    .map_err(|e| format!("Chrome stealth injection error: {e}"))?;
+
+    page.goto(url.as_str())
+        .await
+        .map_err(|e| format!("Chrome navigation error: {e}"))?;
+
+    // Poll until real listing content appears or timeout.
+    let timeout = Duration::from_secs(30);
+    let start = std::time::Instant::now();
+    let html = loop {
+        let html: String = page
+            .evaluate("document.documentElement.outerHTML")
+            .await
+            .map_err(|e| format!("Chrome eval error: {e}"))?
+            .into_value()
+            .map_err(|e| format!("Chrome HTML deserialize error: {e}"))?;
+
+        let has_content = html.len() > 50_000
+            || html.contains("listingId")
+            || html.contains("propertyDetails");
+
+        if has_content || start.elapsed() >= timeout {
+            break html;
+        }
+
+        tokio::time::sleep(Duration::from_secs(2)).await;
+    };
+
+    let _ = browser.close().await;
+
+    if html.len() < 5000 {
+        return Err(format!(
+            "Chrome returned only {} bytes (likely blocked)",
+            html.len()
+        ));
+    }
+    Ok(html)
+}
+
 /// Returns `true` when the HTML looks like a bot-protection challenge page
 /// rather than real listing content.
 fn is_challenge_page(html: &str) -> bool {
@@ -118,6 +260,18 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, Str
         Err(e) => return Err(format!("Failed to fetch {url}: {e}")),
     }
 
-    // Slow path: Safari via AppleScript (macOS only).
-    fetch_html_safari(url).await
+    // Try Safari first (lower overhead if already open).
+    match fetch_html_safari(url).await {
+        Ok(html) => return Ok(html),
+        Err(e) => {
+            tracing::info!(
+                "fetch_html: Safari failed for {} ({}), trying Chrome",
+                url,
+                e
+            );
+        }
+    }
+
+    // Chrome via CDP (works even when Safari is not running).
+    fetch_html_chrome(url).await
 }

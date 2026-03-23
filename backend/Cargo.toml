@@ -21,6 +21,8 @@ hex = "0.4"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 object_store = "0.13"
 clap = { version = "4", features = ["derive"] }
+chromiumoxide = "0.9"
+futures = "0.3"
 
 [dev-dependencies]
 insta = { version = "1", features = ["json"] }

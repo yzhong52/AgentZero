@@ -202,16 +202,21 @@ fn compute_diff(current: &Listing, preview: &Listing) -> Vec<Change> {
     field!("mls_number", mls_number, fmt_opt_str);
     field!("source_status", source_status, fmt_opt_str);
 
-    // Open houses: compare by start_time set; show if any added or removed.
+    // Open houses are additive-only — refresh never removes existing entries.
+    // Only show newly parsed ones that aren't already stored.
     let current_times: std::collections::HashSet<&str> =
         current.open_houses.iter().map(|oh| oh.start_time.as_str()).collect();
-    let preview_times: std::collections::HashSet<&str> =
-        preview.open_houses.iter().map(|oh| oh.start_time.as_str()).collect();
-    if current_times != preview_times {
+    let new_open_houses: Vec<&OpenHouse> = preview
+        .open_houses
+        .iter()
+        .filter(|oh| !current_times.contains(oh.start_time.as_str()))
+        .collect();
+    if !new_open_houses.is_empty() {
+        let new_cloned: Vec<OpenHouse> = new_open_houses.into_iter().cloned().collect();
         changes.push(Change {
-            label: "open_houses",
-            from: fmt_open_houses(&current.open_houses),
-            to: fmt_open_houses(&preview.open_houses),
+            label: "open_houses (new)",
+            from: "—".to_string(),
+            to: fmt_open_houses(&new_cloned),
         });
     }
 

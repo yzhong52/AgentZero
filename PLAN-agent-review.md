@@ -6,7 +6,7 @@ by Claude — including profile assignment — before a human sees it.
 ## Workflow
 
 ```
-User / cron submits URL only (no profile)
+Daily email scan (skill/cron) finds a Redfin listing URL in Gmail
         ↓
 Parse listing (Redfin, REW, Realtor, Zillow)
         ↓
@@ -15,9 +15,10 @@ Save to DB  →  status: AgentPending,  search_profile_id: NULL
 Background task: call Claude API
   Input: structured Property JSON fields
        + ALL search profile titles + descriptions
+  (no raw HTML — keeps the call small and fast)
         ↓
   ┌──────────────────────────────────────────────────────────┐
-  │  status: HumanPending                              │
+  │  status: HumanPending                                    │
   │  search_profile_id: 2                                    │
   │  comment: "3br under $1.8M in East Van, lane access"     │
   └──────────────────────────────────────────────────────────┘

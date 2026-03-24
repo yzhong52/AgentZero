@@ -121,12 +121,12 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 4 — Backend: `add.rs` — simplify suggest endpoint
 
-- [ ] `SuggestBody` no longer requires `search_profile_id`
+- [x] `SuggestBody` no longer requires `search_profile_id`
   - Old: `{ "url": "...", "search_profile_id": N }`
   - New: `{ "url": "..." }`
-- [ ] Remove profile validation from `suggest` handler
-- [ ] `suggest` endpoint: initial status → `AgentPending`, `search_profile_id` → `None`
-- [ ] Manual add endpoint (`POST /api/listings`): initial status stays `Interested` (unchanged)
+- [x] Remove profile validation from `suggest` handler
+- [x] `suggest` endpoint: initial status → `AgentPending`, `search_profile_id` → `None`
+- [x] Manual add endpoint (`POST /api/listings`): initial status stays `Interested` (unchanged)
 - [ ] `search_profile_id` starts as `None`
 - [ ] After saving, spawn background task: `tokio::spawn(run_agent_review(...))`
   - Returns immediately with `AgentPending` property; review runs async

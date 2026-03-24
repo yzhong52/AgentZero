@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod api;
 mod finance;
 pub mod fetching;

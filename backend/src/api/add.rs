@@ -20,7 +20,7 @@
 //!
 //! Endpoints:
 //! - `POST /api/listings`         — human-driven add (defaults to Interested)
-//! - `POST /api/listings/suggest` — AI-driven suggest (must be Pending)
+//! - `POST /api/listings/suggest` — AI-driven suggest (AgentPending, no profile; agent assigns)
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
@@ -41,6 +41,13 @@ pub struct AddRequest {
     pub search_profile_id: i64,
 }
 
+/// Body for POST /api/listings/suggest — agent/skill workflow.
+/// No search_profile_id: the agent assigns the profile during review.
+#[derive(Deserialize)]
+pub struct SuggestRequest {
+    pub url: String,
+}
+
 /// POST /api/listings
 ///
 /// Human-driven listing ingest endpoint. Saves the property with `Interested`
@@ -55,13 +62,29 @@ pub(crate) async fn add_listing(
 
 /// POST /api/listings/suggest
 ///
-/// AI-facing listing ingest endpoint. Behaves like `add_listing` but enforces
-/// `HumanPending` status for newly ingested properties.
+/// AI/skill-driven listing ingest endpoint. Saves the property with
+/// `AgentPending` status and no search profile. After saving, spawns a
+/// background task that calls the Claude API to triage the listing and assign
+/// a search profile (or skip it).
 pub(crate) async fn suggest_listing(
     State(state): State<AppState>,
-    Json(body): Json<AddRequest>,
+    Json(body): Json<SuggestRequest>,
 ) -> Result<Json<Property>, (StatusCode, String)> {
-    let property = add_listing_impl(state, body, ListingStatus::HumanPending).await?;
+    let add_body = AddRequest {
+        url: body.url,
+        search_profile_id: 0, // ignored by suggest path — overridden below
+    };
+    let property = add_listing_impl(state.clone(), add_body, ListingStatus::AgentPending).await?;
+
+    // Spawn background agent review (assigns profile + moves to HumanPending or AgentSkip).
+    let db = state.db.clone();
+    let client = state.client.clone();
+    let listing_id = property.id;
+    let stored = crate::models::property::StoredProperty::from(property.clone());
+    tokio::spawn(async move {
+        crate::agent::review::run_agent_review(listing_id, stored, db, client).await;
+    });
+
     Ok(Json(property))
 }
 
@@ -71,15 +94,18 @@ async fn add_listing_impl(
     initial_status: ListingStatus,
 ) -> Result<Property, (StatusCode, String)> {
     // Validate search profile exists before doing any expensive work.
-    search_profile_store::get_by_id(&state.db, body.search_profile_id)
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => (
-                StatusCode::BAD_REQUEST,
-                format!("search_profile_id {} does not exist", body.search_profile_id),
-            ),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")),
-        })?;
+    // search_profile_id==0 is the sentinel used by suggest_listing (no profile yet).
+    if body.search_profile_id != 0 {
+        search_profile_store::get_by_id(&state.db, body.search_profile_id)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => (
+                    StatusCode::BAD_REQUEST,
+                    format!("search_profile_id {} does not exist", body.search_profile_id),
+                ),
+                _ => (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")),
+            })?;
+    }
 
     let trimmed_url = body.url.trim();
     let listing_url = parse_listing_url(trimmed_url).ok_or((
@@ -185,8 +211,10 @@ async fn add_listing_impl(
         }
     }
 
-    // Assign to search profile.
-    property.search_profile_id = Some(body.search_profile_id);
+    // Assign to search profile (skipped for suggest path where id==0).
+    if body.search_profile_id != 0 {
+        property.search_profile_id = Some(body.search_profile_id);
+    }
     property.status = initial_status;
 
     let saved = property_store::add_listing(&state.db, &property).await.map_err(|e| {
@@ -301,6 +329,6 @@ fn blank_stub() -> StoredProperty {
         mls_number: None,
         laundry_in_unit: None,
         source_status: None,
-            agent_comment: None,
+        agent_comment: None,
     }
 }

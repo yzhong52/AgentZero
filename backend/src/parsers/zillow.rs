@@ -391,7 +391,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
     Some(ParsedListing {
         property: StoredProperty {
             id: 0,
-            search_profile_id: 0, // overwritten by caller
+            search_profile_id: None, // overwritten by caller
             title,
             description: next.description.unwrap_or_default(),
             price: ld.price,
@@ -422,6 +422,7 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
             ac: None,
             laundry_in_unit: None,
             source_status: None,
+        agent_comment: None,
             down_payment_pct: None,
             mortgage_interest_rate: None,
             amortization_years: None,

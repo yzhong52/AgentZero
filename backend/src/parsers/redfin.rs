@@ -500,7 +500,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
 
     Some(StoredProperty {
         id: 0,
-        search_profile_id: 0, // overwritten by caller
+        search_profile_id: None, // overwritten by caller
         redfin_url: Some(url.to_string()),
         realtor_url: None,
         rew_url: None,
@@ -536,6 +536,7 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         ac: af.ac,
         laundry_in_unit: af.laundry_in_unit,
         source_status: None,
+        agent_comment: None,
         // Mortgage params are set by main.rs after parsing (save/refresh handlers).
         down_payment_pct: None,
         mortgage_interest_rate: None,

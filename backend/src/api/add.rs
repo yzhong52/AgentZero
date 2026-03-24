@@ -56,12 +56,12 @@ pub(crate) async fn add_listing(
 /// POST /api/listings/suggest
 ///
 /// AI-facing listing ingest endpoint. Behaves like `add_listing` but enforces
-/// `Pending` status for newly ingested properties.
+/// `HumanPending` status for newly ingested properties.
 pub(crate) async fn suggest_listing(
     State(state): State<AppState>,
     Json(body): Json<AddRequest>,
 ) -> Result<Json<Property>, (StatusCode, String)> {
-    let property = add_listing_impl(state, body, ListingStatus::Pending).await?;
+    let property = add_listing_impl(state, body, ListingStatus::HumanPending).await?;
     Ok(Json(property))
 }
 
@@ -186,7 +186,7 @@ async fn add_listing_impl(
     }
 
     // Assign to search profile.
-    property.search_profile_id = body.search_profile_id;
+    property.search_profile_id = Some(body.search_profile_id);
     property.status = initial_status;
 
     let saved = property_store::add_listing(&state.db, &property).await.map_err(|e| {
@@ -246,7 +246,7 @@ fn is_blocked_host(site: parsers::ListingSite) -> bool {
 fn blank_stub() -> StoredProperty {
     StoredProperty {
         id: 0,
-        search_profile_id: 0, // overwritten by the caller before insert
+        search_profile_id: None, // overwritten by the caller before insert
         redfin_url: None,
         realtor_url: None,
         rew_url: None,
@@ -301,5 +301,6 @@ fn blank_stub() -> StoredProperty {
         mls_number: None,
         laundry_in_unit: None,
         source_status: None,
+            agent_comment: None,
     }
 }

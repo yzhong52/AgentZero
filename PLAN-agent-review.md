@@ -88,7 +88,7 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 1 — Backend: status rename + new statuses
 
-- [ ] `backend/src/models/property.rs`
+- [x] `backend/src/models/property.rs`
   - Rename `Pending` → `HumanPending` in `ListingStatus` enum
   - Add `AgentPending` and `AgentSkip` variants
   - Update `Display`, `FromStr`, sqlx impls for all three
@@ -96,12 +96,12 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 2 — Backend: DB migrations
 
-- [ ] `0034_rename_pending_status.sql`
+- [x] `0034_rename_pending_status.sql`
   ```sql
   UPDATE listings SET status = 'HumanPending' WHERE status = 'Pending';
   ```
 
-- [ ] `0035_agent_fields.sql`
+- [x] `0035_agent_fields.sql`
   ```sql
   -- Add agent_comment column
   ALTER TABLE listings ADD COLUMN agent_comment TEXT;
@@ -114,9 +114,9 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 3 — Backend: StoredProperty + Property fields
 
-- [ ] `agent_comment: Option<String>` added to `StoredProperty` and propagated through
+- [x] `agent_comment: Option<String>` added to `StoredProperty` and propagated through
   `Property::from_stored`, `row_to_property`, INSERT/UPDATE queries
-- [ ] `search_profile_id: Option<i64>` change propagated through store queries,
+- [x] `search_profile_id: Option<i64>` change propagated through store queries,
   `From<Property> for StoredProperty`, `From<StoredProperty>` conversions
 
 ### Step 4 — Backend: `add.rs` — simplify suggest endpoint

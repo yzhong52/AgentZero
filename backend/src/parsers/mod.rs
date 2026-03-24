@@ -565,6 +565,7 @@ fn merge_property(
             fallback_source,
         ),
         source_status: None, // cleared by a successful parse
+        agent_comment: None,
     }
 }
 

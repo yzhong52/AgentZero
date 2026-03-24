@@ -198,13 +198,16 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
         // None means actively for sale — also clears any stale off-market status.
         source_status: parsed_listing.source_status.clone(),
 
+        // ── Agent review ──────────────────────────────────────────────────────
+        // Preserve the agent's comment and never overwrite it on refresh.
+        agent_comment: stored_listing.agent_comment.clone(),
+
         // ── System metadata ───────────────────────────────────────────────────
         // Neither value affects the UPDATE: created_at is not in the SET clause,
         // and updated_at is overwritten with datetime('now') by the SQL.
         // The correct values come back from the fetch_one_by_id re-read in update_by_id.
         created_at: stored_listing.created_at.clone(),
         updated_at: stored_listing.updated_at.clone(),
-
     }
 }
 
@@ -416,7 +419,7 @@ mod tests {
     fn base_stored() -> StoredProperty {
         StoredProperty {
             id: 0,
-            search_profile_id: 1,
+            search_profile_id: Some(1),
             title: String::new(),
             description: String::new(),
             price: None,
@@ -534,7 +537,7 @@ mod tests {
     fn test_merge_identity_fields_from_stored() {
         let parsed = StoredProperty {
             redfin_url: Some("https://wrong.com".to_string()),
-            search_profile_id: 0,
+            search_profile_id: None,
             ..base_stored()
         };
         let stored = StoredProperty {
@@ -542,7 +545,7 @@ mod tests {
             realtor_url: Some("https://realtor.ca/correct".to_string()),
             rew_url: None,
             zillow_url: Some("https://zillow.com/correct".to_string()),
-            search_profile_id: 3,
+            search_profile_id: Some(3),
             ..base_stored()
         };
 
@@ -559,8 +562,8 @@ mod tests {
     /// which has no matching row in search_profiles → FK constraint failure.
     #[test]
     fn test_merge_preserves_search_profile_id() {
-        let parsed = StoredProperty { search_profile_id: 0, ..base_stored() };
-        let stored = StoredProperty { search_profile_id: 5, ..base_stored() };
+        let parsed = StoredProperty { search_profile_id: None, ..base_stored() };
+        let stored = StoredProperty { search_profile_id: Some(5), ..base_stored() };
 
         let result = merge_with_stored(parsed, &stored, 1);
 

@@ -17,7 +17,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating,
                     property_type, listed_date, mls_number, laundry_in_unit,
-                    source_status, search_profile_id";
+                    source_status, search_profile_id, agent_comment";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -57,11 +57,11 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 property_type, listed_date, mls_number, laundry_in_unit,
-                source_status, search_profile_id,
+                source_status, search_profile_id, agent_comment,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                datetime('now'), datetime('now'))
            RETURNING id"#,
     )
@@ -117,6 +117,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
     .bind(p.laundry_in_unit)
     .bind(&p.source_status)
     .bind(p.search_profile_id)
+    .bind(&p.agent_comment)
     .fetch_one(pool)
     .await?;
 
@@ -184,6 +185,7 @@ pub async fn update_by_id(
                status                   = ?,
                source_status            = ?,
                search_profile_id        = ?,
+               agent_comment            = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -239,6 +241,7 @@ pub async fn update_by_id(
     .bind(p.status)
     .bind(&p.source_status)
     .bind(p.search_profile_id)
+    .bind(&p.agent_comment)
     .bind(id)
     .execute(pool)
     .await?;
@@ -458,6 +461,7 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> StoredProperty {
         mls_number: row.get("mls_number"),
         laundry_in_unit: row.get("laundry_in_unit"),
         source_status: row.get("source_status"),
+        agent_comment: row.get("agent_comment"),
     }
 }
 
@@ -479,7 +483,7 @@ mod tests {
 
         let p = StoredProperty {
             id: 0,
-            search_profile_id: 1,
+            search_profile_id: Some(1),
             redfin_url: Some("https://example.com/add".to_string()),
             realtor_url: Some("https://realtor.example/add".to_string()),
             rew_url: Some("https://rew.example/add".to_string()),
@@ -534,6 +538,7 @@ mod tests {
             mls_number: Some("R9999999".to_string()),
             laundry_in_unit: Some(true),
             source_status: None,
+                agent_comment: None,
         };
 
         let saved = add_listing(&pool, &p).await.expect("add_listing failed");
@@ -563,7 +568,7 @@ mod tests {
         // Construct a minimal property to save.
         let p = StoredProperty {
             id: 0,
-            search_profile_id: 1,
+            search_profile_id: Some(1),
             redfin_url: Some("https://example.com/1".to_string()),
             realtor_url: None,
             rew_url: None,
@@ -618,6 +623,7 @@ mod tests {
             mls_number: None,
             laundry_in_unit: None,
             source_status: None,
+                agent_comment: None,
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)

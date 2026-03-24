@@ -35,6 +35,27 @@ small and fast.
 
 ---
 
+## State Diagram
+
+```
+(new listing added by agent / user)
+        │
+        ▼
+  AgentPending ──────────────────────────────► AgentSkip
+  (agent reviews)                              (no profile match)
+        │
+        │ agent approves + assigns profile
+        ▼
+  HumanPending
+  (human reviews in UI)
+        │
+        ├──────────────► Interested  (human is tracking)
+        ├──────────────► Buyable     (human considers it a strong candidate)
+        └──────────────► Pass        (human dismissed)
+
+  Human can also move freely between Interested / Buyable / Pass at any time.
+```
+
 ## Status Set
 
 | Status | Set by | Meaning |

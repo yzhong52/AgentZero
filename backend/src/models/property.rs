@@ -6,12 +6,16 @@ use std::str::FromStr;
 use ts_rs::TS;
 
 /// The user-facing status of a listing.
-/// Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
+/// Stored in SQLite as its display name ("Interested", "Buyable", "Pass", …).
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub enum ListingStatus {
-    /// Auto-added by Agent Zero; awaiting user review.
-    Pending,
+    /// Newly added; the agent has not reviewed it yet.
+    AgentPending,
+    /// Agent approved this listing; awaiting human review.
+    HumanPending,
+    /// Agent decided this listing does not match any search profile.
+    AgentSkip,
     #[default]
     Interested,
     Buyable,
@@ -21,7 +25,9 @@ pub enum ListingStatus {
 impl std::fmt::Display for ListingStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
-            Self::Pending => "Pending",
+            Self::AgentPending => "AgentPending",
+            Self::HumanPending => "HumanPending",
+            Self::AgentSkip => "AgentSkip",
             Self::Interested => "Interested",
             Self::Buyable => "Buyable",
             Self::Pass => "Pass",
@@ -33,7 +39,12 @@ impl FromStr for ListingStatus {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Pending" => Ok(Self::Pending),
+            "AgentPending" => Ok(Self::AgentPending),
+            "HumanPending" => Ok(Self::HumanPending),
+            // Legacy value — migrated by 0034_rename_pending_status.sql but
+            // kept here so old DB rows decode without error during the transition.
+            "Pending" => Ok(Self::HumanPending),
+            "AgentSkip" => Ok(Self::AgentSkip),
             "Interested" => Ok(Self::Interested),
             "Buyable" => Ok(Self::Buyable),
             "Pass" => Ok(Self::Pass),
@@ -81,7 +92,7 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
 pub struct StoredProperty {
     // ── System ──────────────────────────────────────────────────────────────
     pub id: i64,
-    pub search_profile_id: i64,
+    pub search_profile_id: Option<i64>, // None while PendingAgentReview
 
     // ── Header ──────────────────────────────────────────────────────────────
     pub title: String,
@@ -161,6 +172,9 @@ pub struct StoredProperty {
     pub status: ListingStatus,
     pub notes: Option<String>,
 
+    // ── Agent review ─────────────────────────────────────────────────────────
+    pub agent_comment: Option<String>,
+
     // ── System metadata ──────────────────────────────────────────────────────
     pub created_at: String,
     pub updated_at: Option<String>,
@@ -179,8 +193,8 @@ pub struct StoredProperty {
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub struct Property {
     // ── System ──────────────────────────────────────────────────────────────
-    pub id: i64,                // system
-    pub search_profile_id: i64, // system — FK to search_profiles.id
+    pub id: i64,                          // system
+    pub search_profile_id: Option<i64>,   // system — FK to search_profiles.id; None while PendingAgentReview
 
     // ── Header ──────────────────────────────────────────────────────────────
     pub title: String,       // parsed; editable (inline header, via PATCH /details)
@@ -262,6 +276,9 @@ pub struct Property {
     pub status: ListingStatus, // editable (status widget); never null, defaults to Interested
     pub notes: Option<String>, // editable (via PATCH /notes)
 
+    // ── Agent review ─────────────────────────────────────────────────────────
+    pub agent_comment: Option<String>, // set by POST /api/listings/:id/agent-review
+
     // ── System metadata ──────────────────────────────────────────────────────
     /// Populated from images_cache, not stored directly in listings.
     pub images: Vec<ImageEntry>, // system
@@ -335,6 +352,7 @@ impl Property {
             source_status: s.source_status,
             status: s.status,
             notes: s.notes,
+            agent_comment: s.agent_comment,
             created_at: s.created_at,
             updated_at: s.updated_at,
             images,
@@ -400,6 +418,7 @@ impl From<Property> for StoredProperty {
             source_status: p.source_status,
             status: p.status,
             notes: p.notes,
+            agent_comment: p.agent_comment,
             created_at: p.created_at,
             updated_at: p.updated_at,
         }

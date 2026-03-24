@@ -38,22 +38,24 @@ small and fast.
 ## State Diagram
 
 ```
-(new listing added by agent / user)
-        │
-        ▼
-  AgentPending ──────────────────────────────► AgentSkip
-  (agent reviews)                              (no profile match)
-        │
-        │ agent approves + assigns profile
-        ▼
-  HumanPending
+  POST /api/listings/suggest          POST /api/listings  (manual add by user)
+  (agent / skill workflow)                    │
+        │                                     │
+        ▼                                     ▼
+  AgentPending ──────────────► AgentSkip   Interested
+  (agent reviews)              (no match)     │
+        │                                     │
+        │ agent approves                       │
+        │ + assigns profile                    │
+        ▼                                     │
+  HumanPending ◄────────────────────────────┘ (user can also manually set)
   (human reviews in UI)
         │
         ├──────────────► Interested  (human is tracking)
         ├──────────────► Buyable     (human considers it a strong candidate)
         └──────────────► Pass        (human dismissed)
 
-  Human can also move freely between Interested / Buyable / Pass at any time.
+  Human can move freely between Interested / Buyable / Pass / HumanPending at any time.
 ```
 
 ## Status Set
@@ -123,7 +125,8 @@ Listings in `AgentPending` state have no profile yet.
   - Old: `{ "url": "...", "search_profile_id": N }`
   - New: `{ "url": "..." }`
 - [ ] Remove profile validation from `suggest` handler
-- [ ] Initial status: `AgentPending` (was `HumanPending`)
+- [ ] `suggest` endpoint: initial status → `AgentPending`, `search_profile_id` → `None`
+- [ ] Manual add endpoint (`POST /api/listings`): initial status stays `Interested` (unchanged)
 - [ ] `search_profile_id` starts as `None`
 - [ ] After saving, spawn background task: `tokio::spawn(run_agent_review(...))`
   - Returns immediately with `AgentPending` property; review runs async

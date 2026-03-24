@@ -42,22 +42,22 @@ small and fast.
   POST /api/listings/suggest         POST /api/listings
   (skill / cron)                     (manual by user, requires profile)
           │                                     │
-          │                                     │
           ▼                                     ▼
-    AgentPending                           Interested
-          │                                     │
-          │  POST /api/listings/:id/agent-review│
-          │                                     │
-          ├──────────────► AgentSkip            │  PATCH /api/listings/:id/details
-          │                (terminal)           │  (user moves freely between
-          │                                     │   Interested / HumanPending /
-          ▼                                     │   Buyable / Pass)
-    HumanPending ◄───────────────────────────── ┤
-          │                                     │
-          ├──────────────────────────────────►  Interested
-          ├──────────────────────────────────►  Buyable
-          └──────────────────────────────────►  Pass
+    AgentPending                           Interested ◄──┐
+          │                                     │        │
+          │  POST /:id/agent-review             │        │  PATCH /:id/details
+          │                                     │        │  (user moves freely
+          ├──────────► AgentSkip (terminal)     ▼        │   between these three)
+          │                                  Buyable ◄───┤
+          ▼                                     │        │
+    HumanPending                                ▼        │
+          │                                   Pass  ◄────┘
+          │  (one-way: agent → human)
+          │
+          └──► Interested / Buyable / Pass
+               via PATCH /:id/details
 ```
+``
 
 ## Status Set
 

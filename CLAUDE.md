@@ -60,6 +60,7 @@ Optional overrides:
 ```bash
 BACKEND_PORT=8000 LOG_FILE=/tmp/backend.log ./scripts/run_backend.sh
 FRONTEND_PORT=5173 LOG_FILE=/tmp/frontend.log ./scripts/run_frontend.sh
+SKIP_SAFARI=1 ./scripts/run_backend.sh   # skip Safari, go straight to Chrome CDP
 ```
 
 ## API

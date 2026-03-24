@@ -236,9 +236,10 @@ fn is_bot_protected_host(url: &Url) -> bool {
 /// Fetch HTML for a listing URL.
 ///
 /// Strategy:
-/// 1. Try the reqwest HTTP client.
-/// 2. If that fails with a 403 or returns a bot-challenge page for a known
-///    protected host, fall back to Safari via AppleScript.
+/// 1. Try the reqwest HTTP client directly.
+/// 2. For bot-protected hosts (realtor.ca, zillow.com), fall back to Safari
+///    via AppleScript (lower overhead when Safari is already running).
+/// 3. If Safari fails or `SKIP_SAFARI=1` is set, fall back to Chrome via CDP.
 pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, String> {
     // Fast path: direct HTTP fetch.
     match fetch_html_direct(client, url).await {
@@ -260,16 +261,23 @@ pub(crate) async fn fetch_html(client: &Client, url: &Url) -> Result<String, Str
         Err(e) => return Err(format!("Failed to fetch {url}: {e}")),
     }
 
-    // Try Safari first (lower overhead if already open).
-    match fetch_html_safari(url).await {
-        Ok(html) => return Ok(html),
-        Err(e) => {
-            tracing::info!(
-                "fetch_html: Safari failed for {} ({}), trying Chrome",
-                url,
-                e
-            );
+    // SKIP_SAFARI=1 bypasses Safari entirely (useful for testing Chrome directly).
+    let skip_safari = std::env::var("SKIP_SAFARI").map(|v| v == "1").unwrap_or(false);
+
+    if !skip_safari {
+        // Try Safari first (lower overhead if already open).
+        match fetch_html_safari(url).await {
+            Ok(html) => return Ok(html),
+            Err(e) => {
+                tracing::info!(
+                    "fetch_html: Safari failed for {} ({}), trying Chrome",
+                    url,
+                    e
+                );
+            }
         }
+    } else {
+        tracing::info!("fetch_html: SKIP_SAFARI=1, skipping Safari for {}", url);
     }
 
     // Chrome via CDP (works even when Safari is not running).

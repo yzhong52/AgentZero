@@ -43,20 +43,24 @@ small and fast.
   (skill / cron)                     (manual by user, requires profile)
           │                                     │
           ▼                                     ▼
-    AgentPending                           Interested ◄──┐
-          │                                     │        │
-          │  POST /:id/agent-review             │        │  PATCH /:id/details
-          │                                     │        │  (user moves freely
-          ├──────────► AgentSkip (terminal)     ▼        │   between these three)
-          │                                  Buyable ◄───┤
-          ▼                                     │        │
-    HumanPending                                ▼        │
-          │                                   Pass  ◄────┘
-          │  (one-way: agent → human)
+    AgentPending                           Interested
           │
-          └──► Interested / Buyable / Pass
-               via PATCH /:id/details
+          │  POST /:id/agent-review
+          │
+          ├──────────────────► AgentSkip  (terminal — no profile match)
+          │
+          ▼
+    HumanPending
+          │
+          │  PATCH /:id/details
+          ▼
+      Interested
+       │       │
+       │       │  PATCH /:id/details
+       ▼       ▼
+   Buyable    Pass
 ```
+``
 ``
 
 ## Status Set

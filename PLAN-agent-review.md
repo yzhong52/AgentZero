@@ -39,29 +39,28 @@ small and fast.
 ## State Diagram
 
 ```
-  POST /api/listings/suggest         POST /api/listings
-  (skill / cron)                     (manual by user, requires profile)
-          │                                     │
-          ▼                                     ▼
-    AgentPending                           Interested
-          │
-          │  POST /:id/agent-review
-          │
-          ├──────────────────► AgentSkip  (terminal — no profile match)
-          │
-          ▼
-    HumanPending
-          │
-          │  PATCH /:id/details
-          ▼
-      Interested
-       │       │
-       │       │  PATCH /:id/details
-       ▼       ▼
-   Buyable    Pass
+           POST /api/listings/agent-suggest         
+           (skill / cron)
+                   │
+                   ▼
+             AgentPending
+                   │
+                   │POST /:id/agent-review
+                   │
+                   ├──────────────────► AgentSkip  
+                   │                   (terminal — no profile match)
+                   │
+                   ▼
+    ┌──────── HumanPending
+    │              │
+    │              │
+    ▼              ▼
+   Pass ◄───── Interested ─────► Buyable
+                   ▲
+                   │
+          POST /api/listings
+          (manual by user, requires profile)
 ```
-``
-``
 
 ## Status Set
 

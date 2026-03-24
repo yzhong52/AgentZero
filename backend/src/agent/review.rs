@@ -1,6 +1,6 @@
 //! Background agent review — triages a newly added listing using the Claude API.
 //!
-//! After a listing is saved via `POST /api/listings/suggest`, this task is
+//! After a listing is saved via `POST /api/listings/agent-suggest`, this task is
 //! spawned to:
 //! 1. Fetch all search profiles from the DB.
 //! 2. Build a compact prompt from the parsed property fields.

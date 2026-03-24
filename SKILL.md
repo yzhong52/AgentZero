@@ -100,7 +100,7 @@ This is opt-in: the scan only runs when explicitly triggered (cron or manual) an
 | Action | Method | Endpoint | Body / Params |
 |---|---|---|---|
 | List search profiles | GET | `/api/search-profiles` | — |
-| Add listing (AI) | POST | `/api/listings/suggest` | `{"url": "...", "search_profile_id": N}` |
+| Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "...", "search_profile_id": N}` |
 | Refresh listing | PUT | `/api/listings/:id/refresh` | — |
 | List all listings | GET | `/api/listings` | `?status=...&search_profile_id=N` |
 | Get single listing | GET | `/api/listings/:id` | — |
@@ -112,7 +112,7 @@ Responses are JSON `Property` objects (see field list below).
 1. **GET** `/api/search-profiles` to fetch all profiles.
 2. Read each profile's `title` + `description`. Pick the best fit based on property type, location, price, and size from the URL or page context.
 3. If no profile fits, log a skip message in the daily notes file and tell the user why. Do NOT add the listing.
-4. **POST** `/api/listings/suggest` with `{"url": "<url>", "search_profile_id": <id>}`.
+4. **POST** `/api/listings/agent-suggest` with `{"url": "<url>", "search_profile_id": <id>}`.
 5. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
 6. On success: log a summary to the daily notes file (see Logging section).
 

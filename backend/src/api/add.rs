@@ -20,7 +20,7 @@
 //!
 //! Endpoints:
 //! - `POST /api/listings`         — human-driven add (defaults to Interested)
-//! - `POST /api/listings/suggest` — AI-driven suggest (AgentPending, no profile; agent assigns)
+//! - `POST /api/listings/agent-suggest` — AI-driven suggest (AgentPending, no profile; agent assigns)
 
 use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
@@ -41,7 +41,7 @@ pub struct AddRequest {
     pub search_profile_id: i64,
 }
 
-/// Body for POST /api/listings/suggest — agent/skill workflow.
+/// Body for POST /api/listings/agent-suggest — agent/skill workflow.
 /// No search_profile_id: the agent assigns the profile during review.
 #[derive(Deserialize)]
 pub struct SuggestRequest {
@@ -60,7 +60,7 @@ pub(crate) async fn add_listing(
     Ok(Json(property))
 }
 
-/// POST /api/listings/suggest
+/// POST /api/listings/agent-suggest
 ///
 /// AI/skill-driven listing ingest endpoint. Saves the property with
 /// `AgentPending` status and no search profile. After saving, spawns a

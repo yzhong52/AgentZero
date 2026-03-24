@@ -39,24 +39,24 @@ small and fast.
 ## State Diagram
 
 ```
-  POST /api/listings/suggest          POST /api/listings  (manual add by user)
-  (agent / skill workflow)                    │
-        │                                     │
-        ▼                                     ▼
-  AgentPending ──────────────► AgentSkip   Interested
-  (agent reviews)              (no match)     │
-        │                                     │
-        │ agent approves                       │
-        │ + assigns profile                    │
-        ▼                                     │
-  HumanPending ◄────────────────────────────┘ (user can also manually set)
-  (human reviews in UI)
-        │
-        ├──────────────► Interested  (human is tracking)
-        ├──────────────► Buyable     (human considers it a strong candidate)
-        └──────────────► Pass        (human dismissed)
-
-  Human can move freely between Interested / Buyable / Pass / HumanPending at any time.
+  POST /api/listings/suggest         POST /api/listings
+  (skill / cron)                     (manual by user, requires profile)
+          │                                     │
+          │                                     │
+          ▼                                     ▼
+    AgentPending                           Interested
+          │                                     │
+          │  POST /api/listings/:id/agent-review│
+          │                                     │
+          ├──────────────► AgentSkip            │  PATCH /api/listings/:id/details
+          │                (terminal)           │  (user moves freely between
+          │                                     │   Interested / HumanPending /
+          ▼                                     │   Buyable / Pass)
+    HumanPending ◄───────────────────────────── ┤
+          │                                     │
+          ├──────────────────────────────────►  Interested
+          ├──────────────────────────────────►  Buyable
+          └──────────────────────────────────►  Pass
 ```
 
 ## Status Set

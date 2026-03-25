@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Property, SearchProfile } from './types'
-import { STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
+import { STATUS_COLORS, HUMAN_PENDING_STATUS, displayStatus } from './constants'
 import { formatPriceCompact } from './utils'
 import './App.css'
 
@@ -35,7 +35,7 @@ export function InboxPage() {
           )
         )
         const pending = (results.flat() as Property[])
-          .filter(p => p.status === PENDING_STATUS)
+          .filter(p => p.status === HUMAN_PENDING_STATUS)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         setListings(pending)
         if (pending.length > 0) setSelectedId(pending[0].id)
@@ -119,7 +119,7 @@ export function InboxPage() {
                   <div className="inbox-item-info">
                     <div className="inbox-item-price">{formatPriceCompact(p.price) ?? '—'}</div>
                     {p.street_address && <div className="inbox-item-address">{p.street_address}</div>}
-                    {searchMap[p.search_profile_id] && (
+                    {p.search_profile_id != null && searchMap[p.search_profile_id] && (
                       <div className="inbox-item-search">{searchMap[p.search_profile_id]}</div>
                     )}
                   </div>
@@ -149,7 +149,7 @@ export function InboxPage() {
                   {selected.sqft != null && <span>{selected.sqft.toLocaleString()} sqft</span>}
                   {selected.year_built != null && <span>Built {selected.year_built}</span>}
                 </div>
-                {searchMap[selected.search_profile_id] && (
+                {selected.search_profile_id != null && searchMap[selected.search_profile_id] && (
                   <div className="inbox-detail-search-tag">{searchMap[selected.search_profile_id]}</div>
                 )}
                 {selected.description && (

@@ -37,7 +37,7 @@ export type SearchProfile = {
 
 export type Property = {
   id: number
-  search_profile_id: number
+  search_profile_id: number | null
   redfin_url: string | null
   realtor_url: string | null
   rew_url: string | null
@@ -94,4 +94,5 @@ export type Property = {
   mls_number: string | null
   laundry_in_unit: boolean | null
   source_status: string | null
+  agent_comment: string | null
 }

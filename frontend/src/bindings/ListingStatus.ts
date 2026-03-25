@@ -2,6 +2,6 @@
 
 /**
  * The user-facing status of a listing.
- * Stored in SQLite as its display name ("Interested", "Buyable", "Pass").
+ * Stored in SQLite as its display name ("Interested", "Buyable", "Pass", …).
  */
-export type ListingStatus = "Pending" | "Interested" | "Buyable" | "Pass";
+export type ListingStatus = "AgentPending" | "HumanPending" | "AgentSkip" | "Interested" | "Buyable" | "Pass";

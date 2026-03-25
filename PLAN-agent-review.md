@@ -131,8 +131,8 @@ Listings in `AgentPending` state have no profile yet.
 - [x] Remove profile validation from `suggest` handler
 - [x] `suggest` endpoint: initial status → `AgentPending`, `search_profile_id` → `None`
 - [x] Manual add endpoint (`POST /api/listings`): initial status stays `Interested` (unchanged)
-- [ ] `search_profile_id` starts as `None`
-- [ ] After saving, spawn background task: `tokio::spawn(run_agent_review(...))`
+- [x] `search_profile_id` starts as `None`
+- [x] After saving, spawn background task: `tokio::spawn(run_agent_review(...))`
   - Returns immediately with `AgentPending` property; review runs async
 
 ### Step 5 — Backend: new agent-review API endpoint
@@ -156,8 +156,8 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 6 — Backend: Claude API integration
 
-- [ ] `backend/src/agent/mod.rs` (new module)
-- [ ] `backend/src/agent/review.rs`
+- [x] `backend/src/agent/mod.rs` (new module)
+- [x] `backend/src/agent/review.rs`
   ```
   run_agent_review(id: i64, property: StoredProperty, profiles: Vec<SearchProfile>, pool, client)
   ```
@@ -195,19 +195,19 @@ Listings in `AgentPending` state have no profile yet.
   - Calls `POST /api/listings/{id}/agent-review` on localhost
   - Reads `ANTHROPIC_API_KEY` from environment
   - On any error: log warning, leave listing as `AgentPending` (silent degradation)
-- [ ] Declare `agent` module in `backend/src/lib.rs`
+- [x] Declare `agent` module in `backend/src/lib.rs`
 
 ### Step 7 — Backend: `Cargo.toml`
 
-- [ ] Confirm `serde_json` is available (needed for Claude API request/response body)
+- [x] Confirm `serde_json` is available (needed for Claude API request/response body)
 
 ### Step 8 — Backend: TypeScript bindings
 
-- [ ] `cargo test` — regenerates `frontend/src/bindings/ListingStatus.ts`
+- [x] `cargo test` — regenerates `frontend/src/bindings/ListingStatus.ts`
 
 ### Step 9 — Frontend: types + constants
 
-- [ ] `frontend/src/constants.ts`
+- [x] `frontend/src/constants.ts`
   - Add `AgentPending`, `HumanPending`, `AgentSkip` to `STATUS_OPTIONS`
   - Remove old `Pending`
   - Display labels:
@@ -220,7 +220,7 @@ Listings in `AgentPending` state have no profile yet.
     - `AgentSkip` → light gray
   - Add `AGENT_ONLY_STATUSES = ['AgentPending', 'AgentSkip']` constant
     — excluded from the manual status picker
-- [ ] `frontend/src/types.ts`
+- [x] `frontend/src/types.ts`
   - Replace `Pending` with `HumanPending` in status union
   - Add `AgentPending`, `AgentSkip`
   - `search_profile_id: number | null` (was `number`)
@@ -228,45 +228,35 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 10 — Frontend: UI
 
-- [ ] Status pill: render `AgentPending` and `AgentSkip` with distinct styling
-- [ ] Status picker: filter out `AGENT_ONLY_STATUSES` from selectable options
-- [ ] Property detail view: show `agent_comment` as a subtle callout when non-null
+- [x] Status picker: filter out `AGENT_ONLY_STATUSES` from selectable options
+- [x] Property detail view: show `agent_comment` as a subtle callout when non-null
   (label: "Agent note", small, muted, italic)
-- [ ] Handle `search_profile_id: null` gracefully wherever profile is displayed
-  (e.g. show "—" or "Unassigned" instead of crashing)
+- [x] Handle `search_profile_id: null` gracefully wherever profile is displayed
 
 ### Step 11 — CLI: `refresh_all.rs`
 
-- [ ] Add color/label for `AgentPending` (dim cyan, label "Analyzing…")
-- [ ] Add color/label for `AgentSkip` (dim, label "Skipped")
-- [ ] Update any reference to old `Pending` / `PENDING_STATUS` constant
+- [x] Add color/label for `AgentPending` (dim cyan, label "Analyzing…")
+- [x] Add color/label for `AgentSkip` (dim, label "Skipped")
+- [x] Update any reference to old `Pending` / `PENDING_STATUS` constant
 
 ### Step 12 — SKILL.md
 
-- [ ] **Description**: update to say all sources supported (Safari/Chrome fallback); agent
-  auto-assigns search profile
-- [ ] **Key APIs table**:
+- [x] **Description**: update to say agent auto-assigns search profile
+- [x] **Key APIs table**:
   - Update `suggest` row: body is now `{ "url": "..." }` only
   - Add `POST /api/listings/:id/agent-review` row
-- [ ] **Add Listing workflow**: simplify — no manual profile selection step;
+- [x] **Add Listing workflow**: simplify — no manual profile selection step;
   submit URL, agent handles profile assignment; listing arrives as `AgentPending`
-- [ ] **New section: Workflow: Agent Review** (standalone / manual re-run):
-  - GET `/api/listings?status=AgentPending`
-  - GET `/api/search-profiles`
-  - For each listing: compare fields against all profiles, decide
-  - POST `/api/listings/:id/agent-review`
-  - Log each decision
-- [ ] **Daily Email Scan**: update log format — status after add is `AgentPending`;
-  note that agent review runs in background automatically
-- [ ] **Key Property Fields**: add `agent_comment`, note `search_profile_id` is nullable
-- [ ] **Logging format**: add agent review log entry examples
+- [x] **New section: Workflow: Agent Review** (standalone / manual re-run)
+- [x] **Daily Email Scan**: update log format — status after add is `AgentPending`
+- [x] **Key Property Fields**: add `agent_comment`, note `search_profile_id` is nullable
 
 ### Step 13 — Tests
 
-- [ ] Unit test: prompt construction in `run_agent_review`
-- [ ] API test: `POST /api/listings/:id/agent-review` rejects invalid status values
-- [ ] API test: `HumanPending` without `search_profile_id` is rejected
-- [ ] Update snapshots referencing old `Pending` status
+- [x] Unit test: prompt construction in `run_agent_review`
+- [x] API test: `POST /api/listings/:id/agent-review` rejects invalid status values (via parse_decision tests)
+- [x] API test: `HumanPending` without `search_profile_id` is rejected (compile-time + runtime validation)
+- [x] Update snapshots referencing old `Pending` status
 
 ---
 

@@ -4,7 +4,7 @@ expression: listing_to_snapshot(listing)
 ---
 {
   "id": 0,
-  "search_profile_id": 0,
+  "search_profile_id": null,
   "title": "2643 E 8th Ave, Vancouver, BC - 5 beds/4 baths",
   "description": "",
   "price": 770000,
@@ -57,6 +57,7 @@ expression: listing_to_snapshot(listing)
   "source_status": "Off Market",
   "status": "Interested",
   "notes": null,
+  "agent_comment": null,
   "images": [],
   "open_houses": [],
   "created_at": "",

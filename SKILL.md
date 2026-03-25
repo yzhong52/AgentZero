@@ -1,6 +1,6 @@
 ---
 name: agent-zero
-description: Interact with the AgentZero real estate listing tracker (local Rust/Axum backend at http://localhost:8000). Use when asked to add a property listing by URL, refresh an existing listing, or list search profiles/scenarios. AgentZero parses Redfin and REW.ca URLs; Zillow and Realtor.ca are blocked (saves stub only). The Daily Email Scan workflow reads Redfin alert emails via himalaya (IMAP) and opens Gmail in the openclaw browser to extract listing URLs — explicit user consent and himalaya configuration are required before use. After any action, log a summary to agent_zero_logs/YYYY-MM-DD.md in the workspace.
+description: Interact with the AgentZero real estate listing tracker (local Rust/Axum backend at http://localhost:8000). Use when asked to add a property listing by URL, refresh an existing listing, or list search profiles/scenarios. AgentZero parses Redfin and REW.ca URLs; Zillow and Realtor.ca are blocked (saves stub only). When a listing is added via agent-suggest, the backend automatically triages it with Claude (assigns a search profile or skips it) — no manual profile selection needed. The Daily Email Scan workflow reads Redfin alert emails via himalaya (IMAP) and opens Gmail in the openclaw browser to extract listing URLs — explicit user consent and himalaya configuration are required before use. After any action, log a summary to agent_zero_logs/YYYY-MM-DD.md in the workspace.
 metadata:
   openclaw:
     requires:
@@ -100,7 +100,8 @@ This is opt-in: the scan only runs when explicitly triggered (cron or manual) an
 | Action | Method | Endpoint | Body / Params |
 |---|---|---|---|
 | List search profiles | GET | `/api/search-profiles` | — |
-| Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "...", "search_profile_id": N}` |
+| Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "..."}` |
+| Apply agent review | POST | `/api/listings/:id/agent-review` | `{"status": "HumanPending", "search_profile_id": N, "comment": "..."}` or `{"status": "AgentSkip", "comment": "..."}` |
 | Refresh listing | PUT | `/api/listings/:id/refresh` | — |
 | List all listings | GET | `/api/listings` | `?status=...&search_profile_id=N` |
 | Get single listing | GET | `/api/listings/:id` | — |
@@ -109,14 +110,24 @@ Responses are JSON `Property` objects (see field list below).
 
 ## Workflow: Add a Listing by URL
 
-1. **GET** `/api/search-profiles` to fetch all profiles.
-2. Read each profile's `title` + `description`. Pick the best fit based on property type, location, price, and size from the URL or page context.
-3. If no profile fits, log a skip message in the daily notes file and tell the user why. Do NOT add the listing.
-4. **POST** `/api/listings/agent-suggest` with `{"url": "<url>", "search_profile_id": <id>}`.
-5. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
-6. On success: log a summary to the daily notes file (see Logging section).
+1. **POST** `/api/listings/agent-suggest` with `{"url": "<url>"}`.
+2. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
+3. On success: the listing is saved as `AgentPending`. The backend agent will automatically assign it to a search profile in the background — no manual profile selection needed.
+4. Log a summary to the daily notes file (see Logging section).
 
 Supported URL sources: `redfin.ca`, `redfin.com`, `rew.ca` (parses fully). `zillow.com`, `realtor.ca` (saves stub only — inform user).
+
+## Workflow: Agent Review (manual re-run)
+
+Use this workflow to manually triage listings that are still in `AgentPending` state (e.g. if the background agent failed).
+
+1. **GET** `/api/listings?status=AgentPending` — fetch listings awaiting agent review.
+2. **GET** `/api/search-profiles` — fetch all profiles.
+3. For each listing: compare its fields (price, beds, location, type, schools, tax) against all profile descriptions. Pick the best match, or skip if none fit.
+4. **POST** `/api/listings/:id/agent-review` with one of:
+   - Matched: `{"status": "HumanPending", "search_profile_id": <id>, "comment": "<one-sentence reason>"}`
+   - No match: `{"status": "AgentSkip", "comment": "<one-sentence reason>"}`
+5. Log each decision to the daily notes file.
 
 ## Workflow: Refresh a Listing
 
@@ -145,7 +156,7 @@ Create the folder and file if they don't exist.
 - **URL:** https://www.redfin.ca/...
 - **Profile:** East Van House (id=1)
 - **Price:** $2,198,000
-- **Status:** Pending
+- **Status:** AgentPending (agent review running in background)
 
 ## HH:MM — Skipped listing
 - **Email:** https://mail.google.com/mail/u/0/#inbox/<thread_id>
@@ -157,7 +168,7 @@ The `thread_id` is the hex ID visible in the Gmail URL after opening the email i
 
 ## Key Property Fields
 
-`id`, `title`, `price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `land_sqft`, `property_tax`, `mortgage_monthly`, `monthly_total`, `status`, `redfin_url`, `rew_url`, `mls_number`, `search_profile_id`
+`id`, `title`, `price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `land_sqft`, `property_tax`, `mortgage_monthly`, `monthly_total`, `status`, `redfin_url`, `rew_url`, `mls_number`, `search_profile_id` (nullable — `null` until agent assigns a profile), `agent_comment` (nullable — one-sentence note set by agent review)
 
 ## Workflow: Daily Email Scan (Cron)
 
@@ -229,7 +240,7 @@ This is the workflow for the scheduled daily cron task.
         - Found listing URL: https://www.redfin.ca/...
         - Submitting to AgentZero...
         ```
-      - Submit via **Add Listing** workflow above (auto-select search profile)
+      - Submit via **Add Listing** workflow above (no profile selection needed — agent assigns it)
       - **Append result to log immediately after each listing** (success, skip, or 409)
 
    d. **Mark email as processed:**
@@ -252,9 +263,9 @@ This is the workflow for the scheduled daily cron task.
 
 8. **Notify your user** with summary and a prompt to review new listings in the frontend:
    ```
-   ✅ AgentZero scan complete — processed 2 emails, added 3 listings (1 skipped: no matching profile).
+   ✅ AgentZero scan complete — processed 2 emails, added 3 listings (agent review running in background).
 
-   🏡 New listings are ready to review: http://localhost:5173/inbox
+   🏡 New listings will appear in Review once the agent finishes: http://localhost:5173/inbox
    ```
 
 ### State file location

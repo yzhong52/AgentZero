@@ -4,7 +4,7 @@ import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, HUMAN_PENDING_STATUS, AGENT_ONLY_STATUSES, displayStatus } from './constants'
 import type { StatusOption } from './constants'
 import type { Property, SearchProfile } from './types'
 
@@ -130,13 +130,13 @@ function App() {
     })
   }
 
-  const pendingListings = listings.filter(p => p.status === PENDING_STATUS)
-  const reviewedListings = listings.filter(p => p.status !== PENDING_STATUS)
+  const pendingListings = listings.filter(p => p.status === HUMAN_PENDING_STATUS)
+  const reviewedListings = listings.filter(p => p.status !== HUMAN_PENDING_STATUS)
 
   const statusCounts = Object.fromEntries(
     STATUS_OPTIONS.map(s => [
       s,
-      s === PENDING_STATUS
+      s === HUMAN_PENDING_STATUS
         ? pendingListings.length
         : reviewedListings.filter(p => p.status === s).length,
     ])
@@ -351,7 +351,7 @@ function App() {
       <section className="listings-section">
         <div className="listings-header">
           <div className="status-filter">
-            {STATUS_OPTIONS.filter((s) => s !== PENDING_STATUS).map((s) => (
+            {STATUS_OPTIONS.filter((s) => !AGENT_ONLY_STATUSES.includes(s)).map((s) => (
               <button
                 key={s}
                 className={`filter-btn${statusFilter.has(s) ? ' active' : ''}`}

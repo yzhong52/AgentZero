@@ -472,6 +472,7 @@ mod tests {
             source_status: None,
             status: ListingStatus::Interested,
             notes: None,
+            agent_comment: None,
             created_at: String::new(),
             updated_at: None,
         }
@@ -567,7 +568,7 @@ mod tests {
 
         let result = merge_with_stored(parsed, &stored, 1);
 
-        assert_eq!(result.search_profile_id, 5);
+        assert_eq!(result.search_profile_id, Some(5));
     }
 
     #[test]

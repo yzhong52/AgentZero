@@ -5,7 +5,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { marked } from 'marked'
 import { emojify, get as getEmoji, search as searchEmoji } from 'node-emoji'
 import type { Property, SearchProfile } from './types'
-import { STATUS_OPTIONS, STATUS_COLORS, PENDING_STATUS, displayStatus } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, AGENT_ONLY_STATUSES, displayStatus } from './constants'
 import type { StatusOption } from './constants'
 import { formatPriceFull } from './utils'
 
@@ -1450,10 +1450,16 @@ export function PropertyDetail() {
                     </div>
 
                     <div className="notes-panel">
+                        {property.agent_comment && (
+                            <div className="agent-comment right-panel-section">
+                                <h3 className="notes-heading">Agent note</h3>
+                                <p className="agent-comment-text">{property.agent_comment}</p>
+                            </div>
+                        )}
                         <div className="status-picker right-panel-section">
                             <h3 className="notes-heading">Status</h3>
                             <div className="status-picker-buttons">
-                                {STATUS_OPTIONS.filter(s => s !== PENDING_STATUS).map(s => (
+                                {STATUS_OPTIONS.filter(s => !AGENT_ONLY_STATUSES.includes(s)).map(s => (
                                     <button
                                         key={s}
                                         className={`status-option-btn${property.status === s ? ' active' : ''}`}
@@ -1471,7 +1477,7 @@ export function PropertyDetail() {
                                 <h3 className="notes-heading">Search Profile</h3>
                                 <select
                                     className="search-picker-select"
-                                    value={property.search_profile_id}
+                                    value={property.search_profile_id ?? ''}
                                     onChange={e => {
                                         const val = Number(e.target.value)
                                         if (val) handleMoveToSearchProfile(val)

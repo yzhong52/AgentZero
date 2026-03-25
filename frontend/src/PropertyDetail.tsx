@@ -458,7 +458,6 @@ export function PropertyDetailContent({
     const programmaticScroll = useRef(false)
 
     function goTo(next: number) {
-        if (!property) return
         const clamped = Math.max(0, Math.min(next, property.images.length - 1))
         if (clamped === activeIdx) return
         programmaticScroll.current = true
@@ -482,7 +481,7 @@ export function PropertyDetailContent({
         }
         window.addEventListener('keydown', handleKey)
         return () => window.removeEventListener('keydown', handleKey)
-    }, [lightboxOpen, activeIdx, property?.images.length])
+    }, [lightboxOpen, activeIdx, property.images.length])
 
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -501,7 +500,6 @@ export function PropertyDetailContent({
     }, [])
 
     async function handleMoveToSearchProfile(searchProfileId: number) {
-        if (!property) return
         try {
             const resp = await fetch(`/api/listings/${property.id}/search-profile`, {
                 method: 'PATCH',
@@ -509,7 +507,7 @@ export function PropertyDetailContent({
                 body: JSON.stringify({ search_profile_id: searchProfileId }),
             })
             if (resp.ok) {
-                setProperty(prev => prev ? { ...prev, search_profile_id: searchProfileId } : prev)
+                setProperty(prev => ({ ...prev, search_profile_id: searchProfileId }))
                 // refresh search profile counts
                 fetch('/api/search-profiles').then(r => r.ok ? r.json() : []).then(setSearchProfiles).catch(() => { })
             }
@@ -519,7 +517,7 @@ export function PropertyDetailContent({
     // ── Edit mode ─────────────────────────────────────────────────────────────
 
     function enterEdit() {
-        setDraft(property ? { ...property } : null)
+        setDraft({ ...property })
         setEditMode(true)
     }
 
@@ -556,7 +554,6 @@ export function PropertyDetailContent({
     }
 
     function enterLocationEdit() {
-        if (!property) return
         setLocationDraft({ skytrain_station: property.skytrain_station ?? null, skytrain_walk_min: property.skytrain_walk_min ?? null })
         setLocationEditMode(true)
     }
@@ -589,7 +586,6 @@ export function PropertyDetailContent({
     }
 
     function enterFinanceEdit() {
-        if (!property) return
         setFinanceDraft(recalcMortgage({ ...property }))
         setFinanceEditMode(true)
     }
@@ -649,7 +645,6 @@ export function PropertyDetailContent({
     // ── URL save (right panel) ────────────────────────────────────────────────
 
     async function saveUrls(): Promise<boolean> {
-        if (!property) return false
         setUrlsSaving(true)
         setUrlSaveError(null)
         try {
@@ -675,7 +670,6 @@ export function PropertyDetailContent({
     // ── Refresh with preview diff ─────────────────────────────────────────────
 
     async function handleRefreshPreview() {
-        if (!property) return
         setError(null)
         setRefreshMsg(null)
         // Save any URL edits before refreshing
@@ -704,7 +698,6 @@ export function PropertyDetailContent({
     }
 
     async function applyRefresh() {
-        if (!property) return
         setApplying(true)
         try {
             const resp = await fetch(`/api/listings/${property.id}/refresh`, { method: 'PUT' })
@@ -729,7 +722,6 @@ export function PropertyDetailContent({
     // ── Notes ─────────────────────────────────────────────────────────────────
 
     async function handleNotesSave() {
-        if (!property) return
         setNotesSaving(true)
         const normalizedNotes = replaceEmojiShortcodes(notes)
         setNotes(normalizedNotes)
@@ -782,7 +774,7 @@ export function PropertyDetailContent({
     // ── Title (inline) ─────────────────────────────────────────────────────────
 
     async function handleTitleSave() {
-        if (!property || !titleDraft.trim()) return
+        if (!titleDraft.trim()) return
         const newTitle = titleDraft.trim()
         if (newTitle === property.title) return
         setProperty({ ...property, title: newTitle })
@@ -803,7 +795,6 @@ export function PropertyDetailContent({
     // ── Status ────────────────────────────────────────────────────────────────
 
     async function handleStatusChange(newStatus: StatusOption) {
-        if (!property) return
         const updated = { ...property, status: newStatus }
         setProperty(updated)
         try {
@@ -836,7 +827,6 @@ export function PropertyDetailContent({
     // ── Image delete ──────────────────────────────────────────────────────────
 
     async function handleDeleteImage(imageId: number) {
-        if (!property) return
         try {
             const resp = await fetch(`/api/listings/${property.id}/images/${imageId}`, { method: 'DELETE' })
             if (!resp.ok) throw new Error(await resp.text())

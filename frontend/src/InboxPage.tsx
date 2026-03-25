@@ -8,12 +8,12 @@ import './App.css'
 
 // the inbox is a simple triage tool; the only statuses we offer here are
 // 'Interested' or 'Pass'.  keeping the list in a constant makes it easier to
+// modify later if requirements change.
 const INBOX_ACTION_STATUSES = ['Interested', 'Pass'] as const
 const INBOX_ACTION_ICONS: Record<typeof INBOX_ACTION_STATUSES[number], string> = {
   Interested: '✓',
   Pass: '✕',
 }
-// modify later if requirements change.
 
 export function InboxPage() {
   const navigate = useNavigate()
@@ -72,7 +72,6 @@ export function InboxPage() {
       })
     } catch { /* non-fatal */ }
   }, [listings, dismissing])
-
 
   const selected = listings.find(p => p.id === selectedId) ?? null
   const searchMap = Object.fromEntries(searchProfiles.map(s => [s.id, s.title]))
@@ -150,7 +149,7 @@ export function InboxPage() {
         />
       )}
 
-      {!loading && listings.length > 0 && selected && (
+      {!loading && selected && (
         <div className="inbox-float-actions">
           {INBOX_ACTION_STATUSES.map(s => (
             <button

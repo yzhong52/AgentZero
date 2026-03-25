@@ -10,7 +10,7 @@ use serde_json::Value as JsonValue;
 use std::sync::OnceLock;
 
 use super::{extract_json_ld, extract_title, OpenHouseEvent, ParsedListing};
-use crate::models::property::StoredProperty;
+use crate::models::property::{SourceStatus, StoredProperty};
 
 // ── Static regexes ────────────────────────────────────────────────────────────
 
@@ -345,11 +345,11 @@ pub fn extract_lot_size(html: &str) -> Option<i64> {
 /// 2. `listingStatus` in the `xdp-meta` JSON script tag (present on active/pending pages).
 ///
 /// Returns `None` for "active" listings — active is the normal state and needs no annotation.
-pub fn extract_source_status(html: &str) -> Option<String> {
+pub fn extract_source_status(html: &str) -> Option<SourceStatus> {
     // 1. Escaped JSON blob — authoritative for off-market / sold pages.
     if let Some(caps) = home_status_label_re().captures(html) {
         if let Some(m) = caps.get(1) {
-            return Some(m.as_str().to_string());
+            return Some(m.as_str().parse().unwrap()); // Infallible
         }
     }
     // 2. xdp-meta JSON tag — present on active/pending pages when the blob is absent.
@@ -361,11 +361,7 @@ pub fn extract_source_status(html: &str) -> Option<String> {
             if raw.eq_ignore_ascii_case("active") {
                 return None;
             }
-            // Capitalise first letter for display (e.g. "pending" → "Pending").
-            let mut chars = raw.chars();
-            return chars.next().map(|c| {
-                c.to_uppercase().collect::<String>() + chars.as_str()
-            });
+            return Some(raw.parse().unwrap()); // Infallible
         }
     }
     None

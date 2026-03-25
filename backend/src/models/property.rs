@@ -5,8 +5,115 @@ use std::str::FromStr;
 #[cfg(test)]
 use ts_rs::TS;
 
+/// The market status of a listing as reported by the source website (Redfin, REW, etc.).
+///
+/// This is distinct from [`ListingStatus`], which tracks *our own* internal workflow state
+/// (what the user or agent is doing with the listing). `SourceStatus` reflects the listing's
+/// **market reality** — whether it is still for sale, under contract, or gone.
+///
+/// `source_status` on a property is `None` when the listing is actively for sale (the normal
+/// state). A non-`None` value means something has changed on the market side and the listing
+/// is no longer straightforwardly available. This is set by the parser on each fetch and
+/// overwritten on refresh; it is never set by the user.
+///
+/// # Relationship to `ListingStatus`
+///
+/// | `ListingStatus`     | Who sets it  | What it means                                    |
+/// |---------------------|--------------|--------------------------------------------------|
+/// | `AgentPending`      | System       | Just added; the agent has not reviewed it yet    |
+/// | `HumanPending`      | Agent        | Approved by agent; awaiting human decision       |
+/// | `AgentSkip`         | Agent        | Agent decided no profile matches                 |
+/// | `Interested` etc.   | User         | User's personal tracking state                   |
+///
+/// | `SourceStatus`      | Who sets it  | What it means                                    |
+/// |---------------------|--------------|--------------------------------------------------|
+/// | `None`              | Parser       | Active — listing is currently for sale           |
+/// | `Pending`           | Parser       | Sale pending — offer accepted, not yet closed    |
+/// | `OffMarket`         | Parser       | No longer listed — withdrawn, expired, or sold   |
+/// | `Sold`              | Parser       | Confirmed sold / closed                          |
+/// | `Unknown(s)`        | Parser       | Any other status string from the source site     |
+/// Serializes and deserializes as a plain string (e.g. `"Pending"`, `"Off Market"`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/", type = "string"))]
+pub enum SourceStatus {
+    /// Sale pending — an offer has been accepted but the sale has not closed.
+    Pending,
+    /// No longer actively listed — withdrawn, expired, or sold without a confirmed close date.
+    OffMarket,
+    /// Confirmed sold / transaction closed.
+    Sold,
+    /// Any other status string returned by the source site; preserved verbatim.
+    Unknown(String),
+}
+
+impl Serialize for SourceStatus {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for SourceStatus {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        Ok(s.parse().unwrap()) // Infallible
+    }
+}
+
+impl std::fmt::Display for SourceStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Pending => "Pending",
+            Self::OffMarket => "Off Market",
+            Self::Sold => "Sold",
+            Self::Unknown(s) => s.as_str(),
+        })
+    }
+}
+
+impl FromStr for SourceStatus {
+    type Err = std::convert::Infallible;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "Pending" | "pending" => Self::Pending,
+            "Off Market" | "OffMarket" | "off market" => Self::OffMarket,
+            "Sold" | "sold" => Self::Sold,
+            other => Self::Unknown(other.to_string()),
+        })
+    }
+}
+
+impl sqlx::Type<sqlx::Sqlite> for SourceStatus {
+    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
+        <String as sqlx::Type<sqlx::Sqlite>>::type_info()
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Sqlite> for SourceStatus {
+    fn decode(value: sqlx::sqlite::SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as sqlx::Decode<sqlx::Sqlite>>::decode(value)?;
+        Ok(s.parse().unwrap()) // Infallible
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for SourceStatus {
+    fn encode_by_ref(
+        &self,
+        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        use std::borrow::Cow;
+        buf.push(sqlx::sqlite::SqliteArgumentValue::Text(Cow::Owned(
+            self.to_string(),
+        )));
+        Ok(sqlx::encode::IsNull::No)
+    }
+}
+
 /// The user-facing status of a listing.
 /// Stored in SQLite as its display name ("Interested", "Buyable", "Pass", …).
+///
+/// This tracks *our internal workflow state* for a listing — what the user or agent
+/// is doing with it. It is independent of [`SourceStatus`], which reflects the
+/// listing's market state as reported by the source website.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
 pub enum ListingStatus {
@@ -166,7 +273,7 @@ pub struct StoredProperty {
     // ── Listing metadata ─────────────────────────────────────────────────────
     pub mls_number: Option<String>,
     pub listed_date: Option<String>,
-    pub source_status: Option<String>,
+    pub source_status: Option<SourceStatus>,
 
     // ── User notes / status ──────────────────────────────────────────────────
     pub status: ListingStatus,
@@ -268,9 +375,9 @@ pub struct Property {
     pub zillow_url: Option<String>,  // editable
 
     // ── Listing metadata ─────────────────────────────────────────────────────
-    pub mls_number: Option<String>,      // parsed; editable
-    pub listed_date: Option<String>,     // parsed; display only (ISO date, e.g. "2026-02-17")
-    pub source_status: Option<String>,   // parsed; display only (e.g. "OffMarket" when listing is gone)
+    pub mls_number: Option<String>,           // parsed; editable
+    pub listed_date: Option<String>,          // parsed; display only (ISO date, e.g. "2026-02-17")
+    pub source_status: Option<SourceStatus>,  // parsed; display only — None means active
 
     // ── User notes / status ──────────────────────────────────────────────────
     pub status: ListingStatus, // editable (status widget); never null, defaults to Interested

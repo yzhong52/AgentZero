@@ -2,6 +2,7 @@
 import type { ImageEntry } from "./ImageEntry";
 import type { ListingStatus } from "./ListingStatus";
 import type { OpenHouse } from "./OpenHouse";
+import type { SourceStatus } from "./SourceStatus";
 
 /**
  * A real estate property with all parsed and user-tracked fields.
@@ -19,7 +20,7 @@ export type Property = { id: bigint, search_profile_id: bigint | null, title: st
  * User's intended offer price — drives all mortgage calculations.
  * When null the application falls back to `price` for calculations.
  */
-offer_price: bigint | null, property_tax: bigint | null, hoa_monthly: bigint | null, down_payment_pct: number | null, mortgage_interest_rate: number | null, amortization_years: bigint | null, mortgage_monthly: bigint | null, monthly_total: bigint | null, monthly_cost: bigint | null, has_rental_suite: boolean | null, rental_income: bigint | null, school_elementary: string | null, school_elementary_rating: number | null, school_middle: string | null, school_middle_rating: number | null, school_secondary: string | null, school_secondary_rating: number | null, redfin_url: string | null, realtor_url: string | null, rew_url: string | null, zillow_url: string | null, mls_number: string | null, listed_date: string | null, source_status: string | null, status: ListingStatus, notes: string | null, agent_comment: string | null, 
+offer_price: bigint | null, property_tax: bigint | null, hoa_monthly: bigint | null, down_payment_pct: number | null, mortgage_interest_rate: number | null, amortization_years: bigint | null, mortgage_monthly: bigint | null, monthly_total: bigint | null, monthly_cost: bigint | null, has_rental_suite: boolean | null, rental_income: bigint | null, school_elementary: string | null, school_elementary_rating: number | null, school_middle: string | null, school_middle_rating: number | null, school_secondary: string | null, school_secondary_rating: number | null, redfin_url: string | null, realtor_url: string | null, rew_url: string | null, zillow_url: string | null, mls_number: string | null, listed_date: string | null, source_status: SourceStatus | null, status: ListingStatus, notes: string | null, agent_comment: string | null, 
 /**
  * Populated from images_cache, not stored directly in listings.
  */

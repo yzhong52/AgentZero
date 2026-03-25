@@ -351,8 +351,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let has_changes = match resp.json::<ResolvedListing>().await {
                     Ok(ResolvedListing::StatusOnly { source_status }) => {
                         let from = listing.source_status.as_deref().unwrap_or("—");
-                        let to = source_status.as_str();
-                        let changed = listing.source_status.as_deref() != Some(to);
+                        let to = source_status.to_string();
+                        let changed = listing.source_status.as_deref() != Some(to.as_str());
                         if changed {
                             println!("  [status-only]  property status  {}  →  {}", from, to);
                         } else {
@@ -365,7 +365,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             id: property.id,
                             title: property.title,
                             status: property.status.to_string(),
-                            source_status: property.source_status,
+                            source_status: property.source_status.map(|s| s.to_string()),
                             price: property.price,
                             price_currency: property.price_currency,
                             street_address: property.street_address,

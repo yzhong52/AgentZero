@@ -3,7 +3,7 @@ use crate::fetching::fetch::fetch_html;
 use crate::fetching::html_snapshots::save_listing_html;
 use crate::fetching::url::parse_listing_url;
 use crate::models::open_house::OpenHouseEvent;
-use crate::models::property::{Property, StoredProperty};
+use crate::models::property::{Property, SourceStatus, StoredProperty};
 use crate::parsers;
 use crate::finance as property_finance;
 use crate::store::{history_store, image_store, open_house_store, property_store};
@@ -219,7 +219,7 @@ pub enum ResolvedListing {
     /// The parsed page has a source_status (e.g. Pending, OffMarket) — treat as
     /// data-stripped and preserve all stored fields.
     StatusOnly {
-        source_status: String,
+        source_status: SourceStatus,
     },
     /// The parsed page has full listing data — the merged property ready to use.
     Full {
@@ -266,16 +266,19 @@ async fn status_only_refresh(
     db: &sqlx::SqlitePool,
     id: i64,
     stored: &Property,
-    new_status: Option<&str>,
+    new_status: Option<SourceStatus>,
 ) -> Result<Json<Property>, (StatusCode, String)> {
-    if stored.source_status.as_deref() != new_status {
+    if stored.source_status != new_status {
+        let old_s = stored.source_status.as_ref().map(|s| s.to_string());
+        let new_s = new_status.as_ref().map(|s| s.to_string());
         let _ = history_store::insert_change(
             db, id,
             crate::models::history::HistoryField::SourceStatus,
-            stored.source_status.as_deref(), new_status,
+            old_s.as_deref(), new_s.as_deref(),
         ).await;
     }
-    let saved = property_store::update_source_status(db, id, new_status)
+    let new_s = new_status.as_ref().map(|s| s.to_string());
+    let saved = property_store::update_source_status(db, id, new_s.as_deref())
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
     let images = image_store::list_images_with_meta(db, id)
@@ -318,7 +321,7 @@ pub(crate) async fn refresh_listing(
     let Some(listing) = parsers::parse_multi(&sources) else {
         // No recognised listing format — the property is likely off-market or removed.
         tracing::info!("refresh_listing: id={} no listing found — marking OffMarket", id);
-        return status_only_refresh(&state.db, id, &stored, Some("OffMarket")).await;
+        return status_only_refresh(&state.db, id, &stored, Some(SourceStatus::OffMarket)).await;
     };
 
     // ── 4. Resolve parsed result ───────────────────────────────────────────────
@@ -329,7 +332,7 @@ pub(crate) async fn refresh_listing(
                 "refresh_listing: id={} data-stripped page (source_status={:?}), skipping full update",
                 id, new_status
             );
-            status_only_refresh(&state.db, id, &stored, Some(new_status.as_str())).await
+            status_only_refresh(&state.db, id, &stored, Some(new_status)).await
         }
 
         ResolvedListing::Full { property: updated } => {
@@ -365,10 +368,12 @@ pub(crate) async fn refresh_listing(
                 }
             }
             if stored.source_status != updated.source_status {
+                let old_ss = stored.source_status.as_ref().map(|s| s.to_string());
+                let new_ss = updated.source_status.as_ref().map(|s| s.to_string());
                 let _ = history_store::insert_change(
                     &state.db, id,
                     crate::models::history::HistoryField::SourceStatus,
-                    stored.source_status.as_deref(), updated.source_status.as_deref(),
+                    old_ss.as_deref(), new_ss.as_deref(),
                 ).await;
             }
 

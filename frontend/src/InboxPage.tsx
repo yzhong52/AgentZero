@@ -117,7 +117,10 @@ export function InboxPage() {
                     }
                   </div>
                   <div className="inbox-item-info">
-                    <div className="inbox-item-price">{formatPriceCompact(p.price) ?? '—'}</div>
+                    <div className="inbox-item-price">
+                      {formatPriceCompact(p.price) ?? '—'}
+                      {p.source_status && <span className="inbox-source-status">{p.source_status}</span>}
+                    </div>
                     {p.street_address && <div className="inbox-item-address">{p.street_address}</div>}
                     {p.search_profile_id != null && searchMap[p.search_profile_id] && (
                       <div className="inbox-item-search">{searchMap[p.search_profile_id]}</div>
@@ -137,7 +140,10 @@ export function InboxPage() {
                 }
               </div>
               <div className="inbox-detail-content">
-                <div className="inbox-detail-price">{formatPriceCompact(selected.price) ?? '—'}</div>
+                <div className="inbox-detail-price">
+                  {formatPriceCompact(selected.price) ?? '—'}
+                  {selected.source_status && <span className="inbox-source-status">{selected.source_status}</span>}
+                </div>
                 {selected.street_address && (
                   <div className="inbox-detail-address">
                     {[selected.street_address, selected.city, selected.region].filter(Boolean).join(', ')}

@@ -872,6 +872,21 @@
   line-height: 1;
 }
 
+.inbox-source-status {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1em 0.45em;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  background: #fee2e2;
+  color: #b91c1c;
+  vertical-align: middle;
+}
+
 .inbox-item-address {
   font-size: 0.72rem;
   color: #3c3c3e;

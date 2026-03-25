@@ -122,7 +122,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
     .await?;
 
     let new_id: i64 = row.get("id");
-    fetch_one_by_id(pool, new_id).await
+    fetch_stored_by_id(pool, new_id).await
 }
 
 /// Update an existing property by ID (called on refresh — overwrites parsed fields).
@@ -246,7 +246,7 @@ pub async fn update_by_id(
     .execute(pool)
     .await?;
 
-    fetch_one_by_id(pool, id).await
+    fetch_stored_by_id(pool, id).await
 }
 
 /// Retrieve all properties ordered by created_at (newest first).
@@ -298,7 +298,7 @@ pub async fn list(
 
 /// Fetch a single property by ID (with images and open houses).
 pub async fn get_by_id(pool: &SqlitePool, id: i64) -> Result<Property, sqlx::Error> {
-    let s = fetch_one_by_id(pool, id).await?;
+    let s = fetch_stored_by_id(pool, id).await?;
     let images = image_store::list_images_with_meta(pool, s.id)
         .await
         .unwrap_or_default();
@@ -324,7 +324,7 @@ pub async fn update_source_status(
     .bind(id)
     .execute(pool)
     .await?;
-    fetch_one_by_id(pool, id).await
+    fetch_stored_by_id(pool, id).await
 }
 
 /// Update the notes field for a property.
@@ -394,7 +394,7 @@ pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), sqlx::Error> {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-async fn fetch_one_by_id(pool: &SqlitePool, id: i64) -> Result<StoredProperty, sqlx::Error> {
+pub async fn fetch_stored_by_id(pool: &SqlitePool, id: i64) -> Result<StoredProperty, sqlx::Error> {
     let row = sqlx::query(&format!("SELECT {COLS} FROM listings WHERE id = ?"))
         .bind(id)
         .fetch_one(pool)

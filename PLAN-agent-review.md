@@ -137,7 +137,7 @@ Listings in `AgentPending` state have no profile yet.
 
 ### Step 5 — Backend: new agent-review API endpoint
 
-- [ ] `backend/src/api/agent_review.rs` (new file)
+- [x] `backend/src/api/agent_review.rs` (new file)
   - `POST /api/listings/:id/agent-review`
   - Body:
     ```json
@@ -152,7 +152,7 @@ Listings in `AgentPending` state have no profile yet.
     - `search_profile_id` must reference an existing profile
   - Updates `status`, `search_profile_id`, `agent_comment` atomically
   - Returns updated `Property`
-- [ ] Wire route in `backend/src/main.rs`
+- [x] Wire route in `backend/src/main.rs`
 
 ### Step 6 — Backend: Claude API integration
 

@@ -9,6 +9,10 @@ import './App.css'
 // the inbox is a simple triage tool; the only statuses we offer here are
 // 'Interested' or 'Pass'.  keeping the list in a constant makes it easier to
 const INBOX_ACTION_STATUSES = ['Interested', 'Pass'] as const
+const INBOX_ACTION_ICONS: Record<typeof INBOX_ACTION_STATUSES[number], string> = {
+  Interested: '✓',
+  Pass: '✕',
+}
 // modify later if requirements change.
 
 export function InboxPage() {
@@ -75,29 +79,21 @@ export function InboxPage() {
 
   return (
     <div className="inbox-page">
-      <div className="inbox-nav">
-        <button className="back-btn" onClick={() => navigate('/')}>
-          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true">
-            <path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back
-        </button>
-        <div className="inbox-nav-title">
-          Inbox
-          {listings.length > 0 && <span className="inbox-nav-count">{listings.length}</span>}
+      <div className="inbox-sticky-header">
+        <div className="inbox-nav">
+          <button className="back-btn" onClick={() => navigate('/')}>
+            <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true">
+              <path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Back
+          </button>
+          <div className="inbox-nav-title">
+            Inbox
+            {listings.length > 0 && <span className="inbox-nav-count">{listings.length}</span>}
+          </div>
         </div>
-      </div>
 
-      {loading ? (
-        <div className="loading">Loading…</div>
-      ) : listings.length === 0 ? (
-        <div className="inbox-empty">
-          <div className="inbox-empty-icon">✓</div>
-          <div className="inbox-empty-title">All caught up</div>
-          <div className="inbox-empty-sub">No properties waiting for review</div>
-        </div>
-      ) : (
-        <div className="inbox-body">
+        {!loading && listings.length > 0 && (
           <div className="inbox-list">
             {listings.map(p => {
               const img = p.images[0]?.url
@@ -131,33 +127,42 @@ export function InboxPage() {
               )
             })}
           </div>
+        )}
+      </div>
 
-          {selected && (
-            <div className="inbox-detail">
-              <div className="inbox-triage-bar">
-                {INBOX_ACTION_STATUSES.map(s => (
-                  <button
-                    key={s}
-                    className="inbox-action-btn"
-                    style={{ '--btn-color': STATUS_COLORS[s] } as React.CSSProperties}
-                    onClick={() => assign(selected.id, s)}
-                    disabled={dismissing.has(selected.id)}
-                  >
-                    {displayStatus(s)}
-                  </button>
-                ))}
-              </div>
-              <PropertyDetailContent
-                key={selected.id}
-                initialProperty={selected}
-                embedded
-                onAfterDelete={() => {
-                  setListings(prev => prev.filter(p => p.id !== selected.id))
-                  setSelectedId(null)
-                }}
-              />
-            </div>
-          )}
+      {loading ? (
+        <div className="loading">Loading…</div>
+      ) : listings.length === 0 ? (
+        <div className="inbox-empty">
+          <div className="inbox-empty-icon">✓</div>
+          <div className="inbox-empty-title">All caught up</div>
+          <div className="inbox-empty-sub">No properties waiting for review</div>
+        </div>
+      ) : selected && (
+        <PropertyDetailContent
+          key={selected.id}
+          initialProperty={selected}
+          embedded
+          onAfterDelete={() => {
+            setListings(prev => prev.filter(p => p.id !== selected.id))
+            setSelectedId(null)
+          }}
+        />
+      )}
+
+      {!loading && listings.length > 0 && selected && (
+        <div className="inbox-float-actions">
+          {INBOX_ACTION_STATUSES.map(s => (
+            <button
+              key={s}
+              className="inbox-action-btn"
+              style={{ '--btn-color': STATUS_COLORS[s] } as React.CSSProperties}
+              onClick={() => assign(selected.id, s)}
+              disabled={dismissing.has(selected.id)}
+            >
+              {INBOX_ACTION_ICONS[s]} {displayStatus(s)}
+            </button>
+          ))}
         </div>
       )}
     </div>

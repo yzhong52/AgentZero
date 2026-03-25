@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Property, SearchProfile } from './types'
 import { STATUS_COLORS, HUMAN_PENDING_STATUS, displayStatus } from './constants'
 import { formatPriceCompact } from './utils'
+import { PropertyDetailContent } from './PropertyDetail'
 import './App.css'
 
 // the inbox is a simple triage tool; the only statuses we offer here are
@@ -133,52 +134,28 @@ export function InboxPage() {
 
           {selected && (
             <div className="inbox-detail">
-              <div className="inbox-detail-photos">
-                {selected.images.length > 0
-                  ? <img src={selected.images[0].url} alt={selected.title} />
-                  : <div className="inbox-detail-no-photo" />
-                }
+              <div className="inbox-triage-bar">
+                {INBOX_ACTION_STATUSES.map(s => (
+                  <button
+                    key={s}
+                    className="inbox-action-btn"
+                    style={{ '--btn-color': STATUS_COLORS[s] } as React.CSSProperties}
+                    onClick={() => assign(selected.id, s)}
+                    disabled={dismissing.has(selected.id)}
+                  >
+                    {displayStatus(s)}
+                  </button>
+                ))}
               </div>
-              <div className="inbox-detail-content">
-                <div className="inbox-detail-price">
-                  {formatPriceCompact(selected.price) ?? '—'}
-                  {selected.source_status && <span className="inbox-source-status">{selected.source_status}</span>}
-                </div>
-                {selected.street_address && (
-                  <div className="inbox-detail-address">
-                    {[selected.street_address, selected.city, selected.region].filter(Boolean).join(', ')}
-                  </div>
-                )}
-                <div className="inbox-detail-stats">
-                  {selected.bedrooms != null && <span>{selected.bedrooms} bd</span>}
-                  {selected.bathrooms != null && <span>{selected.bathrooms} ba</span>}
-                  {selected.sqft != null && <span>{selected.sqft.toLocaleString()} sqft</span>}
-                  {selected.year_built != null && <span>Built {selected.year_built}</span>}
-                </div>
-                {selected.search_profile_id != null && searchMap[selected.search_profile_id] && (
-                  <div className="inbox-detail-search-tag">{searchMap[selected.search_profile_id]}</div>
-                )}
-                {selected.description && (
-                  <p className="inbox-detail-desc">{selected.description}</p>
-                )}
-                <div className="inbox-detail-actions">
-                  {/* only show the two actions the user cares about */}
-                  {INBOX_ACTION_STATUSES.map(s => (
-                    <button
-                      key={s}
-                      className="inbox-action-btn"
-                      style={{ '--btn-color': STATUS_COLORS[s] } as React.CSSProperties}
-                      onClick={() => assign(selected.id, s)}
-                      disabled={dismissing.has(selected.id)}
-                    >
-                      {displayStatus(s)}
-                    </button>
-                  ))}
-                </div>
-                <button className="inbox-view-link" onClick={() => navigate(`/property/${selected.id}`)}>
-                  View full details →
-                </button>
-              </div>
+              <PropertyDetailContent
+                key={selected.id}
+                initialProperty={selected}
+                embedded
+                onAfterDelete={() => {
+                  setListings(prev => prev.filter(p => p.id !== selected.id))
+                  setSelectedId(null)
+                }}
+              />
             </div>
           )}
         </div>

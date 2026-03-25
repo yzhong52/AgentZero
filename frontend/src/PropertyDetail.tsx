@@ -389,19 +389,21 @@ function toUserDetails(p: Property) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function PropertyDetail() {
-    const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
-    const location = useLocation()
-    const fromApp = location.key !== 'default'
-
-    const [property, setProperty] = useState<Property | null>(null)
-    const [loading, setLoading] = useState(true)
+export function PropertyDetailContent({
+    initialProperty,
+    onAfterDelete,
+    embedded = false,
+}: {
+    initialProperty: Property
+    onAfterDelete?: () => void
+    embedded?: boolean
+}) {
+    const [property, setProperty] = useState<Property>(initialProperty)
     const [error, setError] = useState<string | null>(null)
     const [refreshMsg, setRefreshMsg] = useState<string | null>(null)
 
     // Notes
-    const [notes, setNotes] = useState<string>('')
+    const [notes, setNotes] = useState<string>(initialProperty.notes ?? '')
     const [notesSaving, setNotesSaving] = useState(false)
     const [notesEditing, setNotesEditing] = useState(false)
     const notesInputRef = useRef<HTMLTextAreaElement>(null)
@@ -410,7 +412,7 @@ export function PropertyDetail() {
     const [emojiSuggestRange, setEmojiSuggestRange] = useState<{ start: number; end: number } | null>(null)
 
     // Title (inline header)
-    const [titleDraft, setTitleDraft] = useState<string>('')
+    const [titleDraft, setTitleDraft] = useState<string>(initialProperty.title ?? '')
     const [titleToast, setTitleToast] = useState(false)
 
     // Edit mode
@@ -438,7 +440,7 @@ export function PropertyDetail() {
         realtor_url: string | null
         rew_url: string | null
         zillow_url: string | null
-    }>({ redfin_url: null, realtor_url: null, rew_url: null, zillow_url: null })
+    }>({ redfin_url: initialProperty.redfin_url, realtor_url: initialProperty.realtor_url, rew_url: initialProperty.rew_url, zillow_url: initialProperty.zillow_url })
     const [editingUrlKey, setEditingUrlKey] = useState<'redfin_url' | 'realtor_url' | 'rew_url' | 'zillow_url' | null>(null)
     const [urlsSaving, setUrlsSaving] = useState(false)
     const [urlSaveError, setUrlSaveError] = useState<string | null>(null)
@@ -485,29 +487,12 @@ export function PropertyDetail() {
     // History
     const [history, setHistory] = useState<HistoryEntry[]>([])
 
-    // ── Data loading ──────────────────────────────────────────────────────────────
-
-    async function loadProperty() {
-        try {
-            setLoading(true)
-            const resp = await fetch(`/api/listings/${id}`)
-            if (!resp.ok) throw new Error('Property not found')
-            const p: Property = await resp.json()
-            setProperty(p)
-            setNotes(p.notes ?? '')
-            setTitleDraft(p.title ?? '')
-            setUrlDraft({ redfin_url: p.redfin_url, realtor_url: p.realtor_url, rew_url: p.rew_url, zillow_url: p.zillow_url })
-
-            const histResp = await fetch(`/api/listings/${id}/history`)
-            if (histResp.ok) setHistory(await histResp.json())
-        } catch (err: any) {
-            setError(err?.message || String(err))
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    useEffect(() => { loadProperty() }, [id])
+    useEffect(() => {
+        fetch(`/api/listings/${initialProperty.id}/history`)
+            .then(r => r.ok ? r.json() : [])
+            .then(setHistory)
+            .catch(() => {})
+    }, [initialProperty.id])
 
     // ── Search profiles (for move-to-search-profile) ─────────────────────────
     const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
@@ -836,13 +821,12 @@ export function PropertyDetail() {
     // ── Delete ────────────────────────────────────────────────────────────────
 
     async function handleDelete() {
-        if (!property) return
         if (!window.confirm(`Delete "${property.title}"? This cannot be undone.`)) return
         setDeleting(true)
         try {
             const resp = await fetch(`/api/listings/${property.id}/delete`, { method: 'DELETE' })
             if (!resp.ok) throw new Error(await resp.text())
-            navigate('/')
+            onAfterDelete?.()
         } catch (err: any) {
             setError(err?.message || String(err))
             setDeleting(false)
@@ -863,10 +847,6 @@ export function PropertyDetail() {
     }
 
     // ── Render ────────────────────────────────────────────────────────────────
-
-    if (loading) return <div className="loading">Loading...</div>
-    if (error && !property) return <div className="error-msg">{error}</div>
-    if (!property) return <div className="error-msg">Property not found</div>
 
     const address = [property.street_address, property.city, property.region, property.postal_code]
         .filter(Boolean).join(', ')
@@ -929,28 +909,7 @@ export function PropertyDetail() {
     }
 
     return (
-        <>
-            <div className="detail-nav">
-                <button className="back-btn" onClick={() => fromApp ? navigate(-1) : navigate('/')}>
-                    {fromApp ? (
-                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    ) : (
-                        <svg width="13" height="12" viewBox="0 0 13 12" fill="none" aria-hidden="true"><path d="M1 5.5L6.5 1 12 5.5V11H8.5V8H4.5v3H1V5.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    )}
-                    {fromApp ? 'Back' : 'Home'}
-                </button>
-                <span className="detail-nav-title" title={property.title}>{property.title}</span>
-                <button
-                    className="delete-btn"
-                    onClick={handleDelete}
-                    disabled={deleting || editMode}
-                    title="Delete this listing"
-                >
-                    {deleting ? 'Deleting…' : 'Delete'}
-                </button>
-            </div>
-
-            <div className="property-detail">
+        <div className={`property-detail${embedded ? ' property-detail--embedded' : ''}`}>
                 {diffModal !== null && (
                     <RefreshDiffModal
                         diffs={diffModal}
@@ -1761,6 +1720,17 @@ export function PropertyDetail() {
                             <span>Watched since: {new Date(property.created_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                             <span>Last refreshed: {property.updated_at ? new Date(property.updated_at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                         </div>
+
+                        <div className="right-panel-section">
+                            <button
+                                className="delete-btn"
+                                onClick={handleDelete}
+                                disabled={deleting || editMode}
+                                title="Delete this listing"
+                            >
+                                {deleting ? 'Deleting…' : 'Delete'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1768,6 +1738,57 @@ export function PropertyDetail() {
                     <div className="title-toast">Title updated</div>
                 )}
             </div>
+    )
+}
+
+// ── Page wrapper ──────────────────────────────────────────────────────────────
+
+export function PropertyDetail() {
+    const { id } = useParams<{ id: string }>()
+    const navigate = useNavigate()
+    const location = useLocation()
+    const fromApp = location.key !== 'default'
+
+    const [property, setProperty] = useState<Property | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        async function load() {
+            try {
+                setLoading(true)
+                const resp = await fetch(`/api/listings/${id}`)
+                if (!resp.ok) throw new Error('Property not found')
+                setProperty(await resp.json())
+            } catch (err: any) {
+                setError(err?.message || String(err))
+            } finally {
+                setLoading(false)
+            }
+        }
+        load()
+    }, [id])
+
+    if (loading) return <div className="loading">Loading...</div>
+    if (error || !property) return <div className="error-msg">{error ?? 'Property not found'}</div>
+
+    return (
+        <>
+            <div className="detail-nav">
+                <button className="back-btn" onClick={() => fromApp ? navigate(-1) : navigate('/')}>
+                    {fromApp ? (
+                        <svg width="7" height="12" viewBox="0 0 7 12" fill="none" aria-hidden="true"><path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    ) : (
+                        <svg width="13" height="12" viewBox="0 0 13 12" fill="none" aria-hidden="true"><path d="M1 5.5L6.5 1 12 5.5V11H8.5V8H4.5v3H1V5.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    )}
+                    {fromApp ? 'Back' : 'Home'}
+                </button>
+                <span className="detail-nav-title" title={property.title}>{property.title}</span>
+            </div>
+            <PropertyDetailContent
+                initialProperty={property}
+                onAfterDelete={() => navigate('/')}
+            />
         </>
     )
 }

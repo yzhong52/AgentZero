@@ -55,22 +55,26 @@ Details for listings you're interested in:
 Every listing moves through a fixed set of states:
 
 ```
-POST /api/listings/agent-suggest    POST /api/listings
-        (email scan / cron)              (manual)
-                │                            │
-                ▼                            │
-         AgentPending                        │
-                │                            │
-                │ POST /:id/agent-review      │
-                │                            │
-                ├──────────────► AgentSkip   │
-                │               (terminal)   │
-                ▼                            ▼
-           HumanPending ─────────────► Interested
-                                            │
-                                     ┌──────┴──────┐
-                                     ▼             ▼
-                                  Buyable         Pass
+  POST /api/listings/agent-suggest   POST /api/listings
+  (email scan / cron)                (manual by user, requires profile)
+          │                                     │
+          ▼                                     ▼
+    AgentPending                           Interested
+          │
+          │  POST /:id/agent-review
+          │
+          ├──────────────────► AgentSkip  (terminal — no profile match)
+          │
+          ▼
+    HumanPending
+          │
+          │  PATCH /:id/details
+          ▼
+      Interested
+       │       │
+       │       │  PATCH /:id/details
+       ▼       ▼
+   Buyable    Pass
 ```
 
 | Status | Set by | Meaning |

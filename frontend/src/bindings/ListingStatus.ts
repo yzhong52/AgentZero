@@ -3,5 +3,9 @@
 /**
  * The user-facing status of a listing.
  * Stored in SQLite as its display name ("Interested", "Buyable", "Pass", …).
+ *
+ * This tracks *our internal workflow state* for a listing — what the user or agent
+ * is doing with it. It is independent of [`SourceStatus`], which reflects the
+ * listing's market state as reported by the source website.
  */
 export type ListingStatus = "AgentPending" | "HumanPending" | "AgentSkip" | "Interested" | "Buyable" | "Pass";

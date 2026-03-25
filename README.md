@@ -55,38 +55,40 @@ Details for listings you're interested in:
 Every listing moves through a fixed set of states:
 
 ```
-  POST /api/listings/agent-suggest   POST /api/listings
-  (email scan / cron)                (manual by user, requires profile)
-          │                                     │
-          ▼                                     ▼
-    AgentPending                           Interested
-          │
-          │  POST /:id/agent-review
-          │
-          ├──────────────────► AgentSkip  (terminal — no profile match)
-          │
-          ▼
-    HumanPending
-          │
-          │  PATCH /:id/details
-          ▼
-      Interested
-       │       │
-       │       │  PATCH /:id/details
-       ▼       ▼
-   Buyable    Pass
+           POST /api/listings/agent-suggest         
+           AgentZero OpenClaw skill as daily cron job to find new listings
+                   │
+                   ▼
+             [ AgentPending ]
+                   │
+                   │ POST /:id/agent-review
+                   │ Agent review
+                   │
+                   ├──────────────────► AgentSkip  
+                   │                    Terminal — no profile match
+                   │
+                   │ Move to inbox for users
+                   │
+                   ▼
+    ┌────────[ HumanPending ]
+    │              │
+    │              │
+    ▼              ▼
+  [ Pass ]◄───[ Interested ]─────►[ Candidate ]
+                   ▲
+                   │
+          POST /api/listings
+          Manually added by user
 ```
 
 | Status | Set by | Meaning |
 |---|---|---|
-| `AgentPending` | System | Just added via email scan; agent review is running in the background |
+| `AgentPending` | Claw | Just added via email scan; agent review is running in the background |
 | `AgentSkip` | Agent (Claude) | No search profile matched this listing |
 | `HumanPending` | Agent (Claude) | Matched a profile; ready for you to review in the Inbox |
 | `Interested` | You | You're tracking this listing |
 | `Buyable` | You | Strong candidate |
 | `Pass` | You | Dismissed |
-
-`AgentPending` and `AgentSkip` are agent-only — not settable from the UI. When you add a listing manually via `POST /api/listings` it starts at `Interested` directly.
 
 ### Agent triage
 
@@ -97,17 +99,3 @@ When a listing is added via the email scan, the backend immediately spawns a bac
 3. Calls **Claude Haiku** (`claude-haiku-4-5`) to pick the best matching profile, or skip if none fit
 4. Calls `POST /api/listings/:id/agent-review` with the decision
 
-On any error the listing stays as `AgentPending` — no crash, silent degradation. You can re-run triage manually via the Agent Review workflow in the skill.
-
-### Two kinds of status
-
-The app tracks two independent status fields on every listing:
-
-| Field | Who sets it | What it means |
-|---|---|---|
-| `status` (`ListingStatus`) | Agent or you | Your internal workflow state — where the listing is in your decision process |
-| `source_status` (`SourceStatus`) | Parser (on each refresh) | Market reality from the listing site — `null` = active, `Pending` = under contract, `Off Market` = gone |
-
-These are independent. A listing you marked `Interested` can later be refreshed and come back with `source_status: "Off Market"` — the site pulled it, but your interest annotation is preserved.
-
----

@@ -70,11 +70,11 @@ Every listing moves through a fixed set of states:
                    │ Move to inbox for users
                    │
                    ▼
-    ┌────────[ HumanPending ]
-    │              │
-    │              │
-    ▼              ▼
-  [ Pass ]◄───[ Interested ]─────►[ Candidate ]
+  ┌──────────[ HumanPending ]
+  │                │
+  │                │
+  ▼                ▼
+[ Pass ]◄─────[ Interested ]─────►[ Candidate ]
                    ▲
                    │
           POST /api/listings

@@ -1,8 +1,8 @@
 export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass', 'HumanPending', 'AgentPending', 'AgentSkip'] as const
 export type StatusOption = typeof STATUS_OPTIONS[number]
 
-// Statuses set exclusively by the agent — excluded from the manual status picker.
-export const AGENT_ONLY_STATUSES: readonly StatusOption[] = ['AgentPending', 'AgentSkip'] as const
+// Statuses available for the user to set manually.
+export const USER_STATUSES: readonly StatusOption[] = ['Buyable', 'Interested', 'Pass'] as const
 
 // HumanPending is set by the agent; the human acts by moving to Interested/Buyable/Pass.
 export const HUMAN_PENDING_STATUS: StatusOption = 'HumanPending'

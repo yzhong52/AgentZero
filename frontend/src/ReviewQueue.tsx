@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { STATUS_OPTIONS, STATUS_COLORS, AGENT_ONLY_STATUSES, displayStatus } from './constants'
+import { STATUS_COLORS, USER_STATUSES, displayStatus } from './constants'
 import type { Property } from './types'
 import { formatPriceCompact } from './utils'
 
@@ -58,7 +58,7 @@ export function ReviewQueue({ listings, onReviewed }: ReviewQueueProps) {
                 {stats && <div className="review-row-stats">{stats}</div>}
               </div>
               <div className="review-row-actions">
-                {STATUS_OPTIONS.filter(s => !AGENT_ONLY_STATUSES.includes(s)).map(s => (
+                {USER_STATUSES.map(s => (
                   <button
                     key={s}
                     className="review-pill"

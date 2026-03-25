@@ -4,7 +4,7 @@ import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
-import { STATUS_OPTIONS, STATUS_COLORS, HUMAN_PENDING_STATUS, AGENT_ONLY_STATUSES, displayStatus } from './constants'
+import { STATUS_OPTIONS, STATUS_COLORS, HUMAN_PENDING_STATUS, USER_STATUSES, displayStatus } from './constants'
 import type { StatusOption } from './constants'
 import type { Property, SearchProfile } from './types'
 
@@ -351,7 +351,7 @@ function App() {
       <section className="listings-section">
         <div className="listings-header">
           <div className="status-filter">
-            {STATUS_OPTIONS.filter((s) => !AGENT_ONLY_STATUSES.includes(s)).map((s) => (
+            {USER_STATUSES.map((s) => (
               <button
                 key={s}
                 className={`filter-btn${statusFilter.has(s) ? ' active' : ''}`}

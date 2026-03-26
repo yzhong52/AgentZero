@@ -19,6 +19,27 @@ use crate::models::property::{ListingStatus, Property};
 use crate::store::{image_store, open_house_store, property_store, search_profile_store};
 use crate::AppState;
 
+/// POST /api/listings/:id/agent-review/run
+///
+/// Re-triggers the background agent review for an existing listing.
+/// Returns 202 Accepted immediately; the review runs asynchronously.
+pub(crate) async fn trigger_agent_review(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let stored = property_store::fetch_stored_by_id(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {e}")))?;
+
+    let db = state.db.clone();
+    let client = state.client.clone();
+    tokio::spawn(async move {
+        crate::agent::review::run_agent_review(id, stored, db, client).await;
+    });
+
+    Ok(StatusCode::ACCEPTED)
+}
+
 #[derive(Deserialize)]
 pub struct AgentReviewRequest {
     /// Must be `HumanPending` or `AgentSkip`.

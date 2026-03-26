@@ -434,6 +434,10 @@ export function PropertyDetailContent({
     // Delete
     const [deleting, setDeleting] = useState(false)
 
+    // Agent re-review
+    const [agentReviewing, setAgentReviewing] = useState(false)
+    const [agentReviewError, setAgentReviewError] = useState<string | null>(null)
+
     // URL draft (right panel — always editable, independent of main edit mode)
     const [urlDraft, setUrlDraft] = useState<{
         redfin_url: string | null
@@ -821,6 +825,40 @@ export function PropertyDetailContent({
         } catch (err: any) {
             setError(err?.message || String(err))
             setDeleting(false)
+        }
+    }
+
+    // ── Agent re-review ───────────────────────────────────────────────────────
+
+    async function handleAgentReview() {
+        setAgentReviewing(true)
+        setAgentReviewError(null)
+        try {
+            const triggerResp = await fetch(`/api/listings/${property.id}/agent-review/run`, { method: 'POST' })
+            if (!triggerResp.ok) throw new Error(await triggerResp.text())
+
+            // Poll until agent_comment changes (or status changes), max ~15s
+            const before = property.agent_comment
+            let updated: Property | null = null
+            for (let i = 0; i < 30; i++) {
+                await new Promise(r => setTimeout(r, 500))
+                const resp = await fetch(`/api/listings/${property.id}`)
+                if (!resp.ok) break
+                const p: Property = await resp.json()
+                if (p.agent_comment !== before || p.status !== property.status) {
+                    updated = p
+                    break
+                }
+            }
+            if (updated) {
+                setProperty(updated)
+            } else {
+                setAgentReviewError('Timed out — check backend log')
+            }
+        } catch (err: any) {
+            setAgentReviewError(err?.message || String(err))
+        } finally {
+            setAgentReviewing(false)
         }
     }
 
@@ -1399,12 +1437,27 @@ export function PropertyDetailContent({
                     </div>
 
                     <div className="notes-panel">
-                        {property.agent_comment && (
-                            <div className="agent-comment right-panel-section">
+                        <div className="agent-comment right-panel-section">
+                            <div className="agent-comment-header">
                                 <h3 className="notes-heading">Agent note</h3>
-                                <p className="agent-comment-text">{property.agent_comment}</p>
+                                <button
+                                    className="agent-review-btn"
+                                    onClick={handleAgentReview}
+                                    disabled={agentReviewing}
+                                    title="Re-run agent review"
+                                >
+                                    {agentReviewing ? '…' : '↻'}
+                                </button>
                             </div>
-                        )}
+                            <p className="agent-comment-text">
+                                {agentReviewing
+                                    ? <span className="agent-comment-empty">Reviewing…</span>
+                                    : property.agent_comment ?? <span className="agent-comment-empty">—</span>}
+                            </p>
+                            {agentReviewError && (
+                                <p className="agent-review-error">{agentReviewError}</p>
+                            )}
+                        </div>
                         <div className="status-picker right-panel-section">
                             <h3 className="notes-heading">Status</h3>
                             <div className="status-picker-buttons">

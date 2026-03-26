@@ -22,6 +22,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 object_store = "0.13"
 clap = { version = "4", features = ["derive"] }
 chromiumoxide = "0.9"
+dirs = "5"
 futures = "0.3"
 
 [dev-dependencies]

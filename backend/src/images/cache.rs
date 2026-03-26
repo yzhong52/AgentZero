@@ -168,8 +168,8 @@ pub async fn cache_images(
 
 /// Ensure the local images directory exists at startup.
 /// Only needed for LocalFileSystem — cloud stores (S3, GCS) don't require this.
-pub async fn ensure_images_dir(path: &str) {
+pub async fn ensure_images_dir(path: &std::path::Path) {
     if let Err(e) = fs::create_dir_all(path).await {
-        tracing::warn!("Could not create images dir {}: {}", path, e);
+        tracing::warn!("Could not create images dir {}: {}", path.display(), e);
     }
 }

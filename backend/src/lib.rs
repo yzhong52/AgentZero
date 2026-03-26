@@ -14,7 +14,8 @@ use axum::{
 use object_store::local::LocalFileSystem;
 use reqwest::Client;
 use crate::store::property_store;
-use std::sync::Arc;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
@@ -23,9 +24,20 @@ use tower_http::services::ServeDir;
 /// Used by `image_paths::serve_url` to construct the serve URL, e.g. `/images/1/abc.jpg`.
 pub const IMAGES_URL_PREFIX: &str = "/images";
 
+/// Resolved data root directory, set once at startup by `build_app()`.
+/// All persistent data (DB, images, snapshots) lives under this path.
+static DATA_ROOT: OnceLock<PathBuf> = OnceLock::new();
+
+/// Returns the resolved data root directory (e.g. `~/.agent_zero` or the override).
+/// Panics if called before `build_app()` initialises it.
+pub fn data_root() -> &'static Path {
+	DATA_ROOT.get().expect("data_root not initialized")
+}
+
 /// Filesystem directory where downloaded images are stored.
-/// Used both to initialise the object store and to clean up per-listing subdirectories on delete.
-pub const IMAGES_LOCAL_DIR: &str = "listings_images";
+pub fn images_local_dir() -> PathBuf {
+	data_root().join("listings_images")
+}
 
 #[derive(Clone)]
 pub(crate) struct AppState {
@@ -34,15 +46,41 @@ pub(crate) struct AppState {
 	pub(crate) store: Arc<dyn object_store::ObjectStore>,
 }
 
+/// Resolve the data root from `AGENT_ZERO_DATA_DIR` (or default to `~/.agent_zero`),
+/// expanding a leading `~` to the user's home directory.
+fn resolve_data_root() -> PathBuf {
+	let raw = std::env::var("AGENT_ZERO_DATA_DIR")
+		.unwrap_or_else(|_| "~/.agent_zero".to_string());
+	if raw.starts_with('~') {
+		let home = dirs::home_dir().expect("Cannot determine home directory");
+		home.join(raw.trim_start_matches('~').trim_start_matches('/'))
+	} else {
+		PathBuf::from(raw)
+	}
+}
+
 pub async fn build_app() -> Router {
-	let database_url =
-		std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://listings.db".to_string());
+	// Resolve and register data root.
+	let data_root = resolve_data_root();
+	DATA_ROOT.set(data_root.clone()).expect("build_app called twice");
+
+	// Derive paths for DB, images, and snapshots.
+	let img_dir = data_root.join("listings_images");
+	let snap_dir = data_root.join("html_snapshots");
+	let db_file  = data_root.join("listings.db");
+
+	let database_url = std::env::var("DATABASE_URL")
+		.unwrap_or_else(|_| format!("sqlite://{}", db_file.display()));
+
+	// Ensure data root exists.
+	std::fs::create_dir_all(&data_root).expect("Failed to create data root directory");
+
 	let db = property_store::init(&database_url).await;
 
-	images::ensure_images_dir(IMAGES_LOCAL_DIR).await;
-	fetching::html_snapshots::ensure_dir().await;
+	images::ensure_images_dir(&img_dir).await;
+	fetching::html_snapshots::ensure_dir(&snap_dir).await;
 	let store: Arc<dyn object_store::ObjectStore> = Arc::new(
-		LocalFileSystem::new_with_prefix(std::path::Path::new(IMAGES_LOCAL_DIR))
+		LocalFileSystem::new_with_prefix(&img_dir)
 			.expect("Failed to initialize local image store"),
 	);
 
@@ -106,7 +144,7 @@ pub async fn build_app() -> Router {
 			"/api/listings/:id/images/:image_id",
 			delete(api::images::delete_image),
 		)
-		.nest_service(IMAGES_URL_PREFIX, ServeDir::new(IMAGES_LOCAL_DIR))
+		.nest_service(IMAGES_URL_PREFIX, ServeDir::new(images_local_dir()))
 		.with_state(state)
 		.layer(cors)
 }

@@ -57,7 +57,7 @@ pub(crate) async fn delete_image(
     let dir = paths::listing_dir(listing_id);
     if let Err(e) = fs::remove_dir(&dir).await {
         // Not empty (other images remain) or already gone — both are fine.
-        tracing::debug!("Could not remove image dir {}: {}", dir, e);
+        tracing::debug!("Could not remove image dir {}: {}", dir.display(), e);
     }
 
     Ok(StatusCode::NO_CONTENT)

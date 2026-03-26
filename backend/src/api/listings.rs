@@ -98,7 +98,7 @@ pub(crate) async fn delete_listing(
     // 2. Remove the per-listing image directory (now empty after step 1).
     let dir = paths::listing_dir(id);
     if let Err(e) = fs::remove_dir(&dir).await {
-        tracing::debug!("delete_listing: could not remove image dir {}: {}", dir, e);
+        tracing::debug!("delete_listing: could not remove image dir {}: {}", dir.display(), e);
     }
 
     // 3. Remove images_cache rows (no CASCADE on this FK).

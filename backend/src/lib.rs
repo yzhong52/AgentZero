@@ -1,5 +1,6 @@
 pub mod agent;
 pub mod api;
+pub mod cli;
 mod finance;
 pub mod fetching;
 pub mod images;

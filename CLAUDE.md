@@ -107,6 +107,18 @@ The generated files use `bigint` for `i64` (technically correct for Rust), while
 2. Run `cargo test` — the file in `frontend/src/bindings/` updates automatically
 3. Reflect the change in `frontend/src/types.ts`
 
+## Publishing the Skill to ClawHub
+
+```bash
+# Check current published version
+clawhub inspect agent-zero
+
+# Publish a new version (bump version as needed)
+clawhub publish /Users/yuchen/Projects/AgentZero --slug agent-zero --version 1.1.0
+```
+
+Login check: `clawhub whoami`. If not logged in: `clawhub login`.
+
 ## Frontend Design
 
 When making layout or styling changes to the frontend, ask if the user would like to load the `frontend-design` skill first (invoke via `/frontend-design`). It provides design thinking guidelines and aesthetic direction to avoid generic UI patterns.

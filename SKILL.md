@@ -52,8 +52,8 @@ metadata:
         execution. They do not make outbound network calls beyond fetching Rust crates (cargo) and
         npm packages on first build.
     writes:
-      - "~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md"
-      - "~/.openclaw/workspace/agent_zero_logs/processed_emails.json"
+      - "~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md"
+      - "~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json"
       - "<project>/backend/listings.db"
       - "<project>/backend/html_snapshots/"
       - "/tmp/agent_zero_backend.log"
@@ -89,9 +89,9 @@ Before using this skill, ensure the following are in place:
 The **Daily Email Scan** workflow accesses your Gmail inbox. Specifically it:
 - Reads envelope metadata (subject, sender, ID) of Redfin alert emails via `himalaya envelope list`
 - Opens Gmail in the openclaw browser to click through listing links (no email body text is read or stored)
-- Records processed email IDs and listing URLs in `~/.openclaw/workspace/agent_zero_logs/`
+- Records processed email IDs and listing URLs in `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/`
 
-This is opt-in: the scan only runs when explicitly triggered (cron or manual) and is scoped to `from:redfin.com` emails only. If you do not want email or browser access, use only the **Add Listing by URL** and **Refresh** workflows, which require no email access.
+The scan only runs when explicitly triggered (cron or manual) and is scoped to `from:redfin.com` emails only. 
 
 ---
 
@@ -99,11 +99,8 @@ This is opt-in: the scan only runs when explicitly triggered (cron or manual) an
 
 | Action | Method | Endpoint | Body / Params |
 |---|---|---|---|
-| List search profiles | GET | `/api/search-profiles` | — |
 | Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "..."}` |
-| Apply agent review | POST | `/api/listings/:id/agent-review` | `{"status": "HumanReview", "search_profile_id": N, "comment": "..."}` or `{"status": "AgentSkip", "comment": "..."}` |
-| Refresh listing | PUT | `/api/listings/:id/refresh` | — |
-| List all listings | GET | `/api/listings` | `?status=...&search_profile_id=N` |
+| List all listings | GET | `/api/listings` | `?status=...` |
 | Get single listing | GET | `/api/listings/:id` | — |
 
 Responses are JSON `Property` objects (see field list below).
@@ -112,40 +109,19 @@ Responses are JSON `Property` objects (see field list below).
 
 1. **POST** `/api/listings/agent-suggest` with `{"url": "<url>"}`.
 2. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
-3. On success: the listing is saved as `AgentPending`. The backend agent will automatically assign it to a search profile in the background — no manual profile selection needed.
+3. On success: the listing is saved as `AgentPending`. The backend agent will further review i.
 4. Log a summary to the daily notes file (see Logging section).
 
-Supported URL sources: `redfin.ca`, `redfin.com`, `rew.ca` (parses fully). `zillow.com`, `realtor.ca` (saves stub only — inform user).
-
-## Workflow: Agent Review (manual re-run)
-
-Use this workflow to manually triage listings that are still in `AgentPending` state (e.g. if the background agent failed).
-
-1. **GET** `/api/listings?status=AgentPending` — fetch listings awaiting agent review.
-2. **GET** `/api/search-profiles` — fetch all profiles.
-3. For each listing: compare its fields (price, beds, location, type, schools, tax) against all profile descriptions. Pick the best match, or skip if none fit.
-4. **POST** `/api/listings/:id/agent-review` with one of:
-   - Matched: `{"status": "HumanReview", "search_profile_id": <id>, "comment": "<one-sentence reason>"}`
-   - No match: `{"status": "AgentSkip", "comment": "<one-sentence reason>"}`
-5. Log each decision to the daily notes file.
-
-## Workflow: Refresh a Listing
-
-1. If given a listing ID directly, use it. Otherwise **GET** `/api/listings` and find the matching listing by title or address.
-2. **PUT** `/api/listings/:id/refresh` (no body).
-3. Log the result to daily notes.
-
-## Workflow: List Search Profiles
-
-1. **GET** `/api/search-profiles`
-2. Present each profile with `id`, `title`, `description`, and `listing_count`.
-
-## Logging — agent_zero_logs/
+## Logging — agent_zero_claw_logs/
 
 After every action (add, refresh, skip), append a summary to:
+
 ```
-~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md
+~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md
 ```
+
+Here `<WORKSPACE>` is the name of your OpenClaw workspace for the specific agent; it can be `workspace` if it is the default agent; or `workspace` followed by the agent name.
+
 Create the folder and file if they don't exist.
 
 **Format:**
@@ -154,7 +130,6 @@ Create the folder and file if they don't exist.
 - **Email:** https://mail.google.com/mail/u/0/#inbox/<thread_id>
 - **Title:** 7778 Nanaimo St, Vancouver - 6 beds/3.5 baths
 - **URL:** https://www.redfin.ca/...
-- **Profile:** East Van House (id=1)
 - **Price:** $2,198,000
 - **Status:** AgentPending (agent review running in background)
 
@@ -166,10 +141,6 @@ Create the folder and file if they don't exist.
 
 The `thread_id` is the hex ID visible in the Gmail URL after opening the email in the browser.
 
-## Key Property Fields
-
-`id`, `title`, `price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `land_sqft`, `property_tax`, `mortgage_monthly`, `monthly_total`, `status`, `redfin_url`, `rew_url`, `mls_number`, `search_profile_id` (nullable — `null` until agent assigns a profile), `agent_comment` (nullable — one-sentence note set by agent review)
-
 ## Workflow: Daily Email Scan (Cron)
 
 This is the workflow for the scheduled daily cron task.
@@ -180,13 +151,13 @@ This is the workflow for the scheduled daily cron task.
 
 1. **Notify your user** (via whatever messaging channel is configured): "🏠 AgentZero daily scan starting — checking Redfin emails..."
 
-2. **Write scan-start entry** to `~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md` immediately (create file/folder if needed):
+2. **Write scan-start entry** to `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md` immediately (create file/folder if needed):
    ```markdown
    ## HH:MM — Scan started
    - Checking Redfin emails...
    ```
 
-3. **Load state file** `~/.openclaw/workspace/agent_zero_logs/processed_emails.json`
+3. **Load state file** `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json`
    - If missing, treat as `{"processed_ids": [], "date_counts": {}}`
    - Format: `{"processed_ids": ["57471", ...], "date_counts": {"2026-03-09": 2}}`
    - `processed_ids` are himalaya envelope IDs (sequential integers) — used to avoid re-processing emails already handled in previous scans
@@ -203,7 +174,7 @@ This is the workflow for the scheduled daily cron task.
    - Reason: Daily limit (3) already reached.
    ```
 
-5. **List Redfin emails** via himalaya:
+5. **List emails** via himalaya:
    ```bash
    himalaya envelope list --output json 2>/dev/null
    ```
@@ -269,4 +240,5 @@ This is the workflow for the scheduled daily cron task.
    ```
 
 ### State file location
-`~/.openclaw/workspace/agent_zero_logs/processed_emails.json`
+
+`~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json`

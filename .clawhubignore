@@ -1,10 +1,9 @@
 database/
 frontend/node_modules/
 frontend/dist/
-target/
-backend/target/
-listings_images/
-html_snapshots/
+**/target/
+**/listings_images/
+**/html_snapshots/
 backend/src/parsers/fixtures/
 backend/src/parsers/snapshots/
 **/*.db

@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 LOG_FILE="${LOG_FILE:-/tmp/agent_zero_backend.log}"
 PORT="${BACKEND_PORT:-8000}"
+export AGENT_ZERO_DATA_DIR="${AGENT_ZERO_DATA_DIR:-$ROOT_DIR/database}"
 
 cd "$BACKEND_DIR"
 

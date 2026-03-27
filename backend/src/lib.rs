@@ -51,7 +51,7 @@ pub(crate) struct AppState {
 /// expanding a leading `~` to the user's home directory.
 fn resolve_data_root() -> PathBuf {
 	let raw = std::env::var("AGENT_ZERO_DATA_DIR")
-		.unwrap_or_else(|_| "~/.agent_zero".to_string());
+		.expect("AGENT_ZERO_DATA_DIR environment variable must be set");
 	if raw.starts_with('~') {
 		let home = dirs::home_dir().expect("Cannot determine home directory");
 		home.join(raw.trim_start_matches('~').trim_start_matches('/'))

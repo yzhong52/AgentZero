@@ -200,7 +200,12 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
 
         // ── Agent review ──────────────────────────────────────────────────────
         // Preserve the agent's comment and never overwrite it on refresh.
-        agent_comment: stored_listing.agent_comment.clone(),
+        agent_review_comment: stored_listing.agent_review_comment.clone(),
+        agent_review_state: stored_listing.agent_review_state,
+        agent_review_error_code: stored_listing.agent_review_error_code.clone(),
+        agent_review_error_message: stored_listing.agent_review_error_message.clone(),
+        agent_review_started_at: stored_listing.agent_review_started_at.clone(),
+        agent_review_finished_at: stored_listing.agent_review_finished_at.clone(),
 
         // ── System metadata ───────────────────────────────────────────────────
         // Neither value affects the UPDATE: created_at is not in the SET clause,
@@ -477,7 +482,12 @@ mod tests {
             source_status: None,
             status: ListingStatus::Interested,
             notes: None,
-            agent_comment: None,
+            agent_review_comment: None,
+            agent_review_state: None,
+            agent_review_error_code: None,
+            agent_review_error_message: None,
+            agent_review_started_at: None,
+            agent_review_finished_at: None,
             created_at: String::new(),
             updated_at: None,
         }

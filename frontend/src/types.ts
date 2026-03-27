@@ -10,6 +10,8 @@
 
 import type { StatusOption } from './constants'
 
+export type AgentReviewState = 'Running' | 'Succeeded' | 'Failed'
+
 export type OpenHouse = {
   id: number
   listing_id: number
@@ -94,5 +96,10 @@ export type Property = {
   mls_number: string | null
   laundry_in_unit: boolean | null
   source_status: string | null
-  agent_comment: string | null
+  agent_review_comment: string | null
+  agent_review_state: AgentReviewState | null
+  agent_review_error_code: string | null
+  agent_review_error_message: string | null
+  agent_review_started_at: string | null
+  agent_review_finished_at: string | null
 }

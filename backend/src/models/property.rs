@@ -187,6 +187,64 @@ impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for ListingStatus {
     }
 }
 
+/// Execution state of the background agent review task.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS), ts(export, export_to = "../../frontend/src/bindings/"))]
+pub enum AgentReviewState {
+    Running,
+    Succeeded,
+    Failed,
+}
+
+impl std::fmt::Display for AgentReviewState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Running => "Running",
+            Self::Succeeded => "Succeeded",
+            Self::Failed => "Failed",
+        })
+    }
+}
+
+impl FromStr for AgentReviewState {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Running" => Ok(Self::Running),
+            "Succeeded" => Ok(Self::Succeeded),
+            "Failed" => Ok(Self::Failed),
+            _ => Err(format!("unknown agent review state: {s}")),
+        }
+    }
+}
+
+impl sqlx::Type<sqlx::Sqlite> for AgentReviewState {
+    fn type_info() -> sqlx::sqlite::SqliteTypeInfo {
+        <String as sqlx::Type<sqlx::Sqlite>>::type_info()
+    }
+}
+
+impl<'r> sqlx::Decode<'r, sqlx::Sqlite> for AgentReviewState {
+    fn decode(value: sqlx::sqlite::SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <String as sqlx::Decode<sqlx::Sqlite>>::decode(value)?;
+        s.parse().map_err(Into::into)
+    }
+}
+
+impl<'q> sqlx::Encode<'q, sqlx::Sqlite> for AgentReviewState {
+    fn encode_by_ref(
+        &self,
+        buf: &mut Vec<sqlx::sqlite::SqliteArgumentValue<'q>>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        use std::borrow::Cow;
+        buf.push(sqlx::sqlite::SqliteArgumentValue::Text(Cow::Owned(
+            self.to_string(),
+        )));
+        Ok(sqlx::encode::IsNull::No)
+    }
+}
+
 /// The raw database row for a property listing — scalar fields only.
 ///
 /// Images and open houses live in separate tables and are joined when building
@@ -279,7 +337,12 @@ pub struct StoredProperty {
     pub notes: Option<String>,
 
     // ── Agent review ─────────────────────────────────────────────────────────
-    pub agent_comment: Option<String>,
+    pub agent_review_comment: Option<String>,
+    pub agent_review_state: Option<AgentReviewState>,
+    pub agent_review_error_code: Option<String>,
+    pub agent_review_error_message: Option<String>,
+    pub agent_review_started_at: Option<String>,
+    pub agent_review_finished_at: Option<String>,
 
     // ── System metadata ──────────────────────────────────────────────────────
     pub created_at: String,
@@ -383,7 +446,12 @@ pub struct Property {
     pub notes: Option<String>, // editable (via PATCH /notes)
 
     // ── Agent review ─────────────────────────────────────────────────────────
-    pub agent_comment: Option<String>, // set by POST /api/listings/:id/agent-review
+    pub agent_review_comment: Option<String>, // set by POST /api/listings/:id/agent-review
+    pub agent_review_state: Option<AgentReviewState>,
+    pub agent_review_error_code: Option<String>,
+    pub agent_review_error_message: Option<String>,
+    pub agent_review_started_at: Option<String>,
+    pub agent_review_finished_at: Option<String>,
 
     // ── System metadata ──────────────────────────────────────────────────────
     /// Populated from images_cache, not stored directly in listings.
@@ -458,7 +526,12 @@ impl Property {
             source_status: s.source_status,
             status: s.status,
             notes: s.notes,
-            agent_comment: s.agent_comment,
+            agent_review_comment: s.agent_review_comment,
+            agent_review_state: s.agent_review_state,
+            agent_review_error_code: s.agent_review_error_code,
+            agent_review_error_message: s.agent_review_error_message,
+            agent_review_started_at: s.agent_review_started_at,
+            agent_review_finished_at: s.agent_review_finished_at,
             created_at: s.created_at,
             updated_at: s.updated_at,
             images,
@@ -524,7 +597,12 @@ impl From<Property> for StoredProperty {
             source_status: p.source_status,
             status: p.status,
             notes: p.notes,
-            agent_comment: p.agent_comment,
+            agent_review_comment: p.agent_review_comment,
+            agent_review_state: p.agent_review_state,
+            agent_review_error_code: p.agent_review_error_code,
+            agent_review_error_message: p.agent_review_error_message,
+            agent_review_started_at: p.agent_review_started_at,
+            agent_review_finished_at: p.agent_review_finished_at,
             created_at: p.created_at,
             updated_at: p.updated_at,
         }

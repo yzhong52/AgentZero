@@ -565,7 +565,12 @@ fn merge_property(
             fallback_source,
         ),
         source_status: None, // cleared by a successful parse
-        agent_comment: None,
+        agent_review_comment: None,
+        agent_review_state: None,
+        agent_review_error_code: None,
+        agent_review_error_message: None,
+        agent_review_started_at: None,
+        agent_review_finished_at: None,
     }
 }
 

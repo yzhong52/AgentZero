@@ -22,6 +22,9 @@ type HistoryEntry = {
     changed_at: string
 }
 
+const AGENT_REVIEW_POLL_MS = 500
+const AGENT_REVIEW_MAX_POLLS = 30
+
 // ── History field label map ───────────────────────────────────────────────────
 
 const HISTORY_FIELD_LABELS: Record<string, string> = {
@@ -837,23 +840,25 @@ export function PropertyDetailContent({
             const triggerResp = await fetch(`/api/listings/${property.id}/agent-review/run`, { method: 'POST' })
             if (!triggerResp.ok) throw new Error(await triggerResp.text())
 
-            // Poll until agent_comment changes (or status changes), max ~15s
-            const before = property.agent_comment
             let updated: Property | null = null
-            for (let i = 0; i < 30; i++) {
-                await new Promise(r => setTimeout(r, 500))
+            for (let i = 0; i < AGENT_REVIEW_MAX_POLLS; i++) {
+                await new Promise(r => setTimeout(r, AGENT_REVIEW_POLL_MS))
                 const resp = await fetch(`/api/listings/${property.id}`)
                 if (!resp.ok) break
                 const p: Property = await resp.json()
-                if (p.agent_comment !== before || p.status !== property.status) {
+                setProperty(p)
+                if (p.agent_review_state === 'Succeeded' || p.agent_review_state === 'Failed') {
                     updated = p
                     break
                 }
             }
             if (updated) {
                 setProperty(updated)
+                if (updated.agent_review_state === 'Failed') {
+                    setAgentReviewError(updated.agent_review_error_message ?? 'Agent review failed')
+                }
             } else {
-                setAgentReviewError('Timed out — check backend log')
+                setAgentReviewError('Agent review is still running. Check back in a moment.')
             }
         } catch (err: any) {
             setAgentReviewError(err?.message || String(err))
@@ -922,6 +927,11 @@ export function PropertyDetailContent({
     ]
     const monthlyTotalBreakdown = monthlyTotalParts.join(' + ')
     const monthlyCostBreakdown = monthlyCostParts.join(' + ')
+    const isAgentReviewRunning = agentReviewing || property.agent_review_state === 'Running'
+    const displayedAgentReviewError = agentReviewError
+        ?? (property.agent_review_state === 'Failed'
+            ? property.agent_review_error_message ?? 'Agent review failed'
+            : null)
 
     // Helper to wrap a field: in edit mode shows input, else shows static value
     function Field({ label, viewVal, editEl }: {
@@ -1450,12 +1460,12 @@ export function PropertyDetailContent({
                                 </button>
                             </div>
                             <p className="agent-comment-text">
-                                {agentReviewing
+                                {isAgentReviewRunning
                                     ? <span className="agent-comment-empty">Reviewing…</span>
-                                    : property.agent_comment ?? <span className="agent-comment-empty">—</span>}
+                                    : property.agent_review_comment ?? <span className="agent-comment-empty">—</span>}
                             </p>
-                            {agentReviewError && (
-                                <p className="agent-review-error">{agentReviewError}</p>
+                            {displayedAgentReviewError && (
+                                <p className="agent-review-error">{displayedAgentReviewError}</p>
                             )}
                         </div>
                         <div className="status-picker right-panel-section">

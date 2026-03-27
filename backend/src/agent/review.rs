@@ -9,7 +9,9 @@
 //!    - `AgentSkip` — no profile fits this listing.
 //! 4. Call `POST /api/listings/:id/agent-review` on localhost to apply the decision.
 //!
-//! On any error the listing stays as `AgentPending` — no crash, silent degradation.
+//! Failures are persisted on the listing so the client can distinguish a true
+//! timeout from a terminal error such as invalid credentials or insufficient
+//! upstream billing.
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -19,7 +21,7 @@ use std::env;
 use std::sync::Arc;
 
 use crate::models::property::StoredProperty;
-use crate::store::search_profile_store;
+use crate::store::{property_store, search_profile_store};
 
 const CLAUDE_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL: &str = "claude-haiku-4-5-20251001";
@@ -33,8 +35,23 @@ pub async fn run_agent_review(
     anthropic_api_key: Arc<str>,
 ) {
     if let Err(e) = try_agent_review(listing_id, property, &pool, &client, &anthropic_api_key).await {
+        if let Err(db_err) = property_store::mark_agent_review_failed(
+            &pool,
+            listing_id,
+            e.code,
+            &e.user_message,
+        )
+        .await
+        {
+            tracing::warn!(
+                "agent_review: listing_id={} failed to persist failure state after {}: {}",
+                listing_id,
+                e,
+                db_err,
+            );
+        }
         tracing::warn!(
-            "agent_review: listing_id={} failed (listing stays AgentPending): {}",
+            "agent_review: listing_id={} failed: {}",
             listing_id,
             e
         );
@@ -47,7 +64,7 @@ async fn try_agent_review(
     pool: &SqlitePool,
     client: &Client,
     anthropic_api_key: &str,
-) -> Result<(), String> {
+) -> Result<(), AgentReviewFailure> {
     tracing::info!(
         "agent_review: listing_id={} Anthropic key loaded ({})",
         listing_id,
@@ -57,10 +74,18 @@ async fn try_agent_review(
     // Fetch all search profiles.
     let profiles = search_profile_store::list_all(pool)
         .await
-        .map_err(|e| format!("DB error fetching profiles: {e}"))?;
+        .map_err(|e| AgentReviewFailure::internal(
+            "search_profiles_unavailable",
+            "Agent review could not load search profiles.",
+            format!("DB error fetching profiles: {e}"),
+        ))?;
 
     if profiles.is_empty() {
-        return Err("no search profiles defined — cannot triage".to_string());
+        return Err(AgentReviewFailure::internal(
+            "no_search_profiles",
+            "Agent review cannot run because no search profiles are defined.",
+            "no search profiles defined — cannot triage".to_string(),
+        ));
     }
 
     let prompt = build_prompt(&property, &profiles);
@@ -80,7 +105,11 @@ async fn try_agent_review(
         .header("content-type", "application/json")
         .json(&request_body)
         .build()
-        .map_err(|e| format!("Failed to build Claude API request: {e}"))?;
+        .map_err(|e| AgentReviewFailure::internal(
+            "request_build_failed",
+            "Agent review could not build the Claude request.",
+            format!("Failed to build Claude API request: {e}"),
+        ))?;
 
     let header_value = request
         .headers()
@@ -113,27 +142,40 @@ async fn try_agent_review(
     let response = client
         .execute(request)
         .await
-        .map_err(|e| format!("Claude API request failed: {e}"))?;
+        .map_err(|e| AgentReviewFailure::upstream_network(format!("Claude API request failed: {e}")))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(format!("Claude API returned {status}: {body}"));
+        return Err(classify_claude_api_failure(status, &body));
     }
 
     let response_json: Value = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse Claude API response: {e}"))?;
+        .map_err(|e| AgentReviewFailure::internal(
+            "response_parse_failed",
+            "Agent review received an unreadable response from Claude.",
+            format!("Failed to parse Claude API response: {e}"),
+        ))?;
 
     let text = response_json["content"][0]["text"]
         .as_str()
-        .ok_or_else(|| format!("Unexpected Claude API response shape: {response_json}"))?;
+        .ok_or_else(|| AgentReviewFailure::internal(
+            "response_shape_invalid",
+            "Agent review received an unexpected response shape from Claude.",
+            format!("Unexpected Claude API response shape: {response_json}"),
+        ))?;
 
     tracing::debug!("agent_review: listing_id={} raw response: {}", listing_id, text);
 
-    let decision: AgentDecision = parse_decision(text)
-        .map_err(|e| format!("Failed to parse agent decision from '{text}': {e}"))?;
+    let decision: AgentDecision = parse_decision(text).map_err(|e| {
+        AgentReviewFailure::internal(
+            "decision_parse_failed",
+            "Agent review returned a decision we could not understand.",
+            format!("Failed to parse agent decision from '{text}': {e}"),
+        )
+    })?;
 
     tracing::info!(
         "agent_review: listing_id={} decision={:?} profile={:?} comment={:?}",
@@ -162,9 +204,17 @@ async fn try_agent_review(
         .json(&review_body)
         .send()
         .await
-        .map_err(|e| format!("Failed to call agent-review endpoint: {e}"))?
+        .map_err(|e| AgentReviewFailure::internal(
+            "local_apply_request_failed",
+            "Agent review could not apply its decision locally.",
+            format!("Failed to call agent-review endpoint: {e}"),
+        ))?
         .error_for_status()
-        .map_err(|e| format!("agent-review endpoint returned error: {e}"))?;
+        .map_err(|e| AgentReviewFailure::internal(
+            "local_apply_failed",
+            "Agent review decision was produced but could not be saved.",
+            format!("agent-review endpoint returned error: {e}"),
+        ))?;
 
     Ok(())
 }
@@ -280,6 +330,96 @@ struct AgentDecision {
     comment: String,
 }
 
+#[derive(Debug)]
+struct AgentReviewFailure {
+    code: &'static str,
+    user_message: String,
+    detail: String,
+}
+
+impl AgentReviewFailure {
+    fn internal(code: &'static str, user_message: &'static str, detail: String) -> Self {
+        Self {
+            code,
+            user_message: user_message.to_string(),
+            detail,
+        }
+    }
+
+    fn upstream_network(detail: String) -> Self {
+        Self {
+            code: "upstream_network_error",
+            user_message: "Agent review could not reach Claude. Try again shortly.".to_string(),
+            detail,
+        }
+    }
+}
+
+impl std::fmt::Display for AgentReviewFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.detail)
+    }
+}
+
+#[derive(Deserialize)]
+struct ClaudeErrorEnvelope {
+    error: ClaudeErrorBody,
+}
+
+#[derive(Deserialize)]
+struct ClaudeErrorBody {
+    #[serde(rename = "type")]
+    kind: String,
+    message: String,
+}
+
+fn classify_claude_api_failure(status: reqwest::StatusCode, body: &str) -> AgentReviewFailure {
+    let parsed = serde_json::from_str::<ClaudeErrorEnvelope>(body).ok();
+    let upstream_message = parsed
+        .as_ref()
+        .map(|err| err.error.message.as_str())
+        .unwrap_or(body)
+        .trim();
+    let upstream_kind = parsed
+        .as_ref()
+        .map(|err| err.error.kind.as_str())
+        .unwrap_or("unknown_error");
+    let detail = format!("Claude API returned {status} ({upstream_kind}): {upstream_message}");
+
+    if status == reqwest::StatusCode::UNAUTHORIZED {
+        return AgentReviewFailure {
+            code: "authentication_error",
+            user_message: "Anthropic authentication failed. Check the configured API key.".to_string(),
+            detail,
+        };
+    }
+
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return AgentReviewFailure {
+            code: "rate_limited",
+            user_message: "Anthropic rate-limited the agent review. Try again shortly.".to_string(),
+            detail,
+        };
+    }
+
+    let insufficient_funds = upstream_message.to_ascii_lowercase().contains("insufficient")
+        || upstream_message.to_ascii_lowercase().contains("credit")
+        || upstream_message.to_ascii_lowercase().contains("fund");
+    if status == reqwest::StatusCode::PAYMENT_REQUIRED || insufficient_funds {
+        return AgentReviewFailure {
+            code: "billing_error",
+            user_message: "Anthropic rejected the review because the account has insufficient funds or credits.".to_string(),
+            detail,
+        };
+    }
+
+    AgentReviewFailure {
+        code: "upstream_api_error",
+        user_message: format!("Anthropic rejected the agent review request: {upstream_message}"),
+        detail,
+    }
+}
+
 /// Extract JSON from the Claude response text (handles stray markdown fences).
 fn parse_decision(text: &str) -> Result<AgentDecision, String> {
     // Strip markdown code fences if present.
@@ -339,7 +479,12 @@ mod tests {
             mls_number: None, listed_date: None, source_status: None,
             redfin_url: None, realtor_url: None, rew_url: None, zillow_url: None,
             status: ListingStatus::AgentPending,
-            notes: None, agent_comment: None,
+            notes: None, agent_review_comment: None,
+            agent_review_state: None,
+            agent_review_error_code: None,
+            agent_review_error_message: None,
+            agent_review_started_at: None,
+            agent_review_finished_at: None,
             created_at: String::new(), updated_at: None,
         }
     }
@@ -393,5 +538,25 @@ mod tests {
     fn test_parse_decision_rejects_invalid_status() {
         let text = r#"{"status":"Interested","comment":"foo"}"#;
         assert!(parse_decision(text).is_err());
+    }
+
+    #[test]
+    fn test_classify_claude_auth_failure() {
+        let failure = classify_claude_api_failure(
+            reqwest::StatusCode::UNAUTHORIZED,
+            r#"{"error":{"type":"authentication_error","message":"invalid x-api-key"}}"#,
+        );
+        assert_eq!(failure.code, "authentication_error");
+        assert!(failure.user_message.contains("API key"));
+    }
+
+    #[test]
+    fn test_classify_claude_billing_failure() {
+        let failure = classify_claude_api_failure(
+            reqwest::StatusCode::BAD_REQUEST,
+            r#"{"error":{"type":"invalid_request_error","message":"insufficient credits"}}"#,
+        );
+        assert_eq!(failure.code, "billing_error");
+        assert!(failure.user_message.contains("insufficient funds or credits"));
     }
 }

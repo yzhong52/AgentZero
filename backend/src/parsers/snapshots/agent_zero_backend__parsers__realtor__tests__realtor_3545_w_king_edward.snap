@@ -1,5 +1,5 @@
 ---
-source: src/parsers/realtor.rs
+source: backend/src/parsers/realtor.rs
 expression: listing_to_snapshot(listing)
 ---
 {
@@ -57,7 +57,12 @@ expression: listing_to_snapshot(listing)
   "source_status": null,
   "status": "Interested",
   "notes": null,
-  "agent_comment": null,
+  "agent_review_comment": null,
+  "agent_review_state": null,
+  "agent_review_error_code": null,
+  "agent_review_error_message": null,
+  "agent_review_started_at": null,
+  "agent_review_finished_at": null,
   "images": [
     {
       "id": 0,

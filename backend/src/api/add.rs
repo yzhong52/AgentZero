@@ -75,17 +75,20 @@ pub(crate) async fn suggest_listing(
         search_profile_id: 0, // ignored by suggest path — overridden below
     };
     let property = add_listing_impl(state.clone(), add_body, ListingStatus::AgentPending).await?;
+    let running = property_store::mark_agent_review_running(&state.db, property.id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
+    let property = Property::from_stored(running.clone(), property.images.clone(), property.open_houses.clone());
 
     // Spawn background agent review (assigns profile + moves to HumanReview or AgentSkip).
     let db = state.db.clone();
     let client = state.client.clone();
     let anthropic_api_key = state.anthropic_api_key.clone();
     let listing_id = property.id;
-    let stored = crate::models::property::StoredProperty::from(property.clone());
     tokio::spawn(async move {
         crate::agent::review::run_agent_review(
             listing_id,
-            stored,
+            running,
             db,
             client,
             anthropic_api_key,
@@ -337,6 +340,11 @@ fn blank_stub() -> StoredProperty {
         mls_number: None,
         laundry_in_unit: None,
         source_status: None,
-        agent_comment: None,
+        agent_review_comment: None,
+        agent_review_state: None,
+        agent_review_error_code: None,
+        agent_review_error_message: None,
+        agent_review_started_at: None,
+        agent_review_finished_at: None,
     }
 }

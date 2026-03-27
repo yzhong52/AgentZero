@@ -532,7 +532,12 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         ac: af.ac,
         laundry_in_unit: af.laundry_in_unit,
         source_status: None,
-        agent_comment: None,
+        agent_review_comment: None,
+        agent_review_state: None,
+        agent_review_error_code: None,
+        agent_review_error_message: None,
+        agent_review_started_at: None,
+        agent_review_finished_at: None,
         // Mortgage params are set by main.rs after parsing (save/refresh handlers).
         down_payment_pct: None,
         mortgage_interest_rate: None,

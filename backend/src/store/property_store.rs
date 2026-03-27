@@ -1,4 +1,4 @@
-use crate::models::property::{ListingStatus, Property, StoredProperty};
+use crate::models::property::{AgentReviewState, ListingStatus, Property, StoredProperty};
 use crate::store::{image_store, open_house_store};
 use sqlx::{sqlite::SqliteConnectOptions, Row, SqlitePool};
 use std::str::FromStr;
@@ -17,7 +17,9 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     school_middle, school_middle_rating,
                     school_secondary, school_secondary_rating,
                     property_type, listed_date, mls_number, laundry_in_unit,
-                    source_status, search_profile_id, agent_comment";
+                    source_status, search_profile_id, agent_review_comment,
+                    agent_review_state, agent_review_error_code, agent_review_error_message,
+                    agent_review_started_at, agent_review_finished_at";
 
 /// Initialize the database connection pool and run migrations.
 pub async fn init(database_url: &str) -> SqlitePool {
@@ -57,11 +59,13 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
                 school_middle, school_middle_rating,
                 school_secondary, school_secondary_rating,
                 property_type, listed_date, mls_number, laundry_in_unit,
-                source_status, search_profile_id, agent_comment,
+                source_status, search_profile_id, agent_review_comment,
+                agent_review_state, agent_review_error_code, agent_review_error_message,
+                agent_review_started_at, agent_review_finished_at,
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                datetime('now'), datetime('now'))
            RETURNING id"#,
     )
@@ -117,7 +121,12 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
     .bind(p.laundry_in_unit)
     .bind(&p.source_status)
     .bind(p.search_profile_id)
-    .bind(&p.agent_comment)
+    .bind(&p.agent_review_comment)
+    .bind(p.agent_review_state)
+    .bind(&p.agent_review_error_code)
+    .bind(&p.agent_review_error_message)
+    .bind(&p.agent_review_started_at)
+    .bind(&p.agent_review_finished_at)
     .fetch_one(pool)
     .await?;
 
@@ -185,7 +194,12 @@ pub async fn update_by_id(
                status                   = ?,
                source_status            = ?,
                search_profile_id        = ?,
-               agent_comment            = ?,
+               agent_review_comment     = ?,
+               agent_review_state       = ?,
+               agent_review_error_code  = ?,
+               agent_review_error_message = ?,
+               agent_review_started_at  = ?,
+               agent_review_finished_at = ?,
                updated_at               = datetime('now')
            WHERE id = ?"#,
     )
@@ -241,7 +255,12 @@ pub async fn update_by_id(
     .bind(p.status)
     .bind(&p.source_status)
     .bind(p.search_profile_id)
-    .bind(&p.agent_comment)
+    .bind(&p.agent_review_comment)
+    .bind(p.agent_review_state)
+    .bind(&p.agent_review_error_code)
+    .bind(&p.agent_review_error_message)
+    .bind(&p.agent_review_started_at)
+    .bind(&p.agent_review_finished_at)
     .bind(id)
     .execute(pool)
     .await?;
@@ -355,6 +374,53 @@ pub async fn update_search_profile_id(
     Ok(())
 }
 
+pub async fn mark_agent_review_running(
+    pool: &SqlitePool,
+    id: i64,
+) -> Result<StoredProperty, sqlx::Error> {
+    sqlx::query(
+        "UPDATE listings
+         SET agent_review_state = ?,
+             agent_review_error_code = NULL,
+             agent_review_error_message = NULL,
+             agent_review_started_at = datetime('now'),
+             agent_review_finished_at = NULL,
+             updated_at = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(AgentReviewState::Running)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    fetch_stored_by_id(pool, id).await
+}
+
+pub async fn mark_agent_review_failed(
+    pool: &SqlitePool,
+    id: i64,
+    error_code: &str,
+    error_message: &str,
+) -> Result<StoredProperty, sqlx::Error> {
+    sqlx::query(
+        "UPDATE listings
+         SET agent_review_state = ?,
+             agent_review_error_code = ?,
+             agent_review_error_message = ?,
+             agent_review_finished_at = datetime('now'),
+             updated_at = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(AgentReviewState::Failed)
+    .bind(error_code)
+    .bind(error_message)
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    fetch_stored_by_id(pool, id).await
+}
+
 /// Find a listing by any of its source URLs. Returns `None` if no match.
 pub async fn find_by_source_url(
     pool: &SqlitePool,
@@ -461,7 +527,12 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> StoredProperty {
         mls_number: row.get("mls_number"),
         laundry_in_unit: row.get("laundry_in_unit"),
         source_status: row.get("source_status"),
-        agent_comment: row.get("agent_comment"),
+        agent_review_comment: row.get("agent_review_comment"),
+        agent_review_state: row.get("agent_review_state"),
+        agent_review_error_code: row.get("agent_review_error_code"),
+        agent_review_error_message: row.get("agent_review_error_message"),
+        agent_review_started_at: row.get("agent_review_started_at"),
+        agent_review_finished_at: row.get("agent_review_finished_at"),
     }
 }
 
@@ -538,7 +609,12 @@ mod tests {
             mls_number: Some("R9999999".to_string()),
             laundry_in_unit: Some(true),
             source_status: None,
-                agent_comment: None,
+            agent_review_comment: None,
+            agent_review_state: None,
+            agent_review_error_code: None,
+            agent_review_error_message: None,
+            agent_review_started_at: None,
+            agent_review_finished_at: None,
         };
 
         let saved = add_listing(&pool, &p).await.expect("add_listing failed");
@@ -623,7 +699,12 @@ mod tests {
             mls_number: None,
             laundry_in_unit: None,
             source_status: None,
-                agent_comment: None,
+            agent_review_comment: None,
+            agent_review_state: None,
+            agent_review_error_code: None,
+            agent_review_error_message: None,
+            agent_review_started_at: None,
+            agent_review_finished_at: None,
         };
 
         // Insert initial listing directly (avoid add_listing upsert complexity in tests)

@@ -1,0 +1,1 @@
+ALTER TABLE listings RENAME COLUMN agent_comment TO agent_review_comment;

@@ -6,7 +6,7 @@
 //!   - `HumanReview` + `search_profile_id` — listing matched a profile; ready for human review.
 //!   - `AgentSkip`                           — no profile matched; listing is deprioritised.
 //!
-//! In both cases `agent_comment` is stored so the human can see the reasoning.
+//! In both cases `agent_review_comment` is stored so the human can see the reasoning.
 
 use axum::{
     extract::{Path, State},
@@ -15,7 +15,7 @@ use axum::{
 };
 use serde::Deserialize;
 
-use crate::models::property::{ListingStatus, Property};
+use crate::models::property::{AgentReviewState, ListingStatus, Property};
 use crate::store::{image_store, open_house_store, property_store, search_profile_store};
 use crate::AppState;
 
@@ -30,6 +30,9 @@ pub(crate) async fn trigger_agent_review(
     let stored = property_store::fetch_stored_by_id(&state.db, id)
         .await
         .map_err(|e| (StatusCode::NOT_FOUND, format!("Listing not found: {e}")))?;
+    property_store::mark_agent_review_running(&state.db, id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("DB error: {e}")))?;
 
     let db = state.db.clone();
     let client = state.client.clone();
@@ -95,12 +98,21 @@ pub(crate) async fn post_agent_review(
     // Apply the decision atomically.
     sqlx::query(
         "UPDATE listings
-         SET status = ?, search_profile_id = ?, agent_comment = ?, updated_at = datetime('now')
+         SET status = ?,
+             search_profile_id = ?,
+             agent_review_comment = ?,
+             agent_review_state = ?,
+             agent_review_error_code = NULL,
+             agent_review_error_message = NULL,
+             agent_review_started_at = COALESCE(agent_review_started_at, datetime('now')),
+             agent_review_finished_at = datetime('now'),
+             updated_at = datetime('now')
          WHERE id = ?",
     )
     .bind(body.status)
     .bind(body.search_profile_id)
     .bind(&body.comment)
+    .bind(AgentReviewState::Succeeded)
     .bind(id)
     .execute(&state.db)
     .await

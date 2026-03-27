@@ -1,5 +1,5 @@
 ---
-source: src/parsers/redfin.rs
+source: backend/src/parsers/redfin.rs
 expression: property
 ---
 {
@@ -57,7 +57,12 @@ expression: property
   "source_status": null,
   "status": "Interested",
   "notes": null,
-  "agent_comment": null,
+  "agent_review_comment": null,
+  "agent_review_state": null,
+  "agent_review_error_code": null,
+  "agent_review_error_message": null,
+  "agent_review_started_at": null,
+  "agent_review_finished_at": null,
   "images": [
     {
       "id": 0,

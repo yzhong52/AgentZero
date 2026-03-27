@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "backend",
+    "az_cli",
+]
+resolver = "2"

@@ -12,8 +12,8 @@
 //!
 //! Reads BACKEND_PORT from the environment (default: 8000).
 
-use crate::api::refresh::ResolvedListing;
-use crate::models::open_house::OpenHouse;
+use agent_zero_backend::api::refresh::ResolvedListing;
+use agent_zero_backend::models::open_house::OpenHouse;
 use clap::Parser;
 use serde::Deserialize;
 use std::env;

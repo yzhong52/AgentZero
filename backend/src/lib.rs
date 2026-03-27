@@ -64,6 +64,7 @@ pub async fn build_app() -> Router {
 	// Resolve and register data root.
 	let data_root = resolve_data_root();
 	DATA_ROOT.set(data_root.clone()).expect("build_app called twice");
+	eprintln!("data root: {}", data_root.display());
 
 	// Derive paths for DB, images, and snapshots.
 	let img_dir = data_root.join("listings_images");
@@ -155,6 +156,18 @@ pub async fn run() {
 	let app = build_app().await;
 	let bind = "127.0.0.1:8000";
 	println!("Starting backend at http://{}", bind);
+	println!(
+		"  AGENT_ZERO_DATA_DIR = {}",
+		std::env::var("AGENT_ZERO_DATA_DIR").as_deref().unwrap_or("(not set)")
+	);
+	println!(
+		"  DATABASE_URL        = {}",
+		std::env::var("DATABASE_URL").as_deref().unwrap_or("(derived from data dir)")
+	);
+	println!(
+		"  BACKEND_PORT        = {}",
+		std::env::var("BACKEND_PORT").as_deref().unwrap_or("(not set, using 8000)")
+	);
 	let listener = tokio::net::TcpListener::bind(bind).await.unwrap();
 	axum::serve(listener, app).await.unwrap();
 }

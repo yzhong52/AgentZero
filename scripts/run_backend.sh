@@ -14,11 +14,8 @@ lsof -ti:"$PORT" | xargs kill -9 2>/dev/null || true
 pkill -f "target/release/agent_zero_backend" 2>/dev/null || true
 pkill -f "cargo run --release" 2>/dev/null || true
 
-echo "[backend] building release binary..."
-cargo build --release
-
-echo "[backend] starting fresh binary..."
-nohup ./target/release/agent_zero_backend > "$LOG_FILE" 2>&1 &
+echo "[backend] starting (cargo run --release)..."
+nohup cargo run --release --bin agent_zero_backend > "$LOG_FILE" 2>&1 &
 PID=$!
 
 echo "[backend] started with PID $PID"

@@ -44,6 +44,7 @@ pub fn images_local_dir() -> PathBuf {
 pub(crate) struct AppState {
 	pub(crate) db: sqlx::SqlitePool,
 	pub(crate) client: Client,
+	pub(crate) anthropic_api_key: Arc<str>,
 	pub(crate) store: Arc<dyn object_store::ObjectStore>,
 }
 
@@ -60,7 +61,7 @@ fn resolve_data_root() -> PathBuf {
 	}
 }
 
-pub async fn build_app() -> Router {
+pub async fn build_app(anthropic_api_key: Arc<str>) -> Router {
 	// Resolve and register data root.
 	let data_root = resolve_data_root();
 	DATA_ROOT.set(data_root.clone()).expect("build_app called twice");
@@ -91,7 +92,12 @@ pub async fn build_app() -> Router {
 		.build()
 		.unwrap();
 
-	let state = AppState { db, client, store };
+	let state = AppState {
+		db,
+		client,
+		anthropic_api_key,
+		store,
+	};
 
 	let cors = CorsLayer::new()
 		.allow_origin(
@@ -153,15 +159,10 @@ pub async fn build_app() -> Router {
 
 pub async fn run() {
 	tracing_subscriber::fmt::init();
-	let app = build_app().await;
 	let bind = "127.0.0.1:8000";
-	let api_key = std::env::var("ANTHROPIC_API_KEY")
-		.expect("ANTHROPIC_API_KEY environment variable must be set");
-	let api_key_masked = format!(
-		"{}****{}",
-		&api_key[..7.min(api_key.len())],
-		&api_key[api_key.len().saturating_sub(4)..]
-	);
+	let api_key = load_anthropic_api_key();
+	let api_key_masked = mask_api_key(&api_key);
+	let app = build_app(api_key).await;
 	println!("Starting backend at http://{}", bind);
 	println!(
 		"  AGENT_ZERO_DATA_DIR = {}",
@@ -178,4 +179,18 @@ pub async fn run() {
 	println!("  ANTHROPIC_API_KEY   = {}", api_key_masked);
 	let listener = tokio::net::TcpListener::bind(bind).await.unwrap();
 	axum::serve(listener, app).await.unwrap();
+}
+
+fn load_anthropic_api_key() -> Arc<str> {
+	std::env::var("ANTHROPIC_API_KEY")
+		.expect("ANTHROPIC_API_KEY environment variable must be set")
+		.into()
+}
+
+fn mask_api_key(api_key: &str) -> String {
+	format!(
+		"{}****{}",
+		&api_key[..7.min(api_key.len())],
+		&api_key[api_key.len().saturating_sub(4)..]
+	)
 }

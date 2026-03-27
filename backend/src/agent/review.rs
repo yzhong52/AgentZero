@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
 use std::env;
+use std::sync::Arc;
 
 use crate::models::property::StoredProperty;
 use crate::store::search_profile_store;
@@ -29,8 +30,9 @@ pub async fn run_agent_review(
     property: StoredProperty,
     pool: SqlitePool,
     client: Client,
+    anthropic_api_key: Arc<str>,
 ) {
-    if let Err(e) = try_agent_review(listing_id, property, &pool, &client).await {
+    if let Err(e) = try_agent_review(listing_id, property, &pool, &client, &anthropic_api_key).await {
         tracing::warn!(
             "agent_review: listing_id={} failed (listing stays AgentPending): {}",
             listing_id,
@@ -44,9 +46,13 @@ async fn try_agent_review(
     property: StoredProperty,
     pool: &SqlitePool,
     client: &Client,
+    anthropic_api_key: &str,
 ) -> Result<(), String> {
-    let api_key = env::var("ANTHROPIC_API_KEY")
-        .map_err(|_| "ANTHROPIC_API_KEY not set".to_string())?;
+    tracing::info!(
+        "agent_review: listing_id={} Anthropic key loaded ({})",
+        listing_id,
+        describe_api_key(anthropic_api_key)
+    );
 
     // Fetch all search profiles.
     let profiles = search_profile_store::list_all(pool)
@@ -67,13 +73,45 @@ async fn try_agent_review(
         "messages": [{ "role": "user", "content": prompt }]
     });
 
-    let response = client
+    let request = client
         .post(CLAUDE_API_URL)
-        .header("x-api-key", &api_key)
+        .header("x-api-key", anthropic_api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")
         .json(&request_body)
-        .send()
+        .build()
+        .map_err(|e| format!("Failed to build Claude API request: {e}"))?;
+
+    let header_value = request
+        .headers()
+        .get("x-api-key")
+        .and_then(|value| value.to_str().ok())
+        .map(mask_api_key)
+        .unwrap_or_else(|| "<missing-or-non-utf8>".to_string());
+    let anthropic_version = request
+        .headers()
+        .get("anthropic-version")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("<missing-or-non-utf8>");
+    let content_type = request
+        .headers()
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("<missing-or-non-utf8>");
+
+    tracing::info!(
+        "agent_review: listing_id={} sending Claude request url={} x_api_key_present={} x_api_key={} anthropic_version={} content_type={} prompt_chars={}",
+        listing_id,
+        CLAUDE_API_URL,
+        request.headers().contains_key("x-api-key"),
+        header_value,
+        anthropic_version,
+        content_type,
+        prompt.len(),
+    );
+
+    let response = client
+        .execute(request)
         .await
         .map_err(|e| format!("Claude API request failed: {e}"))?;
 
@@ -214,6 +252,24 @@ fn format_number(n: i64) -> String {
     }
     let formatted: String = out.chars().rev().collect();
     if n < 0 { format!("-{formatted}") } else { formatted }
+}
+
+fn describe_api_key(api_key: &str) -> String {
+    format!(
+        "masked={} len={} trimmed_len={} leading_ws={} trailing_ws={} contains_newline={}",
+        mask_api_key(api_key),
+        api_key.len(),
+        api_key.trim().len(),
+        api_key.chars().next().is_some_and(char::is_whitespace),
+        api_key.chars().last().is_some_and(char::is_whitespace),
+        api_key.contains(['\n', '\r'])
+    )
+}
+
+fn mask_api_key(api_key: &str) -> String {
+    let prefix_len = 7.min(api_key.len());
+    let suffix_start = api_key.len().saturating_sub(4);
+    format!("{}****{}", &api_key[..prefix_len], &api_key[suffix_start..])
 }
 
 /// The decision extracted from the Claude response.

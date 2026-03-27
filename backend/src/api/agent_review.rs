@@ -33,8 +33,9 @@ pub(crate) async fn trigger_agent_review(
 
     let db = state.db.clone();
     let client = state.client.clone();
+    let anthropic_api_key = state.anthropic_api_key.clone();
     tokio::spawn(async move {
-        crate::agent::review::run_agent_review(id, stored, db, client).await;
+        crate::agent::review::run_agent_review(id, stored, db, client, anthropic_api_key).await;
     });
 
     Ok(StatusCode::ACCEPTED)

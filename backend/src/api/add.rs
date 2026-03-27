@@ -79,10 +79,18 @@ pub(crate) async fn suggest_listing(
     // Spawn background agent review (assigns profile + moves to HumanReview or AgentSkip).
     let db = state.db.clone();
     let client = state.client.clone();
+    let anthropic_api_key = state.anthropic_api_key.clone();
     let listing_id = property.id;
     let stored = crate::models::property::StoredProperty::from(property.clone());
     tokio::spawn(async move {
-        crate::agent::review::run_agent_review(listing_id, stored, db, client).await;
+        crate::agent::review::run_agent_review(
+            listing_id,
+            stored,
+            db,
+            client,
+            anthropic_api_key,
+        )
+        .await;
     });
 
     Ok(Json(property))

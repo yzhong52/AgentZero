@@ -157,8 +157,11 @@ pub async fn run() {
 	let bind = "127.0.0.1:8000";
 	let api_key = std::env::var("ANTHROPIC_API_KEY")
 		.expect("ANTHROPIC_API_KEY environment variable must be set");
-	let api_key_display = format!("{}…{}", &api_key[..8.min(api_key.len())], &api_key[api_key.len().saturating_sub(4)..]);
-
+	let api_key_masked = format!(
+		"{}****{}",
+		&api_key[..7.min(api_key.len())],
+		&api_key[api_key.len().saturating_sub(4)..]
+	);
 	println!("Starting backend at http://{}", bind);
 	println!(
 		"  AGENT_ZERO_DATA_DIR = {}",
@@ -172,7 +175,7 @@ pub async fn run() {
 		"  BACKEND_PORT        = {}",
 		std::env::var("BACKEND_PORT").as_deref().unwrap_or("(not set, using 8000)")
 	);
-	println!("  ANTHROPIC_API_KEY   = {}", api_key_display);
+	println!("  ANTHROPIC_API_KEY   = {}", api_key_masked);
 	let listener = tokio::net::TcpListener::bind(bind).await.unwrap();
 	axum::serve(listener, app).await.unwrap();
 }

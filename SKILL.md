@@ -19,6 +19,14 @@ metadata:
           url: "http://localhost:5173"
           note: "Vite/TypeScript UI — optional, used for reviewing listings"
     credentials:
+      - name: ANTHROPIC_API_KEY
+        description: >
+          Required for the backend's automatic listing triage. When a listing is added via agent-suggest,
+          the backend calls the Anthropic Claude API (claude-haiku-4-5) to match it against search profiles.
+          Set this environment variable before starting the backend — it will fail to start without it.
+          Obtain your key at https://console.anthropic.com.
+        envVar: ANTHROPIC_API_KEY
+        keychain: false
       - name: himalaya Gmail config
         description: >
           himalaya must be configured with an IMAP/SMTP account pointing to the user's Gmail inbox.
@@ -79,6 +87,7 @@ Before using this skill, ensure the following are in place:
 | Requirement | Details |
 |---|---|
 | **AgentZero backend** | Must be running at `http://localhost:8000` (Rust/Axum). Start with `./scripts/run_backend.sh` in the project directory. |
+| **ANTHROPIC_API_KEY** | Required for automatic listing triage. Set in your environment before starting the backend. Get your key at console.anthropic.com. |
 | **himalaya** | CLI email client — must be installed (`brew install himalaya` or similar) and configured with your Gmail account via IMAP. Config at `~/.config/himalaya/config.toml`. |
 | **himalaya credentials** | Gmail app password or OAuth token stored in keychain. Required for the Daily Email Scan workflow. |
 | **openclaw browser** | Used by the Daily Email Scan to open Gmail and click listing links. Start with `openclaw browser --browser-profile openclaw start`. |

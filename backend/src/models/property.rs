@@ -21,7 +21,7 @@ use ts_rs::TS;
 /// | `ListingStatus`     | Who sets it  | What it means                                    |
 /// |---------------------|--------------|--------------------------------------------------|
 /// | `AgentPending`      | System       | Just added; the agent has not reviewed it yet    |
-/// | `HumanPending`      | Agent        | Approved by agent; awaiting human decision       |
+/// | `HumanReview`      | Agent        | Approved by agent; awaiting human decision       |
 /// | `AgentSkip`         | Agent        | Agent decided no profile matches                 |
 /// | `Interested` etc.   | User         | User's personal tracking state                   |
 ///
@@ -120,7 +120,7 @@ pub enum ListingStatus {
     /// Newly added; the agent has not reviewed it yet.
     AgentPending,
     /// Agent approved this listing; awaiting human review.
-    HumanPending,
+    HumanReview,
     /// Agent decided this listing does not match any search profile.
     AgentSkip,
     #[default]
@@ -133,7 +133,7 @@ impl std::fmt::Display for ListingStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::AgentPending => "AgentPending",
-            Self::HumanPending => "HumanPending",
+            Self::HumanReview => "HumanReview",
             Self::AgentSkip => "AgentSkip",
             Self::Interested => "Interested",
             Self::Buyable => "Buyable",
@@ -147,10 +147,9 @@ impl FromStr for ListingStatus {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "AgentPending" => Ok(Self::AgentPending),
-            "HumanPending" => Ok(Self::HumanPending),
-            // Legacy value — migrated by 0034_rename_pending_status.sql but
-            // kept here so old DB rows decode without error during the transition.
-            "Pending" => Ok(Self::HumanPending),
+            "HumanReview" => Ok(Self::HumanReview),
+            // Legacy values kept for decoding old DB rows during transition.
+            "HumanPending" | "Pending" => Ok(Self::HumanReview),
             "AgentSkip" => Ok(Self::AgentSkip),
             "Interested" => Ok(Self::Interested),
             "Buyable" => Ok(Self::Buyable),

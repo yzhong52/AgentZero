@@ -76,7 +76,7 @@ pub(crate) async fn suggest_listing(
     };
     let property = add_listing_impl(state.clone(), add_body, ListingStatus::AgentPending).await?;
 
-    // Spawn background agent review (assigns profile + moves to HumanPending or AgentSkip).
+    // Spawn background agent review (assigns profile + moves to HumanReview or AgentSkip).
     let db = state.db.clone();
     let client = state.client.clone();
     let listing_id = property.id;

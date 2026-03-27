@@ -17,7 +17,7 @@
  * | `ListingStatus`     | Who sets it  | What it means                                    |
  * |---------------------|--------------|--------------------------------------------------|
  * | `AgentPending`      | System       | Just added; the agent has not reviewed it yet    |
- * | `HumanPending`      | Agent        | Approved by agent; awaiting human decision       |
+ * | `HumanReview`      | Agent        | Approved by agent; awaiting human decision       |
  * | `AgentSkip`         | Agent        | Agent decided no profile matches                 |
  * | `Interested` etc.   | User         | User's personal tracking state                   |
  *

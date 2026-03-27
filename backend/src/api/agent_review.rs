@@ -3,7 +3,7 @@
 //! Called by the background agent task (or the skill in standalone mode) to
 //! apply the result of an AI triage decision:
 //!
-//!   - `HumanPending` + `search_profile_id` — listing matched a profile; ready for human review.
+//!   - `HumanReview` + `search_profile_id` — listing matched a profile; ready for human review.
 //!   - `AgentSkip`                           — no profile matched; listing is deprioritised.
 //!
 //! In both cases `agent_comment` is stored so the human can see the reasoning.
@@ -42,9 +42,9 @@ pub(crate) async fn trigger_agent_review(
 
 #[derive(Deserialize)]
 pub struct AgentReviewRequest {
-    /// Must be `HumanPending` or `AgentSkip`.
+    /// Must be `HumanReview` or `AgentSkip`.
     pub status: ListingStatus,
-    /// Required when `status` is `HumanPending`; ignored for `AgentSkip`.
+    /// Required when `status` is `HumanReview`; ignored for `AgentSkip`.
     pub search_profile_id: Option<i64>,
     /// One-sentence reason for the decision.
     pub comment: String,
@@ -58,22 +58,22 @@ pub(crate) async fn post_agent_review(
 ) -> Result<Json<Property>, (StatusCode, String)> {
     // Validate the requested status transition.
     match body.status {
-        ListingStatus::HumanPending | ListingStatus::AgentSkip => {}
+        ListingStatus::HumanReview | ListingStatus::AgentSkip => {}
         other => {
             return Err((
                 StatusCode::BAD_REQUEST,
                 format!(
-                    "Invalid agent-review status '{other}'. Must be 'HumanPending' or 'AgentSkip'."
+                    "Invalid agent-review status '{other}'. Must be 'HumanReview' or 'AgentSkip'."
                 ),
             ));
         }
     }
 
-    // HumanPending requires a valid search profile.
-    if body.status == ListingStatus::HumanPending {
+    // HumanReview requires a valid search profile.
+    if body.status == ListingStatus::HumanReview {
         let profile_id = body.search_profile_id.ok_or((
             StatusCode::BAD_REQUEST,
-            "search_profile_id is required when status is HumanPending".to_string(),
+            "search_profile_id is required when status is HumanReview".to_string(),
         ))?;
         search_profile_store::get_by_id(&state.db, profile_id)
             .await

@@ -45,7 +45,7 @@ fn fmt_status(s: &str) -> String {
     match s {
         "Buyable"      => format!("{GREEN}{BOLD}{s}{RESET}"),
         "Interested"   => format!("{CYAN}{s}{RESET}"),
-        "HumanPending" => format!("{YELLOW}HumanPending{RESET}"),
+        "HumanReview"  => format!("{YELLOW}HumanReview{RESET}"),
         "AgentPending" => format!("{DIM}AgentPending{RESET}"),
         "AgentSkip"    => format!("{DIM}AgentSkip{RESET}"),
         "Pass"         => format!("{DIM}{s}{RESET}"),

@@ -1,11 +1,11 @@
-export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass', 'HumanPending', 'AgentPending', 'AgentSkip'] as const
+export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass', 'HumanReview', 'AgentPending', 'AgentSkip'] as const
 export type StatusOption = typeof STATUS_OPTIONS[number]
 
 // Statuses available for the user to set manually.
 export const USER_STATUSES: readonly StatusOption[] = ['Buyable', 'Interested', 'Pass'] as const
 
-// HumanPending is set by the agent; the human acts by moving to Interested/Buyable/Pass.
-export const HUMAN_PENDING_STATUS: StatusOption = 'HumanPending'
+// HumanReview is set by the agent; the human acts by moving to Interested/Buyable/Pass.
+export const HUMAN_PENDING_STATUS: StatusOption = 'HumanReview'
 
 // human‑readable labels shown in the UI; keeps the underlying value
 // (`Buyable`) unchanged so the backend/data is unaffected.
@@ -13,13 +13,13 @@ export const STATUS_DISPLAY: Record<StatusOption, string> = {
   Buyable: 'Candidate',
   Interested: 'Interested',
   Pass: 'Pass',
-  HumanPending: 'Review',
+  HumanReview: 'Review',
   AgentPending: 'Analyzing…',
   AgentSkip: 'Skipped',
 }
 
 export const STATUS_COLORS: Record<string, string> = {
-  HumanPending: '#d97706',
+  HumanReview: '#d97706',
   Interested: '#0369a1',
   Buyable: '#16a34a',
   Pass: '#9ca3af',

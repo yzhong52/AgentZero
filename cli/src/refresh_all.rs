@@ -31,7 +31,7 @@ struct Cli {
     id: Option<i64>,
 
     /// Only refresh listings with these statuses (comma-separated).
-    /// Valid values: Interested, Buyable, HumanPending, AgentPending, AgentSkip, Pass
+    /// Valid values: Interested, Buyable, HumanReview, AgentPending, AgentSkip, Pass
     #[arg(long, value_name = "STATUS,...")]
     status: Option<String>,
 
@@ -81,7 +81,7 @@ fn fmt_review_status(s: &str) -> String {
     match s {
         "Buyable"      => format!("{GREEN}{BOLD}{s}{RESET}"),
         "Interested"   => format!("{CYAN}{s}{RESET}"),
-        "HumanPending" => format!("{YELLOW}Review{RESET}"),
+        "HumanReview"  => format!("{YELLOW}Review{RESET}"),
         "AgentPending" => format!("{DIM}{CYAN}Analyzing…{RESET}"),
         "AgentSkip"    => format!("{DIM}Skipped{RESET}"),
         "Pass"         => format!("{DIM}{s}{RESET}"),

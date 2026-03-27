@@ -70,7 +70,7 @@ Every listing moves through a fixed set of states:
                    │ Move to inbox for users
                    │
                    ▼
-  ┌──────────[ HumanPending ]
+  ┌──────────[ HumanReview ]
   │                │
   │                │
   ▼                ▼
@@ -85,7 +85,7 @@ Every listing moves through a fixed set of states:
 |---|---|---|
 | `AgentPending` | Claw | Just added via email scan; agent review is running in the background |
 | `AgentSkip` | Agent (Claude) | No search profile matched this listing |
-| `HumanPending` | Agent (Claude) | Matched a profile; ready for you to review in the Inbox |
+| `HumanReview` | Agent (Claude) | Matched a profile; ready for you to review in the Inbox |
 | `Interested` | You | You're tracking this listing |
 | `Buyable` | You | Strong candidate |
 | `Pass` | You | Dismissed |

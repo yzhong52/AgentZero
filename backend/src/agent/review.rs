@@ -5,7 +5,7 @@
 //! 1. Fetch all search profiles from the DB.
 //! 2. Build a compact prompt from the parsed property fields.
 //! 3. Call the Claude API (`claude-haiku-4-5`) to decide:
-//!    - `HumanPending` + `search_profile_id` — listing matches a profile.
+//!    - `HumanReview` + `search_profile_id` — listing matches a profile.
 //!    - `AgentSkip` — no profile fits this listing.
 //! 4. Call `POST /api/listings/:id/agent-review` on localhost to apply the decision.
 //!
@@ -185,9 +185,14 @@ fn build_prompt(p: &StoredProperty, profiles: &[crate::models::search_profile::S
     lines.push(String::new());
     lines.push("Pick the best matching profile ID, or skip if none fit.".to_string());
     lines.push("Reply with JSON only (no markdown, no explanation):".to_string());
-    lines.push(r#"{"status":"HumanPending","search_profile_id":N,"comment":"one sentence"}"#.to_string());
-    lines.push("OR".to_string());
-    lines.push(r#"{"status":"AgentSkip","comment":"one sentence"}"#.to_string());
+    lines.push(String::new());
+    lines.push("If it matches a profile (HumanReview), the comment should say WHY it is a good fit —".to_string());
+    lines.push("highlight the specific strengths (price, size, location, features) relative to that profile.".to_string());
+    lines.push(r#"{"status":"HumanReview","search_profile_id":N,"comment":"why this property is a strong match"}"#.to_string());
+    lines.push(String::new());
+    lines.push("If no profile fits (AgentSkip), the comment should say WHY it was skipped —".to_string());
+    lines.push("what key criteria it fails (price too high, wrong area, too few beds, etc.).".to_string());
+    lines.push(r#"{"status":"AgentSkip","comment":"why this property does not match any profile"}"#.to_string());
 
     lines.join("\n")
 }
@@ -234,7 +239,7 @@ fn parse_decision(text: &str) -> Result<AgentDecision, String> {
 
     // Validate status value.
     match decision.status.as_str() {
-        "HumanPending" | "AgentSkip" => {}
+        "HumanReview" | "AgentSkip" => {}
         other => return Err(format!("unexpected status value: {other}")),
     }
 
@@ -301,15 +306,15 @@ mod tests {
         assert!(prompt.contains("123 Main St, Vancouver"));
         assert!(prompt.contains("1,800,000"));
         assert!(prompt.contains("East Van House"));
-        assert!(prompt.contains("HumanPending"));
+        assert!(prompt.contains("HumanReview"));
         assert!(prompt.contains("AgentSkip"));
     }
 
     #[test]
     fn test_parse_decision_human_pending() {
-        let text = r#"{"status":"HumanPending","search_profile_id":1,"comment":"Good match"}"#;
+        let text = r#"{"status":"HumanReview","search_profile_id":1,"comment":"Good match"}"#;
         let d = parse_decision(text).unwrap();
-        assert_eq!(d.status, "HumanPending");
+        assert_eq!(d.status, "HumanReview");
         assert_eq!(d.search_profile_id, Some(1));
     }
 

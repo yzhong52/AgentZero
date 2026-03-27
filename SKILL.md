@@ -101,7 +101,7 @@ This is opt-in: the scan only runs when explicitly triggered (cron or manual) an
 |---|---|---|---|
 | List search profiles | GET | `/api/search-profiles` | — |
 | Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "..."}` |
-| Apply agent review | POST | `/api/listings/:id/agent-review` | `{"status": "HumanPending", "search_profile_id": N, "comment": "..."}` or `{"status": "AgentSkip", "comment": "..."}` |
+| Apply agent review | POST | `/api/listings/:id/agent-review` | `{"status": "HumanReview", "search_profile_id": N, "comment": "..."}` or `{"status": "AgentSkip", "comment": "..."}` |
 | Refresh listing | PUT | `/api/listings/:id/refresh` | — |
 | List all listings | GET | `/api/listings` | `?status=...&search_profile_id=N` |
 | Get single listing | GET | `/api/listings/:id` | — |
@@ -125,7 +125,7 @@ Use this workflow to manually triage listings that are still in `AgentPending` s
 2. **GET** `/api/search-profiles` — fetch all profiles.
 3. For each listing: compare its fields (price, beds, location, type, schools, tax) against all profile descriptions. Pick the best match, or skip if none fit.
 4. **POST** `/api/listings/:id/agent-review` with one of:
-   - Matched: `{"status": "HumanPending", "search_profile_id": <id>, "comment": "<one-sentence reason>"}`
+   - Matched: `{"status": "HumanReview", "search_profile_id": <id>, "comment": "<one-sentence reason>"}`
    - No match: `{"status": "AgentSkip", "comment": "<one-sentence reason>"}`
 5. Log each decision to the daily notes file.
 

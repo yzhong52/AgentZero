@@ -8,4 +8,4 @@
  * is doing with it. It is independent of [`SourceStatus`], which reflects the
  * listing's market state as reported by the source website.
  */
-export type ListingStatus = "AgentPending" | "HumanPending" | "AgentSkip" | "Interested" | "Buyable" | "Pass";
+export type ListingStatus = "AgentPending" | "HumanReview" | "AgentSkip" | "Interested" | "Buyable" | "Pass";

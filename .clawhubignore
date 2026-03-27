@@ -1,4 +1,7 @@
-target/
+database
+database/html_snapshots/
+database/listings_images/
+database/listings.db
 frontend/node_modules/
 frontend/dist/
 backend/listings_images/
@@ -7,3 +10,5 @@ backend/src/parsers/fixtures/
 backend/*.db
 backend/*.log
 .git/
+.claude/
+.vscode/

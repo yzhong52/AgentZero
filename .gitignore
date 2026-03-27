@@ -14,6 +14,9 @@ dist/
 .DS_Store
 .vscode/
 .claude/
+
+# Data
 *.db
 listings_images/
 html_snapshots/
+database/

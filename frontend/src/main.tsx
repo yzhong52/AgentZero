@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { PropertyDetail } from './PropertyDetail.tsx'
 import { ManageSearchProfiles } from './ManageSearchProfiles.tsx'
 import { InboxPage } from './InboxPage.tsx'
+import { AgentQueuePage } from './AgentQueuePage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/search-profiles" element={<ManageSearchProfiles />} />
         <Route path="/inbox" element={<InboxPage />} />
+        <Route path="/agent-queue" element={<AgentQueuePage />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

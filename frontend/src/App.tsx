@@ -217,6 +217,11 @@ function App() {
                 <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
                 <ul className="app-menu-dropdown">
                   <li>
+                    <button onClick={() => { setMenuOpen(false); navigate('/agent-queue') }}>
+                      Agent Queue
+                    </button>
+                  </li>
+                  <li>
                     <button onClick={() => { setMenuOpen(false); navigate('/search-profiles') }}>
                       Manage Scenarios
                     </button>

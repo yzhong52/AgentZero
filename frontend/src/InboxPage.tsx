@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Property, SearchProfile } from './types'
 import { STATUS_COLORS, HUMAN_PENDING_STATUS, displayStatus } from './constants'
 import { formatPriceCompact } from './utils'
@@ -17,8 +17,13 @@ const INBOX_ACTION_ICONS: Record<typeof INBOX_ACTION_STATUSES[number], string> =
 
 export function InboxPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
   const [listings, setListings] = useState<Property[]>([])
+  const [profileFilter, setProfileFilter] = useState<number | null>(() => {
+    const p = searchParams.get('profile')
+    return p ? Number(p) : null
+  })
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [dismissing, setDismissing] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -43,7 +48,11 @@ export function InboxPage() {
           .filter(p => p.status === HUMAN_PENDING_STATUS)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         setListings(pending)
-        if (pending.length > 0) setSelectedId(pending[0].id)
+        const initialFilter = searchParams.get('profile') ? Number(searchParams.get('profile')) : null
+        const firstVisible = initialFilter === null
+          ? pending[0]
+          : pending.find(p => p.search_profile_id === initialFilter) ?? pending[0]
+        if (firstVisible) setSelectedId(firstVisible.id)
       } finally {
         setLoading(false)
       }
@@ -52,10 +61,13 @@ export function InboxPage() {
   }, [])
 
   const assign = useCallback(async (id: number, status: string) => {
-    const idx = listings.findIndex(p => p.id === id)
+    const visible = profileFilter === null
+      ? listings
+      : listings.filter(p => p.search_profile_id === profileFilter)
+    const idx = visible.findIndex(p => p.id === id)
     const next =
-      listings.find((p, i) => i > idx && !dismissing.has(p.id)) ??
-      listings.find((p, i) => i < idx && !dismissing.has(p.id))
+      visible.find((p, i) => i > idx && !dismissing.has(p.id)) ??
+      visible.find((p, i) => i < idx && !dismissing.has(p.id))
     setSelectedId(next?.id ?? null)
 
     setDismissing(prev => new Set(prev).add(id))
@@ -71,9 +83,24 @@ export function InboxPage() {
         body: JSON.stringify({ status }),
       })
     } catch { /* non-fatal */ }
-  }, [listings, dismissing])
+  }, [listings, dismissing, profileFilter])
 
-  const selected = listings.find(p => p.id === selectedId) ?? null
+  const visibleListings = profileFilter === null
+    ? listings
+    : listings.filter(p => p.search_profile_id === profileFilter)
+
+  // Auto-select first visible item when filter changes
+  useEffect(() => {
+    if (visibleListings.length > 0 && !visibleListings.find(p => p.id === selectedId)) {
+      setSelectedId(visibleListings[0].id)
+    }
+  }, [profileFilter])
+
+  const profileCounts = Object.fromEntries(
+    searchProfiles.map(s => [s.id, listings.filter(p => p.search_profile_id === s.id).length])
+  )
+
+  const selected = visibleListings.find(p => p.id === selectedId) ?? null
   const searchMap = Object.fromEntries(searchProfiles.map(s => [s.id, s.title]))
 
   return (
@@ -88,13 +115,29 @@ export function InboxPage() {
           </button>
           <div className="inbox-nav-title">
             Inbox
-            {listings.length > 0 && <span className="inbox-nav-count">{listings.length}</span>}
+            {visibleListings.length > 0 && <span className="inbox-nav-count">{visibleListings.length}</span>}
           </div>
         </div>
 
-        {!loading && listings.length > 0 && (
+        {!loading && searchProfiles.length > 1 && (
+          <div className="inbox-profile-filters">
+            <button
+              className={`inbox-profile-pill${profileFilter === null ? ' active' : ''}`}
+              onClick={() => setProfileFilter(null)}
+            >All <span className="inbox-profile-pill-count">{listings.length}</span></button>
+            {searchProfiles.map(s => (
+              <button
+                key={s.id}
+                className={`inbox-profile-pill${profileFilter === s.id ? ' active' : ''}`}
+                onClick={() => setProfileFilter(profileFilter === s.id ? null : s.id)}
+              >{s.title} <span className="inbox-profile-pill-count">{profileCounts[s.id] ?? 0}</span></button>
+            ))}
+          </div>
+        )}
+
+        {!loading && visibleListings.length > 0 && (
           <div className="inbox-list">
-            {listings.map(p => {
+            {visibleListings.map(p => {
               const img = p.images[0]?.url
               return (
                 <div
@@ -131,11 +174,11 @@ export function InboxPage() {
 
       {loading ? (
         <div className="loading">Loading…</div>
-      ) : listings.length === 0 ? (
+      ) : visibleListings.length === 0 ? (
         <div className="inbox-empty">
           <div className="inbox-empty-icon">✓</div>
-          <div className="inbox-empty-title">All caught up</div>
-          <div className="inbox-empty-sub">No properties waiting for review</div>
+          <div className="inbox-empty-title">{profileFilter === null ? 'All caught up' : 'Nothing here'}</div>
+          <div className="inbox-empty-sub">{profileFilter === null ? 'No properties waiting for review' : 'No pending properties in this profile'}</div>
         </div>
       ) : selected && (
         <PropertyDetailContent

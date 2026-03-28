@@ -198,7 +198,7 @@ function App() {
         </div>
         {/* ── Header right ── */}
         <div className="app-header-right">
-          <button className="inbox-link-btn" onClick={() => navigate('/inbox')}>
+          <button className="inbox-link-btn" onClick={() => navigate(activeSearchId !== null ? `/inbox?profile=${activeSearchId}` : '/inbox')}>
             {pendingListings.length > 0 && (
               <span className="inbox-link-badge">{pendingListings.length}</span>
             )}

@@ -94,7 +94,7 @@ async fn try_agent_review(
     // Call Claude API.
     let request_body = json!({
         "model": CLAUDE_MODEL,
-        "max_tokens": 300,
+        "max_tokens": 600,
         "messages": [{ "role": "user", "content": prompt }]
     });
 
@@ -274,13 +274,14 @@ fn build_prompt(p: &StoredProperty, profiles: &[crate::models::search_profile::S
     lines.push("Pick the best matching profile ID, or skip if none fit.".to_string());
     lines.push("Reply with JSON only (no markdown, no explanation):".to_string());
     lines.push(String::new());
-    lines.push("If it matches a profile (HumanReview), the comment should say WHY it is a good fit —".to_string());
-    lines.push("highlight the specific strengths (price, size, location, features) relative to that profile.".to_string());
-    lines.push(r#"{"status":"HumanReview","search_profile_id":N,"comment":"why this property is a strong match"}"#.to_string());
+    lines.push("If it matches a profile (HumanReview), write a one-paragraph comment explaining why it is a strong fit —".to_string());
+    lines.push("cover price relative to budget, size (beds/baths/sqft), location and neighbourhood, standout features,".to_string());
+    lines.push("and any notable trade-offs or caveats. Be specific and direct.".to_string());
+    lines.push(r#"{"status":"HumanReview","search_profile_id":N,"comment":"one paragraph explaining the match"}"#.to_string());
     lines.push(String::new());
-    lines.push("If no profile fits (AgentSkip), the comment should say WHY it was skipped —".to_string());
-    lines.push("what key criteria it fails (price too high, wrong area, too few beds, etc.).".to_string());
-    lines.push(r#"{"status":"AgentSkip","comment":"why this property does not match any profile"}"#.to_string());
+    lines.push("If no profile fits (AgentSkip), write a one-paragraph comment explaining why it was skipped —".to_string());
+    lines.push("cover each key criterion it fails (price too high, wrong area, too few beds, missing features, etc.).".to_string());
+    lines.push(r#"{"status":"AgentSkip","comment":"one paragraph explaining why no profile matches"}"#.to_string());
 
     lines.join("\n")
 }

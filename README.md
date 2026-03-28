@@ -13,22 +13,37 @@ Built to run with **[OpenClaw](https://openclaw.ai)**, AgentZero watches the mar
 - 📬 **Inbox new matches** — only the properties that fit, surfaced when they appear
 - ✅ **Triage at your pace** — one-click Interested / Pass, no follow-up required
 - 📸 **Full listing details** — photos, price history, notes, all in one place
+- 📉 **Price change history** — every price drop and increase is recorded so you can see how long a listing has been sitting and how motivated the seller is
+- 🔄 **Relisting detection** — tracks when a listing comes back on the market after being removed, a strong signal that a deal fell through
+- 🏡 **Open house history** — past and upcoming open houses are logged over time, so you can see how many times a home has been shown without an offer
 
 No sign-ups. No subscriptions. Runs locally on your machine.
 
 ## Screenshots
 
-Home screen shows you the properties that you are watching.
+### Home — listing grid with search profiles and status filters
 
 ![Home](./screenshots/home.png)
 
-Daily agent curated listings in the inbox:
+Organize listings across multiple search scenarios (tabs). Filter by status — Candidate, Interested, Pass — and switch between grid and table views.
 
-![Agent Suggestions](./screenshots/agent_suggestions.png)
+### Inbox — AI-curated listings with agent analysis
 
-Details for listings you're interested in:
+![Agent Suggestions](./screenshots/agent_suggestion.png)
+
+New listings surfaced by the agent land in your inbox. Each one includes a written paragraph explaining how it fits your criteria, what stands out, and any trade-offs to consider.
+
+### Listing detail
 
 ![Listing Detail](./screenshots/listing_detail.png)
+
+Photo gallery, description, key facts, and a status picker. Set your own status and add personal notes directly on the page.
+
+### Agent Skipped — full rejection notes
+
+![Agent Skipped](./screenshots/agent_skipped.png)
+
+Listings the agent flagged as not a fit, with a full paragraph explanation of which criteria were missed and why — useful for catching cases where the agent got it wrong.
 
 ---
 

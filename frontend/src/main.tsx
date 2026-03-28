@@ -16,7 +16,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/search-profiles" element={<ManageSearchProfiles />} />
         <Route path="/inbox" element={<InboxPage />} />
-        <Route path="/agent-queue" element={<AgentQueuePage />} />
+        <Route path="/agent-pending" element={<AgentQueuePage status="AgentPending" />} />
+        <Route path="/agent-skipped" element={<AgentQueuePage status="AgentSkip" />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

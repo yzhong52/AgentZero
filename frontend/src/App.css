@@ -1279,6 +1279,12 @@
   overflow: hidden;
 }
 
+.agent-queue-item--skipped .agent-queue-item-comment {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  display: block;
+}
+
 .agent-queue-item-comment-label {
   display: block;
   font-size: 0.65rem;

@@ -217,8 +217,13 @@ function App() {
                 <div className="app-menu-backdrop" onClick={() => setMenuOpen(false)} />
                 <ul className="app-menu-dropdown">
                   <li>
-                    <button onClick={() => { setMenuOpen(false); navigate('/agent-queue') }}>
-                      Agent Queue
+                    <button onClick={() => { setMenuOpen(false); navigate('/agent-pending') }}>
+                      Pending Review
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => { setMenuOpen(false); navigate('/agent-skipped') }}>
+                      Agent Skipped
                     </button>
                   </li>
                   <li>

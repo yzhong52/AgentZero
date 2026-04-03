@@ -17,7 +17,7 @@ echo "[frontend] building latest frontend bundle..."
 npm --prefix "$FRONTEND_DIR" run build
 
 echo "[frontend] starting dev server..."
-nohup npm --prefix "$FRONTEND_DIR" run dev -- --host 127.0.0.1 --port "$PORT" --strictPort > "$LOG_FILE" 2>&1 &
+nohup npm --prefix "$FRONTEND_DIR" run dev -- --host 0.0.0.0 --port "$PORT" --strictPort > "$LOG_FILE" 2>&1 &
 PID=$!
 
 echo "[frontend] started with PID $PID"

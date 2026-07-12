@@ -1782,6 +1782,8 @@
   padding: 0;
   cursor: pointer;
   text-align: left;
+  text-decoration: none;
+  color: inherit;
   width: 100%;
 }
 
@@ -2675,6 +2677,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 0.6rem 1.25rem;
+}
+
+.tracked-fields + .tracked-fields {
+  margin-top: 0.6rem;
 }
 
 .tracked-field {

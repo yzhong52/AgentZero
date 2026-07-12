@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import type { Property } from './types'
 import type { ColDef } from './ListingTable'
 
@@ -14,8 +13,6 @@ function rankCells(col: ColDef, rows: Property[]): ('winner' | 'loser' | null)[]
 }
 
 export function ListingComparison({ rows, cols, onRemove }: { rows: Property[]; cols: ColDef[]; onRemove: (id: number) => void }) {
-  const navigate = useNavigate()
-
   return (
     <div className="comparison-wrap">
       <table className="comparison-table">
@@ -34,13 +31,13 @@ export function ListingComparison({ rows, cols, onRemove }: { rows: Property[]; 
                   >
                     ×
                   </button>
-                  <button className="comparison-thumb-btn" onClick={() => navigate(`/property/${p.id}`)} type="button">
+                  <a className="comparison-thumb-btn" href={`/property/${p.id}`} target="_blank" rel="noopener noreferrer">
                     {img
                       ? <img src={img} alt={p.title} className="comparison-thumb" />
                       : <div className="comparison-thumb-placeholder" />
                     }
                     <span className="comparison-title">{p.title}</span>
-                  </button>
+                  </a>
                 </th>
               )
             })}

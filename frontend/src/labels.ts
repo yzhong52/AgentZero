@@ -35,11 +35,11 @@ export const LABELS = {
 
   // Transit
   SKYTRAIN_STATION: 'Closest Skytrain Station',
-  WALK_TIME: 'Walk Time (Min)',
+  WALK_TIME: 'Skytrain (walk min)',
 
   // Walkability
-  COMMUNITY_CENTER_WALK: 'Community Center Walk Time (Min)',
-  LIBRARY_WALK: 'Library Walk Time (Min)',
+  COMMUNITY_CENTER_WALK: 'Community Center (walk min)',
+  LIBRARY_WALK: 'Library (walk min)',
 
   // Finance
   PROPERTY_TAX: 'Property Tax (Annual)',

@@ -1248,6 +1248,8 @@ export function PropertyDetailContent({
                                             <span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span>
                                         )}
                                     </div>
+                                </div>
+                                <div className="tracked-fields">
                                     <div className="tracked-field">
                                         <label>{LABELS.COMMUNITY_CENTER_WALK}</label>
                                         {locationEditMode ? (

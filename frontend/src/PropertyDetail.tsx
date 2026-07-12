@@ -427,7 +427,12 @@ export function PropertyDetailContent({
     const [financeDraft, setFinanceDraft] = useState<Property | null>(null)
     const [locationEditMode, setLocationEditMode] = useState(false)
     const [locationSaving, setLocationSaving] = useState(false)
-    const [locationDraft, setLocationDraft] = useState<{ skytrain_station: string | null; skytrain_walk_min: number | null } | null>(null)
+    const [locationDraft, setLocationDraft] = useState<{
+        skytrain_station: string | null
+        skytrain_walk_min: number | null
+        community_center_walk_min: number | null
+        library_walk_min: number | null
+    } | null>(null)
 
     // Refresh preview
     const [previewing, setPreviewing] = useState(false)
@@ -561,7 +566,12 @@ export function PropertyDetailContent({
     }
 
     function enterLocationEdit() {
-        setLocationDraft({ skytrain_station: property.skytrain_station ?? null, skytrain_walk_min: property.skytrain_walk_min ?? null })
+        setLocationDraft({
+            skytrain_station: property.skytrain_station ?? null,
+            skytrain_walk_min: property.skytrain_walk_min ?? null,
+            community_center_walk_min: property.community_center_walk_min ?? null,
+            library_walk_min: property.library_walk_min ?? null,
+        })
         setLocationEditMode(true)
     }
 
@@ -1209,7 +1219,7 @@ export function PropertyDetailContent({
 
                             <div className="location-subsection">
                                 <div className="tracked-details-header">
-                                    <h4>Transit</h4>
+                                    <h4>Transit &amp; Walkability</h4>
                                     {!locationEditMode ? (
                                         <button className="edit-btn" onClick={enterLocationEdit}>Edit</button>
                                     ) : (
@@ -1236,6 +1246,22 @@ export function PropertyDetailContent({
                                             <input className="edit-input" type="number" value={locationDraft?.skytrain_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, skytrain_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
                                         ) : (
                                             <span className="tracked-value">{numLabel(property.skytrain_walk_min, ' min')}</span>
+                                        )}
+                                    </div>
+                                    <div className="tracked-field">
+                                        <label>{LABELS.COMMUNITY_CENTER_WALK}</label>
+                                        {locationEditMode ? (
+                                            <input className="edit-input" type="number" value={locationDraft?.community_center_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, community_center_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
+                                        ) : (
+                                            <span className="tracked-value">{numLabel(property.community_center_walk_min, ' min')}</span>
+                                        )}
+                                    </div>
+                                    <div className="tracked-field">
+                                        <label>{LABELS.LIBRARY_WALK}</label>
+                                        {locationEditMode ? (
+                                            <input className="edit-input" type="number" value={locationDraft?.library_walk_min ?? ''} onChange={e => setLocationDraft(d => d ? { ...d, library_walk_min: e.target.value ? Number(e.target.value) : null } : d)} />
+                                        ) : (
+                                            <span className="tracked-value">{numLabel(property.library_walk_min, ' min')}</span>
                                         )}
                                     </div>
                                 </div>

@@ -73,6 +73,8 @@ export type Property = {
   property_tax: number | null
   skytrain_station: string | null
   skytrain_walk_min: number | null
+  community_center_walk_min: number | null
+  library_walk_min: number | null
   radiant_floor_heating: boolean | null
   ac: boolean | null
   down_payment_pct: number | null

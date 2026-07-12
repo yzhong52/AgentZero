@@ -411,6 +411,20 @@ fn merge_property(
             primary_source,
             fallback_source,
         ),
+        community_center_walk_min: merge_opt(
+            "community_center_walk_min",
+            primary.community_center_walk_min,
+            fallback.community_center_walk_min,
+            primary_source,
+            fallback_source,
+        ),
+        library_walk_min: merge_opt(
+            "library_walk_min",
+            primary.library_walk_min,
+            fallback.library_walk_min,
+            primary_source,
+            fallback_source,
+        ),
 
         radiant_floor_heating: merge_opt(
             "radiant_floor_heating",

@@ -468,6 +468,7 @@ mod tests {
             parking_carport: None, parking_pad: None,
             radiant_floor_heating: None, ac: Some(false), laundry_in_unit: Some(true),
             skytrain_station: None, skytrain_walk_min: None,
+            community_center_walk_min: None, library_walk_min: None,
             lat: None, lon: None,
             offer_price: None, property_tax: Some(8_500),
             hoa_monthly: None, down_payment_pct: Some(0.20),

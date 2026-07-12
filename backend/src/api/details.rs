@@ -157,6 +157,10 @@ pub(crate) async fn patch_details(
         .clone()
         .or(updated.skytrain_station.clone());
     updated.skytrain_walk_min = body.skytrain_walk_min.or(updated.skytrain_walk_min);
+    updated.community_center_walk_min = body
+        .community_center_walk_min
+        .or(updated.community_center_walk_min);
+    updated.library_walk_min = body.library_walk_min.or(updated.library_walk_min);
     updated.radiant_floor_heating = body.radiant_floor_heating.or(updated.radiant_floor_heating);
     updated.ac = body.ac.or(updated.ac);
     updated.down_payment_pct = body.down_payment_pct.or(updated.down_payment_pct);

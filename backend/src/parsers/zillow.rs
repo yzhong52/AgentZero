@@ -418,6 +418,8 @@ pub fn parse(url: &str, html: &str) -> Option<ParsedListing> {
             hoa_monthly: next.hoa_monthly,
             skytrain_station: None,
             skytrain_walk_min: None,
+            community_center_walk_min: None,
+            library_walk_min: None,
             radiant_floor_heating: None,
             ac: None,
             laundry_in_unit: None,

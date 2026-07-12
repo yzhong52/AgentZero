@@ -317,6 +317,8 @@ fn blank_stub() -> StoredProperty {
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,
+        community_center_walk_min: None,
+        library_walk_min: None,
         radiant_floor_heating: None,
         ac: None,
         down_payment_pct: Some(0.20),

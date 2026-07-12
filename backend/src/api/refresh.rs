@@ -137,6 +137,8 @@ fn merge_with_stored(parsed_listing: StoredProperty, stored_listing: &StoredProp
         offer_price: stored_listing.offer_price,
         skytrain_station: stored_listing.skytrain_station.clone(),
         skytrain_walk_min: stored_listing.skytrain_walk_min,
+        community_center_walk_min: stored_listing.community_center_walk_min,
+        library_walk_min: stored_listing.library_walk_min,
         has_rental_suite: stored_listing.has_rental_suite,
         rental_income: stored_listing.rental_income,
 
@@ -457,6 +459,8 @@ mod tests {
             laundry_in_unit: None,
             skytrain_station: None,
             skytrain_walk_min: None,
+            community_center_walk_min: None,
+            library_walk_min: None,
             property_tax: None,
             hoa_monthly: None,
             down_payment_pct: None,

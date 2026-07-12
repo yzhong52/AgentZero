@@ -9,7 +9,7 @@ const COLS: &str = "id, redfin_url, realtor_url, rew_url, zillow_url, title, des
                     bedrooms, bathrooms, sqft, year_built, lat, lon,
                     created_at, updated_at, notes,
                     parking_total, parking_garage, parking_carport, parking_pad, land_sqft, property_tax,
-                    skytrain_station, skytrain_walk_min, radiant_floor_heating, ac,
+                    skytrain_station, skytrain_walk_min, community_center_walk_min, library_walk_min, radiant_floor_heating, ac,
                     down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                     hoa_monthly, monthly_total, monthly_cost, has_rental_suite, rental_income,
                     status,
@@ -51,6 +51,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
                 bedrooms, bathrooms, sqft, year_built, lat, lon,
                 parking_total, parking_garage, parking_carport, parking_pad, land_sqft,
                 property_tax, skytrain_station, skytrain_walk_min,
+                community_center_walk_min, library_walk_min,
                 ac, radiant_floor_heating,
                 down_payment_pct, mortgage_interest_rate, amortization_years, mortgage_monthly,
                 hoa_monthly, monthly_total, monthly_cost,
@@ -65,7 +66,7 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
                 created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                datetime('now'), datetime('now'))
            RETURNING id"#,
     )
@@ -97,6 +98,8 @@ pub async fn add_listing(pool: &SqlitePool, p: &StoredProperty) -> Result<Stored
     .bind(p.property_tax)
     .bind(&p.skytrain_station)
     .bind(p.skytrain_walk_min)
+    .bind(p.community_center_walk_min)
+    .bind(p.library_walk_min)
     .bind(p.ac)
     .bind(p.radiant_floor_heating)
     .bind(p.down_payment_pct)
@@ -189,6 +192,8 @@ pub async fn update_by_id(
                monthly_cost             = ?,
                skytrain_station         = ?,
                skytrain_walk_min        = ?,
+               community_center_walk_min = ?,
+               library_walk_min         = ?,
                has_rental_suite         = ?,
                rental_income            = ?,
                status                   = ?,
@@ -250,6 +255,8 @@ pub async fn update_by_id(
     .bind(p.monthly_cost)
     .bind(&p.skytrain_station)
     .bind(p.skytrain_walk_min)
+    .bind(p.community_center_walk_min)
+    .bind(p.library_walk_min)
     .bind(p.has_rental_suite)
     .bind(p.rental_income)
     .bind(p.status)
@@ -504,6 +511,8 @@ fn row_to_property(row: &sqlx::sqlite::SqliteRow) -> StoredProperty {
         property_tax: row.get("property_tax"),
         skytrain_station: row.get("skytrain_station"),
         skytrain_walk_min: row.get("skytrain_walk_min"),
+        community_center_walk_min: row.get("community_center_walk_min"),
+        library_walk_min: row.get("library_walk_min"),
         radiant_floor_heating: row.get("radiant_floor_heating"),
         ac: row.get("ac"),
         down_payment_pct: row.get("down_payment_pct"),
@@ -586,6 +595,8 @@ mod tests {
             property_tax: Some(3200),
             skytrain_station: Some("Test Station".to_string()),
             skytrain_walk_min: Some(8),
+            community_center_walk_min: Some(12),
+            library_walk_min: Some(6),
             radiant_floor_heating: Some(false),
             ac: Some(true),
             down_payment_pct: Some(0.2),
@@ -676,6 +687,8 @@ mod tests {
             property_tax: None,
             skytrain_station: None,
             skytrain_walk_min: None,
+            community_center_walk_min: None,
+            library_walk_min: None,
             radiant_floor_heating: None,
             ac: None,
             down_payment_pct: None,
@@ -796,6 +809,9 @@ mod tests {
             // Transit
             skytrain_station: Some("Test Station".to_string()),
             skytrain_walk_min: Some(10),
+            // Walkability
+            community_center_walk_min: Some(15),
+            library_walk_min: Some(7),
             // Finance
             property_tax: Some(3000),
             hoa_monthly: Some(50),
@@ -867,6 +883,10 @@ mod tests {
             .clone()
             .or(merged.skytrain_station.clone());
         merged.skytrain_walk_min = details.skytrain_walk_min.or(merged.skytrain_walk_min);
+        merged.community_center_walk_min = details
+            .community_center_walk_min
+            .or(merged.community_center_walk_min);
+        merged.library_walk_min = details.library_walk_min.or(merged.library_walk_min);
         merged.property_tax = details.property_tax.or(merged.property_tax);
         merged.hoa_monthly = details.hoa_monthly.or(merged.hoa_monthly);
         merged.down_payment_pct = details.down_payment_pct.or(merged.down_payment_pct);
@@ -934,6 +954,9 @@ mod tests {
         // Transit
         assert_eq!(updated.skytrain_station.as_deref(), Some("Test Station"));
         assert_eq!(updated.skytrain_walk_min, Some(10));
+        // Walkability
+        assert_eq!(updated.community_center_walk_min, Some(15));
+        assert_eq!(updated.library_walk_min, Some(7));
         // Finance
         assert_eq!(updated.property_tax, Some(3000));
         assert_eq!(updated.hoa_monthly, Some(50));

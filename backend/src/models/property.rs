@@ -298,6 +298,10 @@ pub struct StoredProperty {
     pub skytrain_station: Option<String>,
     pub skytrain_walk_min: Option<i64>,
 
+    // ── Walkability ──────────────────────────────────────────────────────────
+    pub community_center_walk_min: Option<i64>,
+    pub library_walk_min: Option<i64>,
+
     // ── Finance ──────────────────────────────────────────────────────────────
     pub offer_price: Option<i64>,
     pub property_tax: Option<i64>,
@@ -405,6 +409,10 @@ pub struct Property {
     pub skytrain_station: Option<String>, // editable
     pub skytrain_walk_min: Option<i64>,   // editable
 
+    // ── Walkability ──────────────────────────────────────────────────────────
+    pub community_center_walk_min: Option<i64>, // editable
+    pub library_walk_min: Option<i64>,          // editable
+
     // ── Finance ──────────────────────────────────────────────────────────────
     /// User's intended offer price — drives all mortgage calculations.
     /// When null the application falls back to `price` for calculations.
@@ -500,6 +508,8 @@ impl Property {
             laundry_in_unit: s.laundry_in_unit,
             skytrain_station: s.skytrain_station,
             skytrain_walk_min: s.skytrain_walk_min,
+            community_center_walk_min: s.community_center_walk_min,
+            library_walk_min: s.library_walk_min,
             offer_price: s.offer_price,
             property_tax: s.property_tax,
             hoa_monthly: s.hoa_monthly,
@@ -571,6 +581,8 @@ impl From<Property> for StoredProperty {
             laundry_in_unit: p.laundry_in_unit,
             skytrain_station: p.skytrain_station,
             skytrain_walk_min: p.skytrain_walk_min,
+            community_center_walk_min: p.community_center_walk_min,
+            library_walk_min: p.library_walk_min,
             offer_price: p.offer_price,
             property_tax: p.property_tax,
             hoa_monthly: p.hoa_monthly,
@@ -644,6 +656,10 @@ pub struct UserDetails {
     // ── Transit ──────────────────────────────────────────────────────────────
     pub skytrain_station: Option<String>,
     pub skytrain_walk_min: Option<i64>,
+
+    // ── Walkability ──────────────────────────────────────────────────────────
+    pub community_center_walk_min: Option<i64>,
+    pub library_walk_min: Option<i64>,
 
     // ── Finance ──────────────────────────────────────────────────────────────
     /// User's intended offer price — drives mortgage calculations. Null means "use listing price".

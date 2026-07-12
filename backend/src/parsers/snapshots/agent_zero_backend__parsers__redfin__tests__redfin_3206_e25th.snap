@@ -31,6 +31,8 @@ expression: listing_to_snapshot(listing)
   "laundry_in_unit": true,
   "skytrain_station": null,
   "skytrain_walk_min": null,
+  "community_center_walk_min": null,
+  "library_walk_min": null,
   "offer_price": null,
   "property_tax": 7814,
   "hoa_monthly": null,

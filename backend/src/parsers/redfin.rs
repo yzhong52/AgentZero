@@ -528,6 +528,8 @@ pub fn extract_property(url: &str, title: &str, json_ld: &[JsonValue]) -> Option
         property_tax: None,
         skytrain_station: None,
         skytrain_walk_min: None,
+        community_center_walk_min: None,
+        library_walk_min: None,
         radiant_floor_heating: af.radiant_floor_heating,
         ac: af.ac,
         laundry_in_unit: af.laundry_in_unit,

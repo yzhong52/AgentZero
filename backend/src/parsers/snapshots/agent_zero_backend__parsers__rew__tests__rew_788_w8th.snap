@@ -31,6 +31,8 @@ expression: property
   "laundry_in_unit": null,
   "skytrain_station": null,
   "skytrain_walk_min": null,
+  "community_center_walk_min": null,
+  "library_walk_min": null,
   "offer_price": null,
   "property_tax": 4762,
   "hoa_monthly": 1137,

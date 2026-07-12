@@ -9,6 +9,7 @@ export type ColKey =
   | 'name' | 'price' | 'status' | 'address' | 'bedrooms' | 'bathrooms'
   | 'sqft' | 'year_built' | 'land_sqft' | 'parking_garage' | 'ac'
   | 'monthly_total' | 'hoa_monthly' | 'property_tax' | 'skytrain' | 'rental_income'
+  | 'subway_walk_min' | 'community_center_walk_min' | 'library_walk_min'
 
 export type CompareDirection = 'higher' | 'lower'
 export type ColDef = {
@@ -36,9 +37,15 @@ export const ALL_COLUMNS: ColDef[] = [
   { key: 'property_tax', label: 'Tax/yr', render: p => p.property_tax ? `$${p.property_tax.toLocaleString()}` : '—', compare: { direction: 'lower', value: p => p.property_tax ?? null } },
   { key: 'skytrain', label: 'Skytrain', render: p => p.skytrain_station ? `${p.skytrain_station} (${p.skytrain_walk_min ?? '?'} min)` : '—', compare: { direction: 'lower', value: p => p.skytrain_walk_min ?? null } },
   { key: 'rental_income', label: 'Potential Rental Income', render: p => p.rental_income ? `$${p.rental_income.toLocaleString()}/mo` : '—', compare: { direction: 'higher', value: p => p.rental_income ?? null } },
+  { key: 'subway_walk_min', label: 'Distance to Subway (Min)', render: p => p.skytrain_walk_min != null ? `${p.skytrain_walk_min} min` : '—', compare: { direction: 'lower', value: p => p.skytrain_walk_min ?? null } },
+  { key: 'community_center_walk_min', label: 'Distance to Community Center (Min)', render: p => p.community_center_walk_min != null ? `${p.community_center_walk_min} min` : '—', compare: { direction: 'lower', value: p => p.community_center_walk_min ?? null } },
+  { key: 'library_walk_min', label: 'Distance to Library (Min)', render: p => p.library_walk_min != null ? `${p.library_walk_min} min` : '—', compare: { direction: 'lower', value: p => p.library_walk_min ?? null } },
 ]
 
-export const DEFAULT_COLS: ColKey[] = ['name', 'price', 'monthly_total', 'status', 'bedrooms', 'bathrooms', 'sqft', 'land_sqft', 'rental_income']
+export const DEFAULT_COLS: ColKey[] = [
+  'name', 'price', 'monthly_total', 'status', 'bedrooms', 'bathrooms', 'sqft', 'land_sqft', 'rental_income',
+  'subway_walk_min', 'community_center_walk_min', 'library_walk_min',
+]
 
 type SortKey = 'status' | 'monthly_total'
 type SortDir = 'asc' | 'desc'

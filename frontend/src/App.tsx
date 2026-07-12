@@ -34,7 +34,12 @@ function App() {
   })
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
-  const [compareIds, setCompareIds] = useState<Set<number>>(new Set())
+  const [compareIds, setCompareIds] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem('az_compare_ids')
+    if (!saved) return new Set()
+    const parsed = saved.split(',').map(Number).filter(n => Number.isFinite(n))
+    return new Set(parsed.slice(0, MAX_COMPARE_ITEMS))
+  })
 
   // ── Search Profiles ───────────────────────────────────────────────────────
   const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
@@ -68,6 +73,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('az_view_mode', viewMode)
   }, [viewMode])
+  useEffect(() => {
+    localStorage.setItem('az_compare_ids', [...compareIds].join(','))
+  }, [compareIds])
 
   async function fetchSearchProfiles() {
     try {

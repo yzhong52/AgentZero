@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { STATUS_COLORS, displayStatus } from './constants'
+import { STATUS_COLORS, displayStatus, MAX_COMPARE_ITEMS } from './constants'
 import type { Property } from './types'
 import { formatPriceCompact } from './utils'
 
@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: string | null }) {
   )
 }
 
-function ListingCard({ p }: { p: Property }) {
+function ListingCard({ p, selected, atLimit, onToggleSelect }: { p: Property; selected: boolean; atLimit: boolean; onToggleSelect: (id: number) => void }) {
   const navigate = useNavigate()
   const img = p.images[0]?.url
   const statusColor = STATUS_COLORS[p.status] ?? '#e0dfd8'
@@ -39,6 +39,19 @@ function ListingCard({ p }: { p: Property }) {
           ? <img src={img} alt={p.title} className="listing-img" />
           : <div className="listing-img-placeholder" />
         }
+        <label
+          className="listing-compare-check"
+          onClick={e => e.stopPropagation()}
+          title={!selected && atLimit ? `You can compare up to ${MAX_COMPARE_ITEMS} listings at once` : undefined}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={!selected && atLimit}
+            onChange={() => onToggleSelect(p.id)}
+            aria-label="Select for comparison"
+          />
+        </label>
       </div>
       <div className="listing-body" style={{ borderLeft: `4px solid ${statusColor}` }}>
         <div className="listing-price-row">
@@ -63,10 +76,11 @@ function ListingCard({ p }: { p: Property }) {
   )
 }
 
-export function ListingGrid({ rows }: { rows: Property[] }) {
+export function ListingGrid({ rows, selectedIds, onToggleSelect }: { rows: Property[]; selectedIds: Set<number>; onToggleSelect: (id: number) => void }) {
+  const atLimit = selectedIds.size >= MAX_COMPARE_ITEMS
   return (
     <div className="listings-grid">
-      {rows.map(p => <ListingCard key={p.id} p={p} />)}
+      {rows.map(p => <ListingCard key={p.id} p={p} selected={selectedIds.has(p.id)} atLimit={atLimit} onToggleSelect={onToggleSelect} />)}
     </div>
   )
 }

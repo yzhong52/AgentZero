@@ -4,8 +4,9 @@ import './App.css'
 import { ListingGrid } from './ListingGrid'
 import { ListingTable, ALL_COLUMNS, DEFAULT_COLS } from './ListingTable'
 import type { ColKey } from './ListingTable'
-import { STATUS_OPTIONS, STATUS_COLORS, HUMAN_PENDING_STATUS, USER_STATUSES, displayStatus } from './constants'
-import type { StatusOption } from './constants'
+import { ListingComparison } from './ListingComparison'
+import { STATUS_OPTIONS, STATUS_COLORS, HUMAN_PENDING_STATUS, USER_STATUSES, displayStatus, VIEW_MODES, MAX_COMPARE_ITEMS } from './constants'
+import type { StatusOption, ViewMode } from './constants'
 import type { Property, SearchProfile } from './types'
 
 function App() {
@@ -27,12 +28,13 @@ function App() {
     }
     return new Set<StatusOption>(['Interested', 'Buyable'])
   })
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() => {
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const saved = localStorage.getItem('az_view_mode')
-    return saved === 'table' ? 'table' : 'grid'
+    return VIEW_MODES.includes(saved as ViewMode) ? (saved as ViewMode) : 'grid'
   })
   const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS))
   const [colPickerOpen, setColPickerOpen] = useState(false)
+  const [compareIds, setCompareIds] = useState<Set<number>>(new Set())
 
   // ── Search Profiles ───────────────────────────────────────────────────────
   const [searchProfiles, setSearchProfiles] = useState<SearchProfile[]>([])
@@ -130,6 +132,20 @@ function App() {
     })
   }
 
+  function toggleCompare(id: number) {
+    setCompareIds(prev => {
+      if (prev.has(id)) {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      }
+      if (prev.size >= MAX_COMPARE_ITEMS) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }
+
   const pendingListings = listings.filter(p => p.status === HUMAN_PENDING_STATUS)
   const reviewedListings = listings.filter(p => p.status !== HUMAN_PENDING_STATUS)
 
@@ -145,6 +161,8 @@ function App() {
   const filteredListings = statusFilter.size > 0
     ? listings.filter(p => statusFilter.has(p.status as StatusOption))
     : reviewedListings
+
+  const comparedListings = listings.filter(p => compareIds.has(p.id))
 
   const [savedInfo, setSavedInfo] = useState<{ id: number; title: string } | null>(null)
   const [dupInfo, setDupInfo] = useState<{ id: number; title: string; mls: string | null } | null>(null)
@@ -376,7 +394,15 @@ function App() {
           <div className="view-controls">
             <button className={`view-btn${viewMode === 'grid' ? ' active' : ''}`} onClick={() => setViewMode('grid')}>Grid</button>
             <button className={`view-btn${viewMode === 'table' ? ' active' : ''}`} onClick={() => setViewMode('table')}>Table</button>
-            {viewMode === 'table' && (
+            <button
+              className={`view-btn${viewMode === 'comparison' ? ' active' : ''}`}
+              onClick={() => setViewMode('comparison')}
+              disabled={compareIds.size < 2}
+              title={compareIds.size < 2 ? `Check 2–${MAX_COMPARE_ITEMS} listings to compare` : undefined}
+            >
+              Compare{compareIds.size > 0 ? ` (${compareIds.size})` : ''}
+            </button>
+            {(viewMode === 'table' || viewMode === 'comparison') && (
               <div className="col-picker-wrap">
                 <button className="view-btn" onClick={() => setColPickerOpen(o => !o)}>Columns ▾</button>
                 {colPickerOpen && (
@@ -402,15 +428,34 @@ function App() {
           </div>
         </div>
 
-        {filteredListings.length > 0 ? (
-          viewMode === 'grid' ? (
-            <ListingGrid rows={[...filteredListings].sort((a, b) => {
-              const ra = STATUS_OPTIONS.indexOf(a.status as any)
-              const rb = STATUS_OPTIONS.indexOf(b.status as any)
-              return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb)
-            })} />
+        {viewMode === 'comparison' ? (
+          comparedListings.length > 0 ? (
+            <ListingComparison
+              rows={comparedListings}
+              cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key) && c.key !== 'status' && c.key !== 'name')}
+              onRemove={toggleCompare}
+            />
           ) : (
-            <ListingTable rows={filteredListings} cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))} />
+            <p className="empty">Check 2–{MAX_COMPARE_ITEMS} listings in Grid or Table view to compare them here.</p>
+          )
+        ) : filteredListings.length > 0 ? (
+          viewMode === 'grid' ? (
+            <ListingGrid
+              rows={[...filteredListings].sort((a, b) => {
+                const ra = STATUS_OPTIONS.indexOf(a.status as any)
+                const rb = STATUS_OPTIONS.indexOf(b.status as any)
+                return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb)
+              })}
+              selectedIds={compareIds}
+              onToggleSelect={toggleCompare}
+            />
+          ) : (
+            <ListingTable
+              rows={filteredListings}
+              cols={ALL_COLUMNS.filter(c => visibleCols.has(c.key))}
+              selectedIds={compareIds}
+              onToggleSelect={toggleCompare}
+            />
           )
         ) : (
           <p className="empty">

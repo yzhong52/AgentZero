@@ -1,6 +1,12 @@
 export const STATUS_OPTIONS = ['Buyable', 'Interested', 'Pass', 'HumanReview', 'AgentPending', 'AgentSkip'] as const
 export type StatusOption = typeof STATUS_OPTIONS[number]
 
+export const VIEW_MODES = ['grid', 'table', 'comparison'] as const
+export type ViewMode = typeof VIEW_MODES[number]
+
+// Comparison view is a side-by-side layout; beyond 3 columns it stops being scannable.
+export const MAX_COMPARE_ITEMS = 3
+
 // Statuses available for the user to set manually.
 export const USER_STATUSES: readonly StatusOption[] = ['Buyable', 'Interested', 'Pass'] as const
 
